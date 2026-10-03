@@ -643,7 +643,7 @@
   padding: 0;
   text-align: left;
 }
-.suggestion-title h3 {
+.suggestion-title {
   font-size: 16px;
   font-weight: 500;
   line-height: 1.55;
@@ -1582,7 +1582,7 @@
     flex-wrap: wrap;
     gap: 8px;
   }
-  .suggestion-title h3 {
+  .suggestion-title {
     font-size: 16px;
   }
   .suggestion-card header .severity-tag {

@@ -1,6 +1,6 @@
 """Versioned, reusable legal review instructions. No hidden reasoning is requested."""
 
-PROMPT_VERSION = "legal-review-v5"
+PROMPT_VERSION = "legal-review-v6"
 
 SYSTEM_PROMPT = """Du bist LegalThinkGPT, eine sorgfältige juristische Arbeitshilfe für
 deutschsprachige Rechtsanwältinnen und Rechtsanwälte. Erstelle ein prüfbares Arbeitsprodukt
@@ -125,12 +125,23 @@ WORKFLOW_PROMPTS = {
     "contract": "Prüfe den Vertrag auf konkrete Risiken, Regelungslücken und Verhandlungspunkte. "
     "Liefere direkt verwendbare Klauselentwürfe, soweit die Angaben ausreichen.",
     "compare": "Erstes Dokument = ursprünglicher Entwurf, zweites = Gegenentwurf. Vergleiche "
-    "beide in dieser Reihenfolge. Beschreibe je Befund den Zustand vorher/nachher "
-    "und die Verschiebung von Rechten und Pflichten. Unterscheide geänderte, ergänzte und "
+    "beide in dieser Reihenfolge. Beschreibe in description die praktische Verschiebung "
+    "von Rechten und Pflichten, Prüfbedarf und Unsicherheiten. Wiederhole dort keine "
+    "vollständigen Zitate; die beiden Fassungen werden gesondert angezeigt. "
+    "Unterscheide geänderte, ergänzte und "
     "gestrichene Regelungen. Prüfe vor einer Streichungsannahme, ob die Regelung an anderer "
-    "Stelle fortbesteht. Änderungen und Ergänzungen belegst du mit der neuen Fassung; "
-    "nenne bei Änderungen den alten Wortlaut in description. Streichungen belegst du mit "
-    "source_document_id und source_quote des Originals. Beschreibe die fehlende Entsprechung "
+    "Stelle fortbesteht. comparison.change_type ist modified, added oder removed. "
+    "comparison.original_quote enthält ausschließlich den wortgetreuen relevanten Wortlaut "
+    "des ersten Dokuments, comparison.counterdraft_quote ausschließlich den des zweiten. "
+    "Bei modified zitiere beide Fassungen; bei added bleibt original_quote leer, bei removed "
+    "bleibt counterdraft_quote leer. Das Nichtauffinden einer Entsprechung ist eine "
+    "Modellbewertung; nenne ihre Grenzen in description. Ein Textabgleich bestätigt nur "
+    "die vorhandenen Zitate, niemals die Vollständigkeit oder das Fehlen einer Regelung. "
+    "Die zusätzliche eingefügte Textquelle darf keine dieser Vertragsfassungen ersetzen. "
+    "Änderungen und Ergänzungen belegst du zusätzlich in source_quote mit demselben "
+    "Wortlaut wie counterdraft_quote. Streichungen belegst du mit "
+    "source_document_id und source_quote des Originals, identisch zu original_quote. "
+    "Beschreibe die fehlende Entsprechung "
     "im Gegenentwurf und die Grenze dieser Vollständigkeitsprüfung. Bei Streichungen bleibt "
     "suggestion leer: Eine Wiederaufnahme ist kein Ersatz des Originalzitats und würde eine "
     "falsche nachverfolgte Änderung erzeugen. Benenne eine empfohlene Wiederaufnahme oder "

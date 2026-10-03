@@ -7,6 +7,9 @@ from .schemas import (
     Document,
     Finding,
     ModelAnalysis,
+    ModelComparisonAnalysis,
+    ModelComparisonEvidence,
+    ModelComparisonFinding,
     ModelFinding,
     ModelTimelineEntry,
     Severity,
@@ -337,7 +340,7 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
     first = documents[0]
     if scenario == "compare":
         second = documents[1]
-        return ModelAnalysis(
+        result = ModelAnalysis(
             title="Cloud-Vertrag · Versionsvergleich",
             summary="Der Gegenentwurf reduziert die "
             "Haftungsgrenze von einer Jahres- auf eine Monatsvergütung und verkürzt "
@@ -349,10 +352,8 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
                     "Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten "
                     "ist die Haftung auf eine Monatsvergütung begrenzt.",
                     "Haftungsgrenze von Jahres- auf Monatsvergütung reduziert",
-                    "Original: Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten "
-                    "ist die Haftung auf die Jahresvergütung begrenzt. Der Gegenentwurf "
-                    "reduziert diese Grenze auf eine Monatsvergütung. Aus Kundensicht steht "
-                    "damit weniger Haftungsvolumen zur Verfügung; Schadensprofil und "
+                    "Aus Kundensicht steht weniger Haftungsvolumen zur Verfügung. "
+                    "Schadensprofil und "
                     "Zulässigkeit der Begrenzung sind zu prüfen.",
                     "Haftung",
                     "Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten "
@@ -364,8 +365,8 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
                     second,
                     "Nach Vertragsende stehen die Kundendaten sieben Tage zum Export bereit.",
                     "Exportfenster von 30 auf sieben Tage verkürzt",
-                    "Original: Nach Vertragsende stehen die Kundendaten 30 Tage zum Export bereit. "
-                    "Im Gegenentwurf entfallen 23 Tage für Migration und Vollständigkeitsprüfung.",
+                    "Es entfallen 23 Tage für Migration und Vollständigkeitsprüfung. "
+                    "Ob sieben Tage ausreichen, hängt vom Datenumfang und Exportverfahren ab.",
                     "Vertragsende",
                     "Nach Vertragsende stehen die Kundendaten 30 Tage zum Export bereit.",
                     "Vertragliche Leistungs- und Übergabepflichten prüfen.",
@@ -375,6 +376,25 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
             questions=[
                 "Wie lange benötigt der Kunde für einen vollständigen Export?",
                 "Welche vertragstypischen Schäden sollen abgedeckt werden?",
+            ],
+        )
+        original_quotes = [
+            "Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten "
+            "ist die Haftung auf die Jahresvergütung begrenzt.",
+            "Nach Vertragsende stehen die Kundendaten 30 Tage zum Export bereit.",
+        ]
+        return ModelComparisonAnalysis(
+            **result.model_dump(exclude={"findings"}),
+            findings=[
+                ModelComparisonFinding(
+                    **finding.model_dump(),
+                    comparison=ModelComparisonEvidence(
+                        change_type="modified",
+                        original_quote=original_quote,
+                        counterdraft_quote=finding.source_quote,
+                    ),
+                )
+                for finding, original_quote in zip(result.findings, original_quotes, strict=True)
             ],
         )
     if scenario == "chronology":
@@ -655,7 +675,9 @@ def demo_analysis(scenario: DemoScenario = "contract") -> Analysis:
             summary=analysis.summary,
             findings=[
                 ModelFinding.model_validate(
-                    item.model_dump(exclude={"id", "verified", "source_document_name"})
+                    item.model_dump(
+                        exclude={"id", "verified", "source_document_name", "comparison"}
+                    )
                 )
                 for item in analysis.findings
             ],

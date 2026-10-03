@@ -5,8 +5,8 @@ import httpx
 import pytest
 from openai import AsyncOpenAI
 
-from app.analysis import AnalysisError, AnalysisService
-from app.schemas import AnalysisRequest, Document, Playbook
+from app.analysis import AnalysisError, AnalysisService, recover_source_references
+from app.schemas import Analysis, AnalysisRequest, Document, Playbook
 
 QUOTE = "Die Haftung ist auf eine Monatsvergütung beschränkt."
 DOC = Document(id="doc-1", name="Vertrag.txt", text=QUOTE, page_count=1, char_count=len(QUOTE))
@@ -260,12 +260,35 @@ async def test_pasted_text_is_a_separate_verified_source_and_never_a_mandate():
 
 
 async def test_compare_pasted_source_does_not_become_a_version_or_redline_target():
-    counter = DOC.model_copy(update={"id": "counter", "name": "Gegenentwurf.txt"})
-    pasted = DOC.model_copy(update={"id": "pasted", "name": "Eingefügter Text.txt"})
+    original = DOC.model_copy(update={"name": "Original.pdf", "text": "[Seite 2]\n" + QUOTE})
+    counter_quote = "Die Haftung ist auf eine Jahresvergütung beschränkt."
+    counter = DOC.model_copy(
+        update={"id": "counter", "name": "Gegenentwurf.pdf", "text": "[Seite 4]\n" + counter_quote}
+    )
+    pasted = DOC.model_copy(
+        update={"id": "pasted", "name": "Eingefügter Text.txt", "text": "Nur eine E-Mail-Aussage."}
+    )
     model = model_result()
     finding = model["findings"][0]
     model["findings"] = [
-        {**finding, "source_document_id": source.id} for source in (DOC, counter, pasted)
+        {
+            **finding,
+            # Deliberately wrong source selection must never determine a version.
+            "source_document_id": pasted.id,
+            "source_quote": pasted.text,
+            "comparison": {
+                "change_type": change_type,
+                "original_quote": before,
+                "counterdraft_quote": after,
+            },
+        }
+        for change_type, before, after in (
+            ("modified", QUOTE, counter_quote),
+            ("added", "", counter_quote),
+            ("removed", QUOTE, ""),
+            ("modified", counter_quote, pasted.text),
+            ("modified", QUOTE, QUOTE),
+        )
     ]
     captured = []
 
@@ -279,7 +302,7 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
             AnalysisRequest(
                 workflow="compare", document_ids=[DOC.id, counter.id], source_text=pasted.text
             ),
-            [DOC, counter],
+            [original, counter],
             pasted_document=pasted,
         )
     finally:
@@ -289,15 +312,44 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     assert user["source_text_document"]["id"] == pasted.id
     assert result.document_ids == [DOC.id, counter.id]
     assert result.source_text_document_id == pasted.id
-    assert all(item.verified for item in result.findings)
-    assert [item.source_quote for item in result.findings] == [DOC.text, counter.text, pasted.text]
+    assert [item.verified for item in result.findings] == [True, True, True, False, False]
+    assert [item.source_quote for item in result.findings] == [
+        counter_quote, counter_quote, QUOTE, pasted.text, QUOTE
+    ]
     assert [item.source_document_name for item in result.findings] == [
-        DOC.name,
-        counter.name,
-        pasted.name,
+        counter.name, counter.name, original.name, counter.name, counter.name
     ]
     assert all(item.description == finding["description"] for item in result.findings)
-    assert [item.suggestion for item in result.findings] == ["", finding["suggestion"], ""]
+    assert [item.suggestion for item in result.findings] == [
+        finding["suggestion"],
+        finding["suggestion"],
+        "",
+        finding["suggestion"],
+        finding["suggestion"],
+    ]
+    modified, added, removed, invalid, wrong_side = [item.comparison for item in result.findings]
+    assert modified.original.verified and modified.counterdraft.verified
+    assert modified.original.source_location == "Seite 2"
+    assert modified.counterdraft.source_location == "Seite 4"
+    assert not added.original.verified and added.original.source_quote == ""
+    assert not removed.counterdraft.verified and removed.counterdraft.source_quote == ""
+    assert not invalid.original.verified and not invalid.counterdraft.verified
+    assert wrong_side.original.verified and not wrong_side.counterdraft.verified
+    assert all(
+        item.comparison.original.source_document_id == original.id
+        and item.comparison.counterdraft.source_document_id == counter.id
+        for item in result.findings
+    )
+    schema = captured[0]["text"]["format"]["schema"]
+    for definition in [schema, *schema["$defs"].values()]:
+        if definition.get("type") == "object":
+            assert definition["additionalProperties"] is False
+            assert set(definition["required"]) == set(definition["properties"])
+    # Both read endpoints deserialize then repair references. A deleted counterdraft
+    # must never be replaced by the original even if its quote only exists there.
+    reloaded = Analysis.model_validate_json(result.model_dump_json())
+    recover_source_references(reloaded, [original, pasted])
+    assert reloaded.model_dump() == result.model_dump()
 
 
 @pytest.mark.parametrize(

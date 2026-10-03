@@ -22,6 +22,9 @@ import type { Analysis, DocumentRecord, Finding, Severity } from './types';
 import { dateLabel, EFFORT_NAMES, ExternalLink, Modal } from './ui';
 import { SourceFile } from './SourceFile';
 import { workflowName } from './workflows';
+import { reviewLabels } from './review-workflows';
+import { WorkflowFindingContent } from './WorkflowFindingContent';
+import { ComparisonFinding, type ComparisonSide } from './ComparisonFinding';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './review-motion.css';
 
@@ -66,32 +69,29 @@ export default function Review({
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(
     () => new Set(analysis.findings.slice(0, 1).map((finding) => finding.id)),
   );
-  const [sourceVisible, setSourceVisible] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [marked, setMarked] = useState<Set<string>>(new Set());
-  const [sourceRequest, setSourceRequest] = useState(0);
   const [suggestionRequest, setSuggestionRequest] = useState<{
     id: string;
     sequence: number;
   } | null>(null);
   const [timelineSourceIndex, setTimelineSourceIndex] = useState<number | null>(null);
-  const consumedSourceRequest = useRef(0);
+  const [activeSource, setActiveSource] = useState<{
+    evidence: SourceEvidence;
+    role?: string;
+  } | null>(null);
+  const labels = reviewLabels(analysis);
   const consumedSuggestionRequest = useRef(0);
   const exportRef = useRef<HTMLDivElement>(null);
   const exportTrigger = useRef<HTMLButtonElement>(null);
-  const sourceTrigger = useRef<HTMLButtonElement>(null);
   const { reduced, transition } = useMotionPreferences();
   function closeExport(restoreFocus = false) {
     setExportOpen(false);
     if (restoreFocus) exportTrigger.current?.focus({ preventScroll: true });
   }
   function closeSource() {
-    if (tab === 'timeline') {
-      setTimelineSourceIndex(null);
-      return;
-    }
-    setSourceVisible(false);
-    sourceTrigger.current?.focus({ preventScroll: true });
+    setTimelineSourceIndex(null);
+    setActiveSource(null);
   }
   useEffect(() => {
     if (!exportOpen) return;
@@ -101,21 +101,6 @@ export default function Review({
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, [exportOpen]);
-  useEffect(() => {
-    if (!sourceRequest || !sourceVisible || consumedSourceRequest.current === sourceRequest) return;
-    const frame = requestAnimationFrame(() => {
-      const panel = document.getElementById('source-panel');
-      if (!panel) return;
-      consumedSourceRequest.current = sourceRequest;
-      const bounds = panel.getBoundingClientRect();
-      panel.focus({ preventScroll: true });
-      // An explicit source action should reveal an off-screen source, not disturb reading.
-      if (bounds.top < 0 || bounds.top > window.innerHeight - 100) {
-        panel.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
-      }
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [sourceRequest, sourceVisible, reduced]);
   useEffect(() => {
     if (
       !suggestionRequest ||
@@ -127,7 +112,7 @@ export default function Review({
       const card = document.getElementById(`suggestion-${suggestionRequest.id}`);
       if (!card) return;
       consumedSuggestionRequest.current = suggestionRequest.sequence;
-      card.querySelector<HTMLButtonElement>('.suggestion-title')?.focus({ preventScroll: true });
+      card.querySelector<HTMLElement>('.suggestion-title')?.focus({ preventScroll: true });
       const bounds = card.getBoundingClientRect();
       if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
         card.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
@@ -143,17 +128,16 @@ export default function Review({
     setExpandedFindings(new Set(analysis.findings.slice(0, 1).map((finding) => finding.id)));
     setMarked(new Set());
     setTimelineSourceIndex(null);
+    setActiveSource(null);
     setSuggestionRequest(null);
     consumedSuggestionRequest.current = 0;
   }, [analysis.id, analysis.workflow, analysis.findings]);
-  const selected = analysis.findings.find((item) => item.id === selectedId);
-  const sourceDocument = documents.find((doc) => doc.id === selected?.source_document_id);
-  const sourceDocumentIndex =
-    analysis.document_ids?.indexOf(selected?.source_document_id ?? '') ?? -1;
-  const sourceDocumentRole =
-    analysis.workflow === 'compare' && sourceDocumentIndex >= 0 && sourceDocumentIndex < 2
-      ? ['Original', 'Gegenentwurf'][sourceDocumentIndex]
+  function documentRole(documentId: string) {
+    const index = analysis.document_ids?.indexOf(documentId) ?? -1;
+    return analysis.workflow === 'compare' && index >= 0 && index < 2
+      ? ['Original', 'Gegenentwurf'][index]
       : undefined;
+  }
   const timelineEvent =
     timelineSourceIndex === null ? undefined : analysis.timeline[timelineSourceIndex];
   const timelineSource: SourceEvidence | undefined = timelineEvent
@@ -183,7 +167,7 @@ export default function Review({
   const filtered = analysis.findings.filter(
     (item) =>
       (filter === 'all' || item.severity === filter) &&
-      `${item.title} ${item.description} ${item.category}`
+      `${item.title} ${item.description} ${item.category} ${item.source_quote} ${item.comparison?.original.source_quote ?? ''} ${item.comparison?.counterdraft.source_quote ?? ''}`
         .toLocaleLowerCase('de-DE')
         .includes(search.toLocaleLowerCase('de-DE')),
   );
@@ -194,13 +178,13 @@ export default function Review({
       ? [
           {
             id: 'findings' as const,
-            label: analysis.workflow === 'chronology' ? 'Prüfpunkte' : 'Befunde',
+            label: labels.findings,
             count: analysis.findings.length,
           },
         ]
       : []),
     ...(suggestions.length
-      ? [{ id: 'suggestions' as const, label: 'Formulierungen', count: suggestions.length }]
+      ? [{ id: 'suggestions' as const, label: labels.suggestions, count: suggestions.length }]
       : []),
     ...(hasTimeline
       ? [{ id: 'timeline' as const, label: 'Chronologie', count: analysis.timeline.length }]
@@ -335,27 +319,6 @@ export default function Review({
         <div className="summary-block">
           <p>{analysis.summary}</p>
         </div>
-        {analysis.workflow !== 'chronology' && counts.high + counts.medium + counts.low > 0 && (
-          <div className="risk-summary">
-            {(['high', 'medium', 'low'] as Severity[]).map((severity) => (
-              <button
-                key={severity}
-                aria-label={`${counts[severity]} Befunde, Priorität ${SEVERITIES[severity].short}`}
-                onClick={() => {
-                  setFilter(severity);
-                  setTab('findings');
-                }}
-                className="risk-stat"
-              >
-                <span className="risk-count">{counts[severity]}</span>
-                <span>
-                  <i className={`severity-dot ${severity}`} />
-                  {SEVERITIES[severity].short}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
       <div className="review-tab-bar">
         {views.length === 1 ? (
@@ -409,21 +372,6 @@ export default function Review({
             ))}
           </div>
         )}
-        {tab !== 'timeline' && (
-          <button
-            ref={sourceTrigger}
-            className="text-button source-toggle"
-            onClick={() => setSourceVisible(!sourceVisible)}
-            aria-pressed={sourceVisible}
-          >
-            <PanelRightClose size={16} />
-            <ReviewToggleLabel
-              active={sourceVisible}
-              on="Quelle ausblenden"
-              off="Quelle anzeigen"
-            />
-          </button>
-        )}
       </div>
       {tab === 'findings' && (
         <motion.div
@@ -433,9 +381,9 @@ export default function Review({
           role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-findings"
           aria-labelledby="tab-findings"
-          className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
+          className="review-workspace source-hidden"
         >
-          <section className="findings-column" aria-label="Befunde">
+          <section className="findings-column" aria-label={labels.findings}>
             <div className="findings-toolbar">
               <div className="filter-pills" aria-label="Nach Priorität filtern">
                 <button
@@ -467,10 +415,10 @@ export default function Review({
               <label className="findings-search">
                 <Search size={14} />
                 <input
-                  placeholder="Befunde durchsuchen"
+                  placeholder="Ergebnisse durchsuchen"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Befunde durchsuchen"
+                  aria-label={`${labels.findings} durchsuchen`}
                 />
               </label>
             </div>
@@ -484,6 +432,7 @@ export default function Review({
               {filtered.map((finding, index) => (
                 <FindingCard
                   key={finding.id}
+                  analysis={analysis}
                   finding={finding}
                   index={index}
                   active={expandedFindings.has(finding.id)}
@@ -498,9 +447,18 @@ export default function Review({
                     setSelectedId(finding.id);
                   }}
                   onShowSource={() => {
-                    setSelectedId(finding.id);
-                    setSourceVisible(true);
-                    setSourceRequest((request) => request + 1);
+                    setActiveSource({
+                      evidence: finding,
+                      role: documentRole(finding.source_document_id),
+                    });
+                  }}
+                  onComparisonSource={(side) => {
+                    const source = finding.comparison?.[side];
+                    if (source)
+                      setActiveSource({
+                        evidence: { ...source, id: `${finding.id}-${side}` },
+                        role: side === 'original' ? 'Original' : 'Gegenentwurf',
+                      });
                   }}
                   onSuggestion={() => {
                     setSelectedId(finding.id);
@@ -516,7 +474,9 @@ export default function Review({
                 <div className="empty-state compact">
                   <FileCheck2 size={28} />
                   <h3>
-                    {analysis.findings.length ? 'Keine passenden Befunde' : 'Keine Befunde erfasst'}
+                    {analysis.findings.length
+                      ? 'Keine Treffer für diese Auswahl'
+                      : `Keine ${labels.findings} erfasst`}
                   </h3>
                   {analysis.findings.length > 0 && (
                     <button
@@ -533,17 +493,10 @@ export default function Review({
                 </div>
               )}
             </motion.div>
-            {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
+            {analysis.questions.length > 0 && (
+              <OpenQuestions questions={analysis.questions} title={labels.questions} />
+            )}
           </section>
-          {sourceVisible && (
-            <SourcePanel
-              finding={selected}
-              document={sourceDocument}
-              documentRole={sourceDocumentRole}
-              onClose={closeSource}
-              onDocumentUpdated={onDocumentUpdated}
-            />
-          )}
         </motion.div>
       )}
       {tab === 'suggestions' && (
@@ -554,7 +507,7 @@ export default function Review({
           role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-suggestions"
           aria-labelledby="tab-suggestions"
-          className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
+          className="review-workspace source-hidden"
         >
           <section className="suggestions-column">
             {suggestions.map((finding, index) => (
@@ -564,12 +517,12 @@ export default function Review({
                 key={finding.id}
               >
                 <header>
-                  <button className="suggestion-title" onClick={() => setSelectedId(finding.id)}>
+                  <h3 className="suggestion-title" tabIndex={-1}>
                     <span className="finding-number">
                       {(index + 1).toString().padStart(2, '0')}
                     </span>
-                    <h3>{finding.title}</h3>
-                  </button>
+                    <span>{finding.title}</span>
+                  </h3>
                   <span className={`severity-tag ${finding.severity}`}>
                     <i className={`severity-dot ${finding.severity}`} />
                     {SEVERITIES[finding.severity].short}
@@ -577,15 +530,33 @@ export default function Review({
                 </header>
                 {finding.source_quote && (
                   <div className="original-clause">
-                    <span className="clause-label">AUSGANGSTEXT</span>
+                    <span className="clause-label">
+                      {documentRole(finding.source_document_id)
+                        ? `Wortlaut im ${documentRole(finding.source_document_id)}`
+                        : 'Ausgangstext'}
+                    </span>
                     <p>{finding.source_quote}</p>
+                    {!finding.verified && <small>Zitat nicht bestätigt</small>}
                   </div>
                 )}
                 <div className="proposed-clause">
-                  <span className="clause-label">VORSCHLAG</span>
+                  <span className="clause-label">{labels.suggestion}</span>
                   <p>{finding.suggestion}</p>
                 </div>
                 <footer>
+                  {finding.source_quote && (
+                    <MotionButton
+                      className="text-button"
+                      onClick={() =>
+                        setActiveSource({
+                          evidence: finding,
+                          role: documentRole(finding.source_document_id),
+                        })
+                      }
+                    >
+                      <Quote size={14} /> Fundstelle ansehen
+                    </MotionButton>
+                  )}
                   <MotionButton className="text-button" onClick={() => onCopy(finding.suggestion)}>
                     <Clipboard size={14} />
                     Kopieren
@@ -624,15 +595,6 @@ export default function Review({
               </p>
             )}
           </section>
-          {sourceVisible && (
-            <SourcePanel
-              finding={selected}
-              document={sourceDocument}
-              documentRole={sourceDocumentRole}
-              onClose={closeSource}
-              onDocumentUpdated={onDocumentUpdated}
-            />
-          )}
         </motion.div>
       )}
       {tab === 'timeline' && (
@@ -715,8 +677,29 @@ export default function Review({
               />
             </Modal>
           )}
-          {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
+          {analysis.questions.length > 0 && (
+            <OpenQuestions questions={analysis.questions} title={labels.questions} />
+          )}
         </motion.section>
+      )}
+      {activeSource && (
+        <Modal
+          title={activeSource.role ? `Fundstelle · ${activeSource.role}` : 'Fundstelle'}
+          onClose={() => setActiveSource(null)}
+          wide
+          className="source-dialog"
+        >
+          <SourcePanel
+            finding={activeSource.evidence}
+            document={documents.find(
+              (document) => document.id === activeSource.evidence.source_document_id,
+            )}
+            documentRole={activeSource.role}
+            onClose={() => setActiveSource(null)}
+            onDocumentUpdated={onDocumentUpdated}
+            embedded
+          />
+        </Modal>
       )}
       {(analysis.sources ?? []).length > 0 && (
         <section className="external-sources">
@@ -840,20 +823,24 @@ function ExportPopover({
 }
 
 function FindingCard({
+  analysis,
   finding,
   index,
   active,
   selected,
   onSelect,
   onShowSource,
+  onComparisonSource,
   onSuggestion,
 }: {
+  analysis: Analysis;
   finding: Finding;
   index: number;
   active: boolean;
   selected: boolean;
   onSelect: () => void;
   onShowSource: () => void;
+  onComparisonSource: (side: ComparisonSide) => void;
   onSuggestion: () => void;
 }) {
   const { transition } = useMotionPreferences();
@@ -886,20 +873,13 @@ function FindingCard({
       </button>
       <Collapse open={active} id={`finding-${finding.id}`} className="finding-content-motion">
         <div className="finding-content">
-          <p>{finding.description}</p>
-          {finding.legal_basis && (
-            <div className="legal-basis">
-              <span>Rechtsbezug</span>
-              <p>{finding.legal_basis}</p>
-              {finding.source_urls?.map((url, index) => (
-                <ExternalLink key={url} url={url}>
-                  Recherchebeleg {index + 1}
-                </ExternalLink>
-              ))}
-            </div>
+          {analysis.workflow === 'compare' ? (
+            <ComparisonFinding finding={finding} onShowSource={onComparisonSource} />
+          ) : (
+            <WorkflowFindingContent analysis={analysis} finding={finding} />
           )}
           <div className="finding-actions">
-            {finding.source_quote && (
+            {finding.source_quote && !finding.comparison && (
               <MotionButton className="text-button" onClick={onShowSource}>
                 <Quote size={13} />
                 Fundstelle ansehen
@@ -908,7 +888,7 @@ function FindingCard({
             )}
             {finding.suggestion && (
               <MotionButton className="text-button" onClick={onSuggestion}>
-                Formulierung
+                {reviewLabels(analysis).suggestion}
                 <ArrowRight size={13} />
               </MotionButton>
             )}
@@ -1093,12 +1073,12 @@ function SourcePanel({
   );
 }
 
-function OpenQuestions({ questions }: { questions: string[] }) {
+function OpenQuestions({ questions, title }: { questions: string[]; title: string }) {
   return (
     <section className="open-questions">
       <h3>
         <CircleHelp size={16} />
-        Offene Fragen
+        {title}
       </h3>
       <ol>
         {questions.map((question, index) => (

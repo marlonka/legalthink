@@ -24,9 +24,13 @@ from .prompts import COMPLIANCE_TASK_PROMPTS, PROMPT_VERSION, SYSTEM_PROMPT, WOR
 from .schemas import (
     Analysis,
     AnalysisRequest,
+    ComparisonEvidence,
+    ComparisonSource,
     Document,
     Finding,
     ModelAnalysis,
+    ModelComparisonAnalysis,
+    ModelComparisonFinding,
     Playbook,
     Source,
     TimelineEntry,
@@ -112,6 +116,30 @@ def verify_findings(
 ) -> list[Finding]:
     findings = []
     for item in result.findings:
+        comparison = None
+        if isinstance(item, ModelComparisonFinding):
+            # Document order is supplied by the user. The model cannot select another
+            # document (including pasted correspondence) as either contract version.
+            original, counterdraft = documents[:2]
+            comparison = ComparisonEvidence(
+                change_type=item.comparison.change_type,
+                original=verify_comparison_source(original, item.comparison.original_quote),
+                counterdraft=verify_comparison_source(
+                    counterdraft, item.comparison.counterdraft_quote
+                ),
+            )
+            target = (
+                comparison.original
+                if comparison.change_type == "removed"
+                else comparison.counterdraft
+            )
+            item = item.model_copy(
+                update={
+                    "source_document_id": target.source_document_id,
+                    "source_quote": target.source_quote,
+                    "suggestion": "" if comparison.change_type == "removed" else item.suggestion,
+                }
+            )
         doc = resolve_source(item.source_document_id, item.source_quote, documents)
         quote = normalized(item.source_quote)
         # Case-sensitive, whitespace-tolerant containment. Verification means text match only.
@@ -121,7 +149,7 @@ def verify_findings(
             location = _page_location(doc, quote) or "Textfundstelle"
         elif not verified:
             location = "Beleg nicht bestätigt"
-        fields = item.model_dump()
+        fields = item.model_dump(exclude={"comparison"})
         fields["source_document_id"] = doc.id if doc else item.source_document_id
         fields["source_location"] = location
         fields["source_urls"] = [url for url in item.source_urls if url in (allowed_urls or set())]
@@ -131,9 +159,28 @@ def verify_findings(
                 id=new_id(),
                 verified=verified,
                 source_document_name=doc.name if doc else "",
+                comparison=comparison,
             )
         )
     return findings
+
+
+def verify_comparison_source(document: Document, quote: str) -> ComparisonSource:
+    normalized_quote = normalized(quote)
+    verified = bool(
+        len(normalized_quote) >= 12 and normalized_quote in normalized(document.text)
+    )
+    return ComparisonSource(
+        source_document_id=document.id,
+        source_document_name=document.name,
+        source_quote=quote,
+        source_location=(
+            (_page_location(document, normalized_quote) or "Textfundstelle")
+            if verified
+            else "Beleg nicht bestätigt" if quote.strip() else ""
+        ),
+        verified=verified,
+    )
 
 
 def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[TimelineEntry]:
@@ -213,6 +260,7 @@ class AnalysisService:
             payload["source_text_document"] = pasted_document.model_dump(
                 include={"id", "name", "text"}
             )
+        result_schema = ModelComparisonAnalysis if request.workflow == "compare" else ModelAnalysis
         kwargs: dict[str, Any] = {
             "model": request.model,
             "input": [
@@ -235,7 +283,7 @@ class AnalysisService:
                     "type": "json_schema",
                     "name": "legal_analysis",
                     "strict": True,
-                    "schema": ModelAnalysis.model_json_schema(),
+                    "schema": result_schema.model_json_schema(),
                 }
             },
             "store": False,
@@ -326,7 +374,7 @@ class AnalysisService:
                 "gespeichert. Bitte den Prüfungsumfang reduzieren."
             )
         try:
-            result = ModelAnalysis.model_validate_json(response.output_text)
+            result = result_schema.model_validate_json(response.output_text)
         except (ValidationError, ValueError):
             raise AnalysisError(
                 "Die Modellantwort entspricht nicht dem erforderlichen Format. "

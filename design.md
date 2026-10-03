@@ -143,10 +143,10 @@ Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im g
 
 - Haupttitel ist der konkrete Berichtstitel. Prüfungsart, Modell und Zeitpunkt sind Metadaten.
 - Zusammenfassung ohne zusätzliche werbliche Überschrift.
-- Befunde, Formulierungen und Chronologie bleiben unterschiedliche Ansichten.
-- Chronologien zeigen keine Risikozähler. Leere Nebenansichten entfallen; bei nur einer Ansicht ersetzt eine Abschnittsüberschrift die Tab-Leiste.
+- Prüfpunkte, Textvorschläge und Chronologie bleiben unterschiedliche Ansichten; ihre Beschriftungen richten sich nach der Aufgabe.
+- Prioritätszahlen stehen ausschließlich in den Filtern. Leere Nebenansichten entfallen; bei nur einer Ansicht ersetzt eine Abschnittsüberschrift die Tab-Leiste.
 - „Quellen“ führt gespeicherte Dokumente und eingefügten Text auf. TXT-Downloads erhalten den vollständigen Quelltext.
-- Fundstellen einer Chronologie öffnen einen Dialog und erhalten die Leseposition der Tabelle. PDFs erscheinen mit stabiler Werkzeugleiste, Seitenwahl, Zoom und internem Scrollbereich; eine Zitatmarkierung setzt einen eindeutigen Texttreffer auf der angezeigten Seite voraus.
+- Fundstellen öffnen einen Dialog und erhalten die Leseposition. PDFs erscheinen mit stabiler Werkzeugleiste, Seitenwahl, Zoom und internem Scrollbereich; eine Zitatmarkierung setzt einen eindeutigen Texttreffer auf der angezeigten Seite voraus.
 - Jeder Befund hat eine lesbare Priorität, Beschreibung und bei Bedarf einen Rechtsbezug.
 - Zitat und Änderungsvorschlag sind eindeutig bezeichnet. Keine bloße Farbmarkierung als angebliche Änderungsverfolgung.
 - Der Dokumentbereich zeigt den tatsächlichen Dateinamen, die Fundstelle und den Wortlaut. Weiterer Dokumenttext bleibt bei Bedarf aufklappbar.
@@ -277,6 +277,26 @@ Ist die Oberfläche nach Entfernung eines Satzes genauso verständlich und bedie
 ### Juristische Arbeitspraxis
 
 Sind Original, Gegenentwurf, Zitat, Modellbewertung und Formulierungsvorschlag klar unterscheidbar? Kann man lange Klauseln und ihre Fundstellen ohne unnötige Wechsel vergleichen? Bleiben Unsicherheiten und fehlende Dokumente erkennbar? Kein automatischer Textabgleich wird als rechtliche Freigabe bezeichnet.
+
+### Ergebnisansichten nach Aufgabe
+
+| Aufgabe | Hauptansicht | Textvorschläge |
+| --- | --- | --- |
+| Vertrag | Vertragspunkte: Textstelle zur Klausel, Einordnung, Rechtsbezug | Klauselvorschläge |
+| Vergleich | Änderungen: Original und Gegenentwurf nebeneinander, danach Bewertung | Verhandlungsvorschläge |
+| Chronologie | Datum, Ereignis, Beleg und offene Frage; zusätzliche Prüfpunkte nur bei vorhandenen Ergebnissen | Textvorschläge nur bei vorhandenem Ersatztext |
+| Datenschutz | Datenschutzfragen: Prüfergebnis, Quellenauszug, Rechtsbezug und offene Angaben | Textvorschläge |
+| AVV | Vertragspunkte mit Prüfergebnis, Klauselbeleg und offenen Angaben | Klauselvorschläge |
+| DSFA | Risiken und Prüfpunkte, Unsicherheiten und offene Angaben | Vorhandene Textvorschläge, keine erfundene Maßnahmenliste |
+| Werbung | Werbeaussagen: zitierte Textstelle vor der Einordnung und dem Rechtsbezug | Textalternativen |
+
+- Priorität bezeichnet den Prüfbedarf. Sie ist kein Risikoscore oder Freigabestatus. Zähler bleiben in den Filtern; keine zusätzliche Zahlenübersicht.
+- `suggestion` enthält ausschließlich Ersatztext. Maßnahmen und Klärungsbedarf stehen in der Bewertung beziehungsweise in offenen Fragen; vorhandene Ersatztexte niemals zu „Maßnahmen“ umbenennen.
+- Im Vergleich stammen beide Wortlaute aus getrennten, fest zugeordneten Dokumentfassungen. Beide Zitate werden unabhängig abgeglichen. Alte Ergebnisse ohne dieses Datenpaar zeigen ihren bisherigen Beleg und keine erfundene zweite Fassung.
+- Die Änderungskategorie stammt aus der Analyse. Ein leeres Zitat allein beweist keine Streichung oder Ergänzung. Eingereichter Gegenentwurf und vorgeschlagene Verhandlungsfassung bleiben getrennt.
+- Ein Quellenzitat kann auch aus einem eingefügten E-Mail-Verlauf stammen. Rollenbezeichnungen dürfen aus einem allgemeinen Beleg keine rechtlich gesicherte Vertragsklausel oder Werbeaussage machen. Unbestätigte Zitate sind direkt gekennzeichnet.
+- Fundstellen öffnen im Dialog mit TXT-Zugriff und vorhandener PDF-Vorschau. Die Ergebnisliste behält dabei ihre Breite und Scrollposition; beim Schließen kehrt der Fokus zur auslösenden Textstelle zurück.
+- Mobil stehen Vergleichsfassungen untereinander: Original, Gegenentwurf, Bewertung. Keine horizontale Seitenverschiebung. Leere Nebenansichten entfallen.
 
 ### Interface-Design
 

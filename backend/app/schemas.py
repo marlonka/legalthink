@@ -102,10 +102,43 @@ class ModelFinding(StrictModel):
     source_urls: list[str]
 
 
+class ModelComparisonEvidence(StrictModel):
+    change_type: Literal["modified", "added", "removed"]
+    original_quote: str
+    counterdraft_quote: str
+
+    @model_validator(mode="after")
+    def validate_sides(self) -> ModelComparisonEvidence:
+        if self.change_type == "added" and self.original_quote.strip():
+            raise ValueError("Eine ergänzte Regelung hat keinen Originalwortlaut.")
+        if self.change_type == "removed" and self.counterdraft_quote.strip():
+            raise ValueError("Eine gestrichene Regelung hat keinen Gegenentwurfswortlaut.")
+        return self
+
+
+class ModelComparisonFinding(ModelFinding):
+    comparison: ModelComparisonEvidence
+
+
+class ComparisonSource(StrictModel):
+    source_document_id: str
+    source_document_name: str
+    source_quote: str
+    source_location: str
+    verified: bool
+
+
+class ComparisonEvidence(StrictModel):
+    change_type: Literal["modified", "added", "removed"]
+    original: ComparisonSource
+    counterdraft: ComparisonSource
+
+
 class Finding(ModelFinding):
     id: str
     verified: bool
     source_document_name: str = ""
+    comparison: ComparisonEvidence | None = None
 
 
 class ModelTimelineEntry(StrictModel):
@@ -136,6 +169,10 @@ class ModelAnalysis(StrictModel):
     findings: list[ModelFinding] = Field(max_length=30)
     timeline: list[ModelTimelineEntry] = Field(max_length=100)
     questions: list[str] = Field(max_length=12)
+
+
+class ModelComparisonAnalysis(ModelAnalysis):
+    findings: list[ModelComparisonFinding] = Field(max_length=30)
 
 
 class Usage(StrictModel):

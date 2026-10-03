@@ -32,12 +32,14 @@ Für den Vergleich zuerst den eigenen Entwurf, dann den Gegenentwurf wählen. Ge
 
 | Werkzeug | Ergebnis |
 | --- | --- |
-| Vertragsprüfung | Priorisierte Befunde, Fundstellen und Formulierungsvorschläge |
-| Versionsvergleich | Änderungen zwischen Ausgangs- und Gegenentwurf |
+| Vertragsprüfung | Vertragspunkte, Klauselbelege und separate Klauselvorschläge |
+| Versionsvergleich | Original und Gegenentwurf nebeneinander, Bewertung und separate Verhandlungsvorschläge |
 | Chronologie | Ereignisse, Quellen und offene Sachverhaltsfragen |
-| Datenschutz | Strukturierte Prüfung von Datenschutzunterlagen |
+| Datenschutz | Datenschutzfragen, AVV-Vertragspunkte oder DSFA-Risiken und Prüfpunkte; jeweils mit offenen Angaben |
 | Werbeprüfung | Aussagen, Prüfbedarf und rechtliche Anknüpfungspunkte |
 | Kanzlei-Playbooks | Eigene Prüfmaßstäbe und Formulierungsvorgaben |
+
+Ergebnisansichten und Vorschlagsbezeichnungen richten sich nach der Aufgabe. Leere Nebenansichten entfallen. Fundstellen öffnen in einem Dialog, ohne die Ergebnisliste zu verschieben. Neue Vergleiche speichern und prüfen den Wortlaut beider Fassungen getrennt; ältere Ergebnisse behalten ihre vorhandenen Belege. Für die Gegenüberstellung alter Vergleiche ist eine neue Analyse nötig.
 
 ## Modelle
 
