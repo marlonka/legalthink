@@ -65,4 +65,14 @@
   border-radius: inherit;
   background: var(--surface-selected);
   pointer-events: none;
+  animation: selection-reveal 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes selection-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

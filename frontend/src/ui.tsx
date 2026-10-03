@@ -6,6 +6,7 @@ import { ArrowUpRight, Check, ChevronDown, X } from 'lucide-react';
 import type { Model } from './types';
 import { MotionButton, useMotionPreferences } from './motion';
 import './overlay-motion.css';
+import BrandMark from './BrandMark';
 
 export const DEFAULT_MODELS: Model[] = [
   {
@@ -35,9 +36,7 @@ export const EFFORT_NAMES: Record<string, string> = {
 export function Brand() {
   return (
     <span className="brand">
-      <svg className="brand-symbol" viewBox="0 0 32 32" aria-hidden="true">
-        <path d="M7 5v22h19M14 5v15h12" />
-      </svg>
+      <BrandMark />
       <span>
         LegalThink<span className="brand-suffix">GPT</span>
       </span>
@@ -52,7 +51,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
       className="page-transition"
       initial={reduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={transition('fade')}
+      transition={transition('page')}
     >
       {children}
     </motion.div>
@@ -192,23 +191,19 @@ export function Modal({
       aria-hidden={!present || undefined}
       initial={reduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={transition('fade')}
+      exit={{ opacity: 0, transition: transition('exit') }}
+      transition={transition('enter')}
       onMouseDown={(event) => {
         if (present && event.target === event.currentTarget) onClose();
       }}
     >
-      <motion.div
+      <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
         className={`modal ${wide ? 'modal-wide' : ''} ${className}`}
-        initial={reduced ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={transition('fade')}
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
@@ -217,7 +212,7 @@ export function Modal({
           </MotionButton>
         </div>
         {children}
-      </motion.div>
+      </div>
     </motion.div>,
     portal,
   );
@@ -234,16 +229,41 @@ function PickerPopover({
 }) {
   const present = useIsPresent();
   const { reduced, transition } = useMotionPreferences();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!present) return;
+    const selected =
+      ref.current?.querySelector<HTMLElement>('[aria-pressed="true"], input') ??
+      ref.current?.querySelector<HTMLElement>('button:not(:disabled)');
+    selected?.focus({ preventScroll: true });
+  }, [present, effort]);
   return (
     <motion.div
+      ref={ref}
       id={id}
       className={`picker-popover motion-picker-popover ${effort ? 'effort-popover' : ''}`}
       inert={!present}
       aria-hidden={!present || undefined}
       initial={reduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={transition('fade')}
+      exit={{ opacity: 0, transition: transition('exit') }}
+      transition={transition('enter')}
+      onKeyDown={(event) => {
+        if (effort || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+        const options = Array.from(
+          event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+        );
+        if (!options.length) return;
+        event.preventDefault();
+        const index = options.indexOf(document.activeElement as HTMLButtonElement);
+        const next =
+          event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? options.length - 1
+              : (index + (event.key === 'ArrowDown' ? 1 : options.length - 1)) % options.length;
+        options[next].focus({ preventScroll: true });
+      }}
     >
       {children}
     </motion.div>
@@ -279,7 +299,7 @@ export function ModelPicker({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState<'model' | 'effort' | null>(null);
-  const { reduced, transition } = useMotionPreferences();
+  const { transition } = useMotionPreferences();
   const ref = useRef<HTMLDivElement>(null);
   const current = models.find((item) => item.id === model) ?? models[0];
   const menuId = useId();
@@ -305,8 +325,13 @@ export function ModelPicker({
     <div
       className="model-picker"
       ref={ref}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(null);
+      }}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && open) {
+          event.preventDefault();
+          event.stopPropagation();
           closePicker();
         }
       }}
@@ -327,7 +352,9 @@ export function ModelPicker({
         />
         <motion.span
           className="picker-chevron"
-          animate={{ rotate: reduced ? 0 : open === 'model' ? 180 : 0 }}
+          aria-hidden="true"
+          initial={false}
+          animate={{ rotate: open === 'model' ? 180 : 0 }}
           transition={transition('control')}
         >
           <ChevronDown size={12} />
@@ -347,7 +374,9 @@ export function ModelPicker({
         <StablePickerLabel value={EFFORT_NAMES[effort] ?? effort} alternatives={effortLabels} />
         <motion.span
           className="picker-chevron"
-          animate={{ rotate: reduced ? 0 : open === 'effort' ? 180 : 0 }}
+          aria-hidden="true"
+          initial={false}
+          animate={{ rotate: open === 'effort' ? 180 : 0 }}
           transition={transition('control')}
         >
           <ChevronDown size={12} />

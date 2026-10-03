@@ -162,14 +162,50 @@
   border-radius: 0 0 var(--radius-composer) var(--radius-composer);
 }
 
-/* Both controls share one row; captions cannot change their alignment. */
+.composer-research-toggle {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+}
+
+.composer-research-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.composer-research-toggle[aria-pressed='true'] {
+  border-color: var(--border-strong);
+  background: var(--surface-selected);
+  color: var(--text-primary);
+}
+
+.composer-research-check {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  border-radius: 50%;
+  background: var(--surface-selected);
+  visibility: hidden;
+}
+
+.composer-research-toggle[aria-pressed='true'] .composer-research-check {
+  visibility: visible;
+}
+
 .composer-options.aligned-composer-options {
   display: grid;
   grid-template-columns: minmax(185px, 1fr) minmax(0, 1.3fr);
   grid-template-areas:
-    'playbook-label .'
-    'playbook-control research-control'
-    '. research-note';
+    'playbook-label research-label'
+    'playbook-control research-note';
   align-items: center;
   gap: 9px 24px;
 }
@@ -191,21 +227,13 @@
   font-size: 14px;
 }
 
-.aligned-composer-options > .research-option {
-  grid-area: research-control;
-  align-items: center;
-  align-self: stretch;
-  min-height: 42px;
-  padding-top: 0;
-}
-
-.aligned-composer-options .research-option input {
-  margin: 0;
+.aligned-composer-options > .composer-research-label {
+  grid-area: research-label;
+  min-width: 0;
 }
 
 .composer-research-note {
   grid-area: research-note;
-  padding-left: 24px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.6;
@@ -260,11 +288,11 @@
     grid-template-areas:
       'playbook-label'
       'playbook-control'
-      'research-control'
+      'research-label'
       'research-note';
   }
 
-  .aligned-composer-options > .research-option {
+  .aligned-composer-options > .composer-research-label {
     margin-top: 10px;
   }
 }
@@ -303,8 +331,10 @@
     font-size: 16px;
   }
 
-  .aligned-composer-options > .research-option {
-    min-height: 44px;
+  .composer-research-toggle {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
   }
 
   .uploaded-documents.composer-document-list {
@@ -317,5 +347,30 @@
 
   .comparison-details .reorder-button {
     min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .analysis-composer .composer-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .composer-toolbar .composer-toolbar-right {
+    display: contents;
+  }
+
+  .composer-research-toggle {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .composer-toolbar .model-picker,
+  .composer-toolbar .run-analysis-button {
+    grid-column: 1 / -1;
+  }
+
+  .composer-toolbar .model-picker {
+    justify-content: space-between;
   }
 }
