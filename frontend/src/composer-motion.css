@@ -1,47 +1,136 @@
-/* Move selection surfaces independently of the labels they identify. */
-.motion-workflows > button {
-  position: relative;
-  isolation: isolate;
-}
-
-.workflow-selector.motion-workflows > button[aria-pressed='true'] {
-  background: transparent;
-  border-color: transparent;
-}
-
-.workflow-selection-surface {
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  border: 1px solid var(--border-selected);
-  border-radius: inherit;
-  background: var(--surface-selected);
-  pointer-events: none;
-}
-
-.workflow-selector.motion-workflows > button[aria-pressed='true']:hover {
-  background: transparent;
-}
-
-.workflow-selector.motion-workflows
-  > button[aria-pressed='true']:hover
-  .workflow-selection-surface {
-  background: var(--surface-hover);
+/* Selection changes color without changing control geometry. */
+.workflow-selector button,
+.compliance-presets > button {
+  font-weight: 400;
 }
 
 .composer-disclosure-icon,
-.composer-drop-icon {
+.composer-drop-icon,
+.composer-action-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.motion-document-list {
-  position: relative;
+.composer-action-icon {
+  width: 17px;
+}
+
+/* The longest label reserves only the space the action can actually use. */
+.stable-action-label {
+  display: inline-grid;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.stable-action-label > span {
+  grid-area: 1 / 1;
+}
+
+.stable-action-size {
+  visibility: hidden;
+}
+
+.uploaded-documents.composer-document-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: stretch;
+}
+
+.composer-document-list .document-chip {
+  min-width: 0;
+}
+
+.composer-document-list .document-chip > div:nth-child(2) {
+  flex: 1;
+}
+
+.composer-document-list .document-chip > div > span,
+.composer-document-list .document-chip small {
+  max-width: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.composer-document-list .document-chip-icon {
+  flex-shrink: 0;
 }
 
 .composer-options-collapse {
   border-radius: 0 0 var(--radius-composer) var(--radius-composer);
+}
+
+/* Both controls share one row; captions cannot change their alignment. */
+.composer-options.aligned-composer-options {
+  display: grid;
+  grid-template-columns: minmax(185px, 1fr) minmax(0, 1.3fr);
+  grid-template-areas:
+    'playbook-label .'
+    'playbook-control research-control'
+    '. research-note';
+  align-items: center;
+  gap: 9px 24px;
+}
+
+.aligned-composer-options > .composer-playbook-label {
+  grid-area: playbook-label;
+  min-width: 0;
+}
+
+.composer-playbook-select {
+  grid-area: playbook-control;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  font-size: 14px;
+}
+
+.aligned-composer-options > .research-option {
+  grid-area: research-control;
+  align-items: center;
+  align-self: stretch;
+  min-height: 42px;
+  padding-top: 0;
+}
+
+.aligned-composer-options .research-option input {
+  margin: 0;
+}
+
+.composer-research-note {
+  grid-area: research-note;
+  padding-left: 24px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Workflow-specific controls extend below the common input and toolbar. */
+.composer-workflow-details {
+  padding: 14px 23px 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.comparison-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.comparison-details .comparison-order-note {
+  margin: 0;
+}
+
+.comparison-details .reorder-button {
+  margin: 0;
+  min-height: 36px;
 }
 
 .drop-overlay.composer-drop-feedback {
@@ -56,7 +145,7 @@
   pointer-events: none;
 }
 
-/* Reserving this small slot keeps filenames still while a selection changes. */
+/* The badge slot exists before and after selection. */
 .document-picker-status-slot {
   display: grid;
   flex-shrink: 0;
@@ -65,6 +154,40 @@
   height: 26px;
 }
 
-.document-picker-status-slot > .document-picker-number {
-  grid-area: 1 / 1;
+@media (max-width: 900px) {
+  .composer-options.aligned-composer-options {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'playbook-label'
+      'playbook-control'
+      'research-control'
+      'research-note';
+  }
+
+  .aligned-composer-options > .research-option {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 700px) {
+  .composer-playbook-select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .aligned-composer-options > .research-option {
+    min-height: 44px;
+  }
+
+  .uploaded-documents.composer-document-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .composer-workflow-details {
+    padding: 14px 19px 18px;
+  }
+
+  .comparison-details .reorder-button {
+    min-height: 44px;
+  }
 }

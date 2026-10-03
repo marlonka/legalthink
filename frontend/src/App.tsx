@@ -10,7 +10,7 @@ import {
   Settings2,
   X,
 } from 'lucide-react';
-import { AnimatePresence, LayoutGroup, motion, useIsPresent } from 'motion/react';
+import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
 import Review from './Review';
 import { History, Playbooks, Settings } from './WorkspacePages';
@@ -47,19 +47,6 @@ type DeleteTarget =
   | { type: 'playbook'; item: Playbook }
   | { type: 'document'; item: DocumentRecord };
 
-function NavigationSelection({ id }: { id: string }) {
-  const { reduced, transition } = useMotionPreferences();
-  return (
-    <motion.span
-      className="nav-selection"
-      aria-hidden="true"
-      layoutId={reduced ? undefined : id}
-      initial={false}
-      transition={transition('layout')}
-    />
-  );
-}
-
 function Notification({ message, onClose }: { message: string; onClose: () => void }) {
   const present = useIsPresent();
   const { reduced, transition } = useMotionPreferences();
@@ -70,10 +57,10 @@ function Notification({ message, onClose }: { message: string; onClose: () => vo
       aria-atomic="true"
       aria-hidden={!present || undefined}
       inert={!present}
-      initial={reduced ? false : { y: 6, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: reduced ? 0 : 4, opacity: 0 }}
-      transition={{ y: transition('control'), opacity: transition('fade') }}
+      initial={reduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={transition('fade')}
     >
       <Check size={16} />
       <span>{message}</span>
@@ -97,8 +84,8 @@ export default function App() {
   mobileOpenRef.current = mobileOpen;
   const [health, setHealth] = useState<Health | null>(null);
   const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
-  const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6.1-sol'));
-  const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'medium'));
+  const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6-luna'));
+  const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'high'));
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -592,79 +579,64 @@ export default function App() {
               <X size={18} />
             </MotionButton>
           </div>
-          <LayoutGroup id="primary-navigation">
-            <nav className="primary-nav">
-              <MotionButton
-                className={`nav-item nav-motion-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
-                aria-current={route === 'new' ? 'page' : undefined}
-                onClick={() => navigate('new')}
-              >
-                <Plus size={18} strokeWidth={1.6} />
-                <span>Neue Analyse</span>
-                {route === 'new' && <NavigationSelection id="primary-selection" />}
-              </MotionButton>
-              <MotionButton
-                className={`nav-item nav-motion-item ${route === 'history' || isReview ? 'active' : ''}`}
-                aria-current={route === 'history' ? 'page' : undefined}
-                onClick={() => navigate('history')}
-              >
-                <HistoryIcon size={17} strokeWidth={1.6} />
-                <span>Analysen</span>
-                {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
-                {(route === 'history' || isReview) && (
-                  <NavigationSelection id="primary-selection" />
-                )}
-              </MotionButton>
-              <MotionButton
-                className={`nav-item nav-motion-item ${route === 'playbooks' ? 'active' : ''}`}
-                aria-current={route === 'playbooks' ? 'page' : undefined}
-                onClick={() => navigate('playbooks')}
-              >
-                <BookOpen size={17} strokeWidth={1.6} />
-                <span>Kanzlei-Playbooks</span>
-                {route === 'playbooks' && <NavigationSelection id="primary-selection" />}
-              </MotionButton>
-            </nav>
-          </LayoutGroup>
+          <nav className="primary-nav">
+            <MotionButton
+              className={`nav-item nav-motion-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
+              aria-current={route === 'new' ? 'page' : undefined}
+              onClick={() => navigate('new')}
+            >
+              <Plus size={18} strokeWidth={1.6} />
+              <span>Neue Analyse</span>
+            </MotionButton>
+            <MotionButton
+              className={`nav-item nav-motion-item ${route === 'history' || isReview ? 'active' : ''}`}
+              aria-current={route === 'history' ? 'page' : undefined}
+              onClick={() => navigate('history')}
+            >
+              <HistoryIcon size={17} strokeWidth={1.6} />
+              <span>Analysen</span>
+              {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
+            </MotionButton>
+            <MotionButton
+              className={`nav-item nav-motion-item ${route === 'playbooks' ? 'active' : ''}`}
+              aria-current={route === 'playbooks' ? 'page' : undefined}
+              onClick={() => navigate('playbooks')}
+            >
+              <BookOpen size={17} strokeWidth={1.6} />
+              <span>Kanzlei-Playbooks</span>
+            </MotionButton>
+          </nav>
           {analyses.length > 0 && (
-            <LayoutGroup id="recent-navigation">
-              <div className="sidebar-recent">
-                <div className="nav-section-label">Letzte Analysen</div>
-                {analyses.slice(0, 4).map((item) => (
-                  <MotionButton
-                    className={`recent-item nav-motion-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
-                    aria-current={analysis?.id === item.id && isReview ? 'page' : undefined}
-                    title={item.title}
-                    key={item.id}
-                    onClick={() => {
-                      setAnalysis(item);
-                      navigate(`analysis/${item.id}`);
-                    }}
-                  >
-                    <FileText size={14} />
-                    <span>{item.title}</span>
-                    {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
-                    {analysis?.id === item.id && isReview && (
-                      <NavigationSelection id="recent-selection" />
-                    )}
-                  </MotionButton>
-                ))}
-              </div>
-            </LayoutGroup>
-          )}
-          <LayoutGroup id="settings-navigation">
-            <div className="sidebar-bottom">
-              <MotionButton
-                className={`nav-item nav-motion-item ${route === 'settings' ? 'active' : ''}`}
-                aria-current={route === 'settings' ? 'page' : undefined}
-                onClick={() => navigate('settings')}
-              >
-                <Settings2 size={17} strokeWidth={1.6} />
-                <span>Einstellungen</span>
-                {route === 'settings' && <NavigationSelection id="settings-selection" />}
-              </MotionButton>
+            <div className="sidebar-recent">
+              <div className="nav-section-label">Letzte Analysen</div>
+              {analyses.slice(0, 4).map((item) => (
+                <MotionButton
+                  className={`recent-item nav-motion-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
+                  aria-current={analysis?.id === item.id && isReview ? 'page' : undefined}
+                  title={item.title}
+                  key={item.id}
+                  onClick={() => {
+                    setAnalysis(item);
+                    navigate(`analysis/${item.id}`);
+                  }}
+                >
+                  <FileText size={14} />
+                  <span>{item.title}</span>
+                  {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
+                </MotionButton>
+              ))}
             </div>
-          </LayoutGroup>
+          )}
+          <div className="sidebar-bottom">
+            <MotionButton
+              className={`nav-item nav-motion-item ${route === 'settings' ? 'active' : ''}`}
+              aria-current={route === 'settings' ? 'page' : undefined}
+              onClick={() => navigate('settings')}
+            >
+              <Settings2 size={17} strokeWidth={1.6} />
+              <span>Einstellungen</span>
+            </MotionButton>
+          </div>
         </motion.aside>
         <div className="main-shell" inert={mobileOpen}>
           <header className="topbar">

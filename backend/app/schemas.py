@@ -12,17 +12,17 @@ Severity = Literal["high", "medium", "low", "info"]
 
 MODELS = [
     {
-        "id": "gpt-6.1-sol",
-        "name": "GPT-6.1 Sol",
-        "description": "Für anspruchsvolle Prüfungen und komplexe Abwägungen.",
-        "efforts": ["low", "medium", "high", "xhigh", "max"],
-        "default_effort": "medium",
-    },
-    {
         "id": "gpt-6-luna",
         "name": "GPT-6 Luna",
         "description": "Für fokussierte Aufgaben und schnelle erste Prüfungen.",
         "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "default_effort": "high",
+    },
+    {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "description": "Für anspruchsvolle Prüfungen und komplexe Abwägungen.",
+        "efforts": ["low", "medium", "high", "xhigh", "max"],
         "default_effort": "medium",
     },
 ]
@@ -52,8 +52,8 @@ class AnalysisRequest(StrictModel):
     workflow: Workflow
     document_ids: list[str] = Field(min_length=1, max_length=12)
     context: str = Field(default="", max_length=20000)
-    model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6.1-sol"
-    effort: Effort = "medium"
+    model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
+    effort: Effort = "high"
     playbook_id: str | None = None
     research: bool = False
 

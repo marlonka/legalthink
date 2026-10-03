@@ -13,7 +13,9 @@ Verbotene Muster: „Mehr Klarheit. Für Ihr nächstes Argument.“, „Raum fü
 # Prüfung und Auslieferung
 
 - Bei Änderungen an der Oberfläche zuerst `design.md` lesen. Farben, Flächen, Abstände und Zustände aus dem dort beschriebenen Designsystem verwenden; beide Themes über gemeinsame semantische Tokens gestalten.
+- Bedienflächen und Text bleiben beim Drücken, Auswählen und Laden positions- und größenstabil. Keine Skalierung oder Verschiebung von Buttons, Seiten, Menüs oder Dialogen als Klickfeedback. Wechselnde Beschriftungen brauchen reservierte Breite, Scrollbereiche stabile Scrollbalkenbreite. Neue Interaktionen mit Positionsmessungen über mehrere Frames prüfen; ein bestandener Funktionstest allein belegt keine Layoutstabilität.
 
 - Vorhandene Bedienabläufe und Barrierefreiheit bei Text- und Layoutänderungen erhalten. Desktop und Mobilansicht prüfen.
 - Keine echten OpenAI-Anfragen in Entwicklung oder Tests, sofern Marlon sie nicht ausdrücklich freigibt.
+- Für freigegebene echte Modelltests ausschließlich `gpt-6-luna` mit `high` verwenden. Standardauswahl der Anwendung ist ebenfalls Luna/Hoch.
 - Änderungen mit Conventional Commit committen und pushen.

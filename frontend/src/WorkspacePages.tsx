@@ -1,5 +1,5 @@
-import { useId, useRef, useState } from 'react';
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { useRef, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import {
   ArrowUpRight,
   BookOpen,
@@ -25,7 +25,7 @@ import type { ThemePreference } from './theme';
 import { api } from './types';
 import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui';
 import { workflowName } from './workflows';
-import { MotionButton, useMotionPreferences } from './motion';
+import { MotionButton } from './motion';
 
 export function History({
   analyses,
@@ -91,11 +91,7 @@ export function History({
         <div className="history-list">
           {filtered.map((analysis) => (
             <article className="history-item" key={analysis.id}>
-              <MotionButton
-                className="history-item-main"
-                whileTap={{ scale: 0.997 }}
-                onClick={() => onOpen(analysis)}
-              >
+              <MotionButton className="history-item-main" onClick={() => onOpen(analysis)}>
                 <span className="history-icon">
                   <FileText size={21} strokeWidth={1.4} />
                 </span>
@@ -242,11 +238,7 @@ export function Playbooks({
         <div className="playbooks-grid">
           {playbooks.map((playbook) => (
             <article className="playbook-card" key={playbook.id}>
-              <MotionButton
-                onClick={() => setSelected(playbook)}
-                className="playbook-card-content"
-                whileTap={{ scale: 0.997 }}
-              >
+              <MotionButton onClick={() => setSelected(playbook)} className="playbook-card-content">
                 <div>
                   <BookOpen size={22} strokeWidth={1.4} />
                   <ArrowUpRight size={15} />
@@ -442,8 +434,6 @@ export function Settings({
   onRefresh: () => void;
   refreshing: boolean;
 }) {
-  const appearanceId = useId();
-  const { reduced, transition } = useMotionPreferences();
   return (
     <div className="standard-page settings-page">
       <header className="standard-page-header">
@@ -458,46 +448,39 @@ export function Settings({
         </div>
         <div className="appearance-row">
           <span id="appearance-mode">Modus</span>
-          <LayoutGroup id={appearanceId}>
-            <div
-              className="theme-options motion-theme-options"
-              role="radiogroup"
-              aria-labelledby="appearance-mode"
-            >
-              {(
-                [
-                  { value: 'system', label: 'System', icon: Monitor },
-                  { value: 'light', label: 'Hell', icon: Sun },
-                  { value: 'dark', label: 'Dunkel', icon: Moon },
-                ] as const
-              ).map(({ value, label, icon: Icon }) => (
-                <label className="theme-option" key={value}>
-                  {themePreference === value && (
-                    <motion.span
-                      aria-hidden="true"
-                      className="theme-selection-surface"
-                      layoutId={reduced ? undefined : 'appearance-selection'}
-                      transition={transition('control')}
-                    />
-                  )}
-                  <input
-                    type="radio"
-                    name="appearance"
-                    value={value}
-                    checked={themePreference === value}
-                    onChange={() => onThemePreference(value)}
-                  />
-                  <Icon
-                    className="theme-option-icon"
-                    size={18}
-                    strokeWidth={1.6}
-                    aria-hidden="true"
-                  />
-                  <span className="theme-option-label">{label}</span>
-                </label>
-              ))}
-            </div>
-          </LayoutGroup>
+          <div
+            className="theme-options motion-theme-options"
+            role="radiogroup"
+            aria-labelledby="appearance-mode"
+          >
+            {(
+              [
+                { value: 'system', label: 'System', icon: Monitor },
+                { value: 'light', label: 'Hell', icon: Sun },
+                { value: 'dark', label: 'Dunkel', icon: Moon },
+              ] as const
+            ).map(({ value, label, icon: Icon }) => (
+              <label className="theme-option" key={value}>
+                {themePreference === value && (
+                  <span aria-hidden="true" className="theme-selection-surface" />
+                )}
+                <input
+                  type="radio"
+                  name="appearance"
+                  value={value}
+                  checked={themePreference === value}
+                  onChange={() => onThemePreference(value)}
+                />
+                <Icon
+                  className="theme-option-icon"
+                  size={18}
+                  strokeWidth={1.6}
+                  aria-hidden="true"
+                />
+                <span className="theme-option-label">{label}</span>
+              </label>
+            ))}
+          </div>
         </div>
       </section>
       <section className="settings-section">

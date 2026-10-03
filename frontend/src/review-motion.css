@@ -1,3 +1,21 @@
+.review-motion {
+  overflow-anchor: none;
+}
+
+.review-motion .review-stable-label {
+  display: inline-grid;
+  min-width: 0;
+  text-align: inherit;
+}
+
+.review-motion .review-stable-label > span {
+  grid-area: 1 / 1;
+}
+
+.review-motion .mark-button {
+  justify-content: flex-start;
+}
+
 .review-motion .review-tabs > button.active::after {
   display: none;
 }

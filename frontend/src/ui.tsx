@@ -9,17 +9,17 @@ import './overlay-motion.css';
 
 export const DEFAULT_MODELS: Model[] = [
   {
-    id: 'gpt-6.1-sol',
-    name: 'GPT-6.1 Sol',
-    description: '',
-    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-    default_effort: 'medium',
-  },
-  {
     id: 'gpt-6-luna',
     name: 'GPT-6 Luna',
     description: '',
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
+    default_effort: 'high',
+  },
+  {
+    id: 'gpt-6.1-sol',
+    name: 'GPT-6.1 Sol',
+    description: '',
+    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     default_effort: 'medium',
   },
 ];
@@ -52,9 +52,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
   return (
     <motion.div
       className="page-transition"
-      initial={reduced ? false : { opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ y: transition('panel'), opacity: transition('fade') }}
+      initial={reduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={transition('fade')}
     >
       {children}
     </motion.div>
@@ -205,10 +205,10 @@ export function Modal({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={`modal ${wide ? 'modal-wide' : ''}`}
-        initial={reduced ? false : { opacity: 0, scale: 0.985, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: reduced ? 1 : 0.99, y: reduced ? 0 : 4 }}
-        transition={{ ...transition('panel'), opacity: transition('fade') }}
+        initial={reduced ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={transition('fade')}
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
@@ -240,13 +240,26 @@ function PickerPopover({
       className={`picker-popover motion-picker-popover ${effort ? 'effort-popover' : ''}`}
       inert={!present}
       aria-hidden={!present || undefined}
-      initial={reduced ? false : { opacity: 0, y: 5, scale: 0.985 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: reduced ? 0 : 3, scale: reduced ? 1 : 0.99 }}
-      transition={{ ...transition('panel'), opacity: transition('fade') }}
+      initial={reduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={transition('fade')}
     >
       {children}
     </motion.div>
+  );
+}
+
+function StablePickerLabel({ value, alternatives }: { value: string; alternatives: string[] }) {
+  return (
+    <span className="stable-picker-label">
+      {alternatives.map((label) => (
+        <span key={label} className="picker-label-reserve" aria-hidden="true">
+          {label}
+        </span>
+      ))}
+      <span>{value}</span>
+    </span>
   );
 }
 
@@ -271,9 +284,14 @@ export function ModelPicker({
   const current = models.find((item) => item.id === model) ?? models[0];
   const menuId = useId();
   const effortIndex = Math.max(0, current.efforts.indexOf(effort));
+  const effortLabels = Array.from(
+    new Set(models.flatMap((item) => item.efforts.map((value) => EFFORT_NAMES[value] ?? value))),
+  );
   function closePicker() {
     setOpen(null);
-    ref.current?.querySelector<HTMLButtonElement>(`[data-picker="${open}"]`)?.focus();
+    ref.current
+      ?.querySelector<HTMLButtonElement>(`[data-picker="${open}"]`)
+      ?.focus({ preventScroll: true });
   }
   useEffect(() => {
     if (!open) return;
@@ -296,13 +314,17 @@ export function ModelPicker({
       <MotionButton
         type="button"
         className="picker-button"
+        title={current.name}
         data-picker="model"
         aria-expanded={open === 'model'}
         aria-controls={`${menuId}-model`}
         onClick={() => setOpen(open === 'model' ? null : 'model')}
         disabled={disabled}
       >
-        <span>{current.name}</span>
+        <StablePickerLabel
+          value={current.name}
+          alternatives={Array.from(new Set(models.map((item) => item.name)))}
+        />
         <motion.span
           className="picker-chevron"
           animate={{ rotate: reduced ? 0 : open === 'model' ? 180 : 0 }}
@@ -322,7 +344,7 @@ export function ModelPicker({
         onClick={() => setOpen(open === 'effort' ? null : 'effort')}
         disabled={disabled}
       >
-        <span>{EFFORT_NAMES[effort] ?? effort}</span>
+        <StablePickerLabel value={EFFORT_NAMES[effort] ?? effort} alternatives={effortLabels} />
         <motion.span
           className="picker-chevron"
           animate={{ rotate: reduced ? 0 : open === 'effort' ? 180 : 0 }}
