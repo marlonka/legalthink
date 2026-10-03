@@ -16,6 +16,7 @@ DISCLAIMER = (
     "Textfundstelle, nicht die behaupteten Tatsachen oder die rechtliche Richtigkeit."
 )
 PRIORITIES = {"high": "Hoch", "medium": "Mittel", "low": "Niedrig", "info": "Hinweis"}
+CHANGE_TYPES = {"modified": "Geändert", "added": "Ergänzt", "removed": "Gestrichen"}
 
 
 def finding_source(finding: Finding) -> str:
@@ -33,10 +34,18 @@ def quote_confirmation(verified: bool) -> str:
 
 
 def has_revision(finding: Finding) -> bool:
-    return bool(finding.verified and finding.source_quote.strip() and finding.suggestion.strip())
+    return bool(
+        finding.verified
+        and finding.source_quote.strip()
+        and finding.suggestion.strip()
+        and not (finding.comparison and finding.comparison.change_type == "removed")
+    )
 
 
 def markdown(analysis: Analysis) -> bytes:
+    proposal_label = (
+        "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
+    )
     lines = [f"# {analysis.title}", "", DISCLAIMER, ""]
     if analysis.is_demo:
         lines += ["**SYNTHETISCHES BEISPIEL · Keine Modellanalyse**", ""]
@@ -59,18 +68,38 @@ def markdown(analysis: Analysis) -> bytes:
             finding.description,
             "",
         ]
-        source = finding_source(finding)
-        if source:
-            lines += [f"Fundstelle: {source}", ""]
-        if finding.source_quote.strip():
-            lines += [
-                "> " + finding.source_quote.replace("\n", "\n> "),
-                "",
-                quote_confirmation(finding.verified),
-                "",
-            ]
+        if finding.comparison:
+            comparison = finding.comparison
+            lines += [f"Änderungsart: {CHANGE_TYPES[comparison.change_type]}", ""]
+            for label, side in (
+                ("Original", comparison.original),
+                ("Gegenentwurf", comparison.counterdraft),
+            ):
+                lines += [f"**{label}** · {side.source_document_name}", ""]
+                if side.source_quote.strip():
+                    lines += [
+                        f"Fundstelle: {side.source_location}",
+                        "",
+                        "> " + side.source_quote.replace("\n", "\n> "),
+                        "",
+                        quote_confirmation(side.verified),
+                        "",
+                    ]
+                else:
+                    lines += ["Kein Wortlaut angegeben; Vollständigkeit manuell prüfen.", ""]
+        else:
+            source = finding_source(finding)
+            if source:
+                lines += [f"Fundstelle: {source}", ""]
+            if finding.source_quote.strip():
+                lines += [
+                    "> " + finding.source_quote.replace("\n", "\n> "),
+                    "",
+                    quote_confirmation(finding.verified),
+                    "",
+                ]
         if finding.suggestion.strip():
-            lines += ["**Formulierungsvorschlag**", "", finding.suggestion, ""]
+            lines += [f"**{proposal_label}**", "", finding.suggestion, ""]
         if finding.legal_basis.strip():
             lines += ["**Rechtlicher Bezug (zu prüfen)**", "", finding.legal_basis, ""]
         if finding.source_urls:
@@ -133,6 +162,9 @@ def add_hyperlink(paragraph, label: str, url: str) -> None:
 
 
 def docx(analysis: Analysis) -> bytes:
+    proposal_label = (
+        "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
+    )
     document = Document()
     section = document.sections[0]
     section.top_margin = section.bottom_margin = Inches(0.8)
@@ -164,18 +196,40 @@ def docx(analysis: Analysis) -> bytes:
         source = finding_source(finding)
         document.add_paragraph(f"{metadata} · {source}" if source else metadata)
         document.add_paragraph(finding.description)
+        if finding.comparison:
+            comparison = finding.comparison
+            document.add_paragraph(f"Änderungsart: {CHANGE_TYPES[comparison.change_type]}")
+            for label, side in (
+                ("Original", comparison.original),
+                ("Gegenentwurf", comparison.counterdraft),
+            ):
+                document.add_heading(label, 2)
+                document.add_paragraph(side.source_document_name)
+                if side.source_quote.strip():
+                    document.add_paragraph(f"Fundstelle: {side.source_location}")
+                    document.add_paragraph(side.source_quote, "Quote")
+                    document.add_paragraph(quote_confirmation(side.verified))
+                else:
+                    document.add_paragraph(
+                        "Kein Wortlaut angegeben; Vollständigkeit manuell prüfen."
+                    )
         if has_revision(finding):
-            document.add_heading("Text und Änderungsvorschlag", 2)
+            document.add_heading(
+                "Gegenentwurf und Verhandlungsvorschlag"
+                if analysis.workflow == "compare"
+                else "Text und Änderungsvorschlag",
+                2,
+            )
             paragraph = document.add_paragraph()
             add_revision(paragraph, finding.source_quote, True, index * 2)
             add_revision(paragraph, finding.suggestion, False, index * 2 + 1)
             document.add_paragraph(f"Nachverfolgte Änderung · {quote_confirmation(True)}")
         else:
-            if finding.source_quote.strip():
+            if finding.source_quote.strip() and not finding.comparison:
                 document.add_paragraph(finding.source_quote, "Quote")
                 document.add_paragraph(quote_confirmation(finding.verified))
             if finding.suggestion.strip():
-                document.add_heading("Formulierungsvorschlag", 2)
+                document.add_heading(proposal_label, 2)
                 document.add_paragraph(finding.suggestion)
         if finding.legal_basis.strip():
             document.add_heading("Rechtlicher Bezug (zu prüfen)", 2)

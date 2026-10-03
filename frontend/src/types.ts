@@ -33,6 +33,18 @@ export interface Finding {
   legal_basis: string;
   verified: boolean;
   source_urls?: string[];
+  comparison?: {
+    change_type: 'modified' | 'added' | 'removed';
+    original: ComparisonSource;
+    counterdraft: ComparisonSource;
+  } | null;
+}
+export interface ComparisonSource {
+  source_document_id: string;
+  source_document_name: string;
+  source_quote: string;
+  source_location: string;
+  verified: boolean;
 }
 export interface Analysis {
   id: string;

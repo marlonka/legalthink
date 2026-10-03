@@ -62,7 +62,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
 }
 
 const focusableSelector =
-  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]';
+  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary, [tabindex="0"]';
 type ActiveModal = { portal: HTMLDivElement; dialog: HTMLDivElement };
 const modalStack: ActiveModal[] = [];
 const backgroundState = new Map<HTMLElement, boolean>();

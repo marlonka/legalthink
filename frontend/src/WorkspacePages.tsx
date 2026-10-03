@@ -25,6 +25,7 @@ import type { ThemePreference } from './theme';
 import { api } from './types';
 import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui';
 import { workflowName } from './workflows';
+import { reviewCount } from './review-workflows';
 import { MotionButton } from './motion';
 
 export function History({
@@ -110,7 +111,7 @@ export function History({
                   </span>
                 </span>
                 <span className="history-findings">
-                  {analysis.findings.length} Befunde
+                  {reviewCount(analysis)}
                   <ChevronRight size={16} />
                 </span>
               </MotionButton>

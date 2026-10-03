@@ -1,0 +1,79 @@
+.comparison-finding {
+  min-width: 0;
+}
+.comparison-change {
+  display: inline-block;
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.comparison-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.comparison-version {
+  min-width: 0;
+  padding: 16px;
+  background: var(--surface-page);
+}
+.comparison-version + .comparison-version {
+  border-left: 1px solid var(--border-subtle);
+}
+.comparison-version h4,
+.comparison-assessment h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.comparison-version .comparison-document {
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.comparison-version blockquote {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.comparison-verification,
+.comparison-empty,
+.comparison-legacy {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.comparison-verification {
+  margin: 16px 0 6px;
+}
+.comparison-version .text-button {
+  min-height: 36px;
+  font-size: 12px;
+}
+.comparison-assessment {
+  margin-top: 22px;
+}
+.comparison-assessment > p {
+  margin: 0;
+  white-space: pre-line;
+  font-size: 15px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .comparison-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .comparison-version + .comparison-version {
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .comparison-version .text-button {
+    min-height: 44px;
+  }
+}
