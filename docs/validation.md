@@ -5,10 +5,10 @@ Stand: 3. Oktober 2026. Auf Wunsch auf wesentliche Schutzmechanismen reduziert.
 ## Umfang
 
 - `backend/tests/test_api.py`: Datenspeicherung, atomisches Speichern und Löschen, Abbruch, Eingabegrenzen einschließlich 1.000.000 Zeichen, vertrauliche Fehlermeldungen, Dokumentimport und Export bestehender Berichte.
-- `backend/tests/test_analysis.py`: OpenAI-Anfrage mit Luna/Hoch, getrennte Anweisungen und Quelldaten, Cachepräfix, Quellenprüfung, Vergleichsrollen, Providerfehler und Abbruch. Providerantworten werden simuliert.
+- `backend/tests/test_analysis.py`: OpenAI-Anfrage mit Luna/Sehr hoch, getrennte Anweisungen und Quelldaten, Cachepräfix, Quellenprüfung, Vergleichsrollen, Providerfehler und Abbruch. Providerantworten werden simuliert.
 - `backend/tests/test_security_review.py`: Host-/Origin-/Token-Zugriff, PDF-Ressourcengrenzen, Dokumentherkunft sowie bekannte Import- und Exportfehler.
 - `backend/tests/test_export.py`: Unbestätigte Zitate dürfen keine nachverfolgten Word-Änderungen erzeugen.
-- `tests/built.spec.ts`: Ein Browserablauf gegen den Produktionsbuild: Start mit Luna/Hoch, lokales Beispiel, Quellenansicht, Markdown-Export, erneutes Öffnen und Löschen mit anschließendem Browser-Zurück. Prüft außerdem lokale Assets und Content Security Policy.
+- `tests/built.spec.ts`: Ein Browserablauf gegen den Produktionsbuild: Start mit Luna/Sehr hoch, lokales Beispiel, Quellenansicht, Markdown-Export, erneutes Öffnen und Löschen mit anschließendem Browser-Zurück. Prüft außerdem lokale Assets und Content Security Policy.
 
 Entfernt: 43 Browserfälle für Layout, Motion, Themes, Bildschirmgrößen, Detailbedienung und große Texteingaben; doppelte Backendfälle, Demo-Matrizen und reine Formatierungsprüfungen. Die separate Vite-Testinstanz, zweite Playwright-Konfiguration und axe-Abhängigkeit entfallen. Keine automatischen Testwiederholungen.
 

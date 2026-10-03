@@ -23,7 +23,7 @@ test('Python serves the built workspace with local assets, CSP and working expor
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
   await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'GPT-6 Luna', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Denkaufwand: Hoch' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Denkaufwand: Sehr hoch' })).toBeVisible();
   await page.getByRole('button', { name: /^Beispiel öffnen/ }).click();
   await expect(
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
