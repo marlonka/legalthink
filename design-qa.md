@@ -1,5 +1,7 @@
 # Designprüfung
 
+> Historisches Prüfprotokoll. Die hier beschriebenen Browser-, Motion- und Layouttests wurden am 3. Oktober 2026 entfernt. Aktueller Testumfang: [Prüfprotokoll](docs/validation.md).
+
 ## Ergebnis
 
 final result: passed

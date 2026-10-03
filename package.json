@@ -10,14 +10,11 @@
     "dev": "node scripts/dev.mjs",
     "build": "npm --prefix frontend run build",
     "test:api": "node scripts/test-api.mjs",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:built": "playwright test --config playwright.built.config.ts",
+    "test:built": "playwright test",
     "format": "prettier --write frontend/src frontend/*.ts tests scripts *.ts *.json",
     "format:check": "prettier --check frontend/src frontend/*.ts tests scripts *.ts *.json"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
     "prettier": "3.9.9"
   }

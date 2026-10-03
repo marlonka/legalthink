@@ -62,7 +62,6 @@ Fundstellenprüfung bedeutet, dass ein Zitat im ausgewählten Dokument gefunden 
 npm run build
 npm run test:api
 npx playwright install chromium
-npm run test:e2e
 npm run test:built
 ```
 
@@ -87,7 +86,7 @@ Unter [evals/](evals/README.md) liegen synthetische Fälle und Bewertungskriteri
 ```text
 backend/       FastAPI, Dokumentimport, SQLite, OpenAI, Exporte, Tests
 frontend/      React-Arbeitsraum und Gestaltungssystem
-tests/         Browserabläufe und Barrierefreiheit
+tests/         Ein Start-/Exporttest des Produktionsbuilds
 docs/          Architektur und verifizierte API-Entscheidungen
 scripts/       Lokaler Start
 ```

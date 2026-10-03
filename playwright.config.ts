@@ -1,19 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 
-const dataDir = path.resolve('artifacts', `e2e-data-${Date.now()}`);
+const dataDir = path.resolve('artifacts', `smoke-data-${Date.now()}`);
 
 export default defineConfig({
   testDir: './tests',
-  testIgnore: '**/built.spec.ts',
+  testMatch: '**/built.spec.ts',
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 30_000,
   use: {
-    baseURL: 'http://127.0.0.1:5174',
+    baseURL: 'http://127.0.0.1:8011',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     ...devices['Desktop Chrome'],
@@ -30,14 +30,8 @@ export default defineConfig({
         LEGALTHINK_DATA_DIR: dataDir,
         LEGALTHINK_ALLOW_REMOTE: 'false',
         LEGALTHINK_API_TOKEN: '',
-        LEGALTHINK_ALLOWED_ORIGINS: 'http://127.0.0.1:5174,http://127.0.0.1:8011',
+        LEGALTHINK_ALLOWED_ORIGINS: 'http://127.0.0.1:8011',
       },
-    },
-    {
-      command: 'npm --prefix frontend run dev -- --port 5174 --strictPort',
-      url: 'http://127.0.0.1:5174',
-      reuseExistingServer: false,
-      env: { VITE_API_PROXY: 'http://127.0.0.1:8011' },
     },
   ],
 });

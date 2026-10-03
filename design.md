@@ -289,7 +289,7 @@ Hat jedes Element einen sinnvollen Platz und eine erkennbare Gewichtung? Tragen 
 - `frontend/src/styles.css`: Navigation, Eingabe, gemeinsame Controls und Popover.
 - `frontend/src/workspace.css`: Befunde, Quellen, Listen, Playbooks und Einstellungen.
 - `frontend/src/polish.css`: Dokumentauswahl und Fehler beim Laden.
-- `tests/workspace.spec.ts`: Darstellung, Kontrast, Tastaturbedienung, Persistenz und Menügrenzen bei 320, 390, 568, 768 und 1024 px.
+- `tests/built.spec.ts`: Start des Produktionsbuilds, Luna/Hoch als Standard, Quellenansicht, Export und Verlauf. Layout und Bedienung bei betroffenen UI-Änderungen gezielt prüfen; keine automatisierte Theme-/Viewport-Matrix.
 
 ### Prüfpunkte
 

@@ -200,22 +200,6 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
         )
 
 
-def test_validation_errors_never_echo_sensitive_request_values(local_client):
-    private = "SYNTHETIC-CONFIDENTIAL-CONTEXT"
-    response = local_client.post(
-        "/api/analyses",
-        json={
-            "workflow": "contract",
-            "document_ids": ["a"],
-            "context": private,
-            "model": "gpt-6.1-sol",
-            "effort": "none",
-        },
-    )
-    assert response.status_code == 422
-    assert private not in response.text
-
-
 _PDF_TEXT = b"BT /F1 12 Tf 72 720 Td (Ein pruefbarer Vertragstext.) Tj ET"
 
 

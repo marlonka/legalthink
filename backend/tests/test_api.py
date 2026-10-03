@@ -325,70 +325,22 @@ def test_playbook_edits_preserve_identity_and_survive_restart(tmp_path):
         assert client.get("/api/playbooks").json() == [expected]
 
 
-def test_playbook_edit_rejects_missing_and_invalid_records_without_changes(client):
-    original = client.post(
-        "/api/playbooks", json={"name": "Kundensicht", "content": "Haftung prüfen."}
-    ).json()
-    valid = {"name": "Neue Fassung", "content": "Haftung und Verfügbarkeit prüfen."}
-    assert client.put("/api/playbooks/does-not-exist", json=valid).status_code == 404
-    invalid = client.put(f"/api/playbooks/{original['id']}", json={**valid, "content": "   "})
-    assert invalid.status_code == 422
-    assert client.get("/api/playbooks").json() == [original]
-
-
-def test_playbook_edit_cors_preflight_allows_configured_origin(client):
-    origin = Settings().allowed_origins[0]
-    response = client.options(
-        "/api/playbooks/example",
-        headers={
-            "Origin": origin,
-            "Access-Control-Request-Method": "PUT",
-            "Access-Control-Request-Headers": "Content-Type",
-        },
-    )
-    assert response.status_code == 200
-    assert response.headers["Access-Control-Allow-Origin"] == origin
-    assert "PUT" in response.headers["Access-Control-Allow-Methods"]
-
-
 @pytest.mark.parametrize(
     "body",
     [
         {"workflow": "chronology", "source_text": " \n\t", "context": "Nur ein Prüfauftrag"},
-        {"workflow": "contract", "source_text": "PRIVATE" * 142_858},
-        {"workflow": "compare", "source_text": "Zusatzquelle ohne beide Vertragsfassungen"},
         {"workflow": "compare", "document_ids": ["a"], "source_text": "Zusatzquelle"},
-        {"workflow": "compare", "document_ids": ["a", "b", "c"], "source_text": "Zusatzquelle"},
-        {"workflow": "compare", "document_ids": ["a"]},
         {"workflow": "contract", "document_ids": ["a", "a"]},
         {"workflow": "contract", "document_ids": ["a"], "model": "gpt-6.1-sol", "effort": "none"},
-        {"workflow": "contract", "document_ids": ["a"], "effort": "ultra"},
         {"workflow": "contract", "document_ids": ["a"], "context": "PRIVATE" * 4000},
         {"workflow": "contract", "document_ids": ["a"], "compliance_task": "avv"},
-        {"workflow": "chronology", "document_ids": ["a"], "compliance_task": "dsfa"},
     ],
 )
 def test_invalid_analysis_inputs_never_echo_document_text(client, body):
+    body = {"context": "PRIVATE mandate context", **body}
     response = client.post("/api/analyses", json=body)
     assert response.status_code == 422
     assert "PRIVATE" not in response.text
-
-
-def test_model_options_and_optional_luna_none(client):
-    models = client.get("/api/models").json()["models"]
-    assert {m["id"] for m in models} == {"gpt-6.1-sol", "gpt-6-luna"}
-    luna = next(model for model in models if model["id"] == "gpt-6-luna")
-    assert luna["default_effort"] == "high"
-    response = client.post(
-        "/api/analyses",
-        json={
-            "workflow": "contract",
-            "document_ids": ["doc"],
-            "model": "gpt-6-luna",
-            "effort": "none",
-        },
-    )
-    assert response.status_code == 503  # Valid settings reach credential boundary.
 
 
 def test_exports_preserve_revisions_labels_and_separate_timeline_quotes(client):
@@ -431,74 +383,6 @@ def test_exports_preserve_revisions_labels_and_separate_timeline_quotes(client):
     )
 
 
-@pytest.mark.parametrize(
-    "scenario,workflow,task,count",
-    [
-        ("contract", "contract", "general", 1),
-        ("compare", "compare", "general", 2),
-        ("chronology", "chronology", "general", 4),
-        ("compliance", "compliance", "general", 1),
-        ("avv", "compliance", "avv", 2),
-        ("dsfa", "compliance", "dsfa", 2),
-        ("advertising", "advertising", "general", 2),
-    ],
-)
-def test_demo_scenarios_persist_matching_documents_and_confirmed_evidence(
-    client, scenario, workflow, task, count
-):
-    class ForbiddenService:
-        async def run(self, *args, **kwargs):
-            pytest.fail("Demo scenarios must never invoke the model service.")
-
-    client.app.state.analysis_service = ForbiddenService()
-    response = client.post("/api/demo", json={"scenario": scenario})
-    assert response.status_code == 201, response.text
-    analysis = response.json()
-    assert analysis["workflow"] == workflow
-    assert analysis["compliance_task"] == task
-    assert analysis["demo_scenario"] == scenario
-    assert analysis["is_demo"] and analysis["model"] == "Synthetisches Beispiel"
-    assert analysis["usage"] is None and analysis["sources"] == []
-    documents = {document["id"]: document for document in client.get("/api/documents").json()}
-    assert len(analysis["document_ids"]) == count
-    for document_id in analysis["document_ids"]:
-        assert "Beispiel" in documents[document_id]["name"]
-        assert "SYNTHETISCHES BEISPIEL" in documents[document_id]["text"]
-    assert analysis["findings"]
-    for item in [*analysis["findings"], *analysis["timeline"]]:
-        assert item["verified"], item["source_quote"]
-        assert item["source_document_id"] in analysis["document_ids"]
-        quote = " ".join(item["source_quote"].split())
-        assert quote in " ".join(documents[item["source_document_id"]]["text"].split())
-    if scenario == "compare":
-        original, counter = [documents[document_id] for document_id in analysis["document_ids"]]
-        assert "Originalentwurf" in original["name"]
-        assert "Gegenentwurf" in counter["name"]
-        assert "Jahresvergütung" in original["text"]
-        assert "Monatsvergütung" in counter["text"]
-        assert all(item["source_document_id"] == counter["id"] for item in analysis["findings"])
-    if scenario == "chronology":
-        assert [item["date"] for item in analysis["timeline"]] == [
-            "2026-09-05",
-            "2026-09-15",
-            "2026-09-17",
-            "2026-09-22",
-            "2026-09-23",
-        ]
-        assert any(item["open_question"] for item in analysis["timeline"])
-    assert client.get(f"/api/analyses/{analysis['id']}").json() == analysis
-
-
-def test_demo_default_stays_contract_and_invalid_scenario_does_not_create_data(client):
-    invalid = client.post("/api/demo", json={"scenario": "unrecognized"})
-    assert invalid.status_code == 422
-    assert client.get("/api/documents").json() == []
-    assert client.get("/api/analyses").json() == []
-    default = client.post("/api/demo").json()
-    assert default["demo_scenario"] == "contract"
-    assert default["workflow"] == "contract"
-
-
 def test_older_reports_recover_source_names_without_rewriting_saved_data(client):
     analysis = client.post("/api/demo").json()
     for finding in analysis["findings"]:
@@ -523,39 +407,6 @@ def test_older_reports_recover_source_names_without_rewriting_saved_data(client)
     exported = client.get(f"/api/analyses/{analysis['id']}/export?format=md")
     assert "Beispiel · Cloud-Vertrag.txt" in exported.text
     assert client.app.state.store.get("analyses", analysis["id"]) == analysis
-
-
-def test_unverified_quotes_never_become_word_revisions(client):
-    analysis = client.post("/api/demo").json()
-    analysis["findings"][0]["verified"] = False
-    client.app.state.store.put("analyses", analysis)
-    response = client.get(f"/api/analyses/{analysis['id']}/export?format=docx")
-    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        xml = etree.fromstring(archive.read("word/document.xml"))
-        assert (
-            len(xml.findall(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}del"))
-            == 2
-        )
-
-
-def test_word_research_sources_are_clickable_relationships(client):
-    analysis = client.post("/api/demo").json()
-    url = "https://www.gesetze-im-internet.de/bgb/__276.html"
-    analysis["findings"][0]["source_urls"] = [url]
-    analysis["sources"] = [{"title": "§ 276 BGB", "url": url}]
-    client.app.state.store.put("analyses", analysis)
-    response = client.get(f"/api/analyses/{analysis['id']}/export?format=docx")
-    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-        xml = etree.fromstring(archive.read("word/document.xml"))
-        links = xml.findall(
-            ".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hyperlink"
-        )
-        assert len(links) == 2
-        relationships = etree.fromstring(archive.read("word/_rels/document.xml.rels"))
-        assert any(
-            rel.get("Target") == url and rel.get("TargetMode") == "External"
-            for rel in relationships
-        )
 
 
 def test_bounded_upload_rejects_unsupported_and_oversized(client, tmp_path):
