@@ -418,6 +418,7 @@ export function Settings({
   onEffort,
   documents,
   onDeleteDocument,
+  onDeleteAllDocuments,
   onRefresh,
   refreshing,
 }: {
@@ -431,6 +432,7 @@ export function Settings({
   onEffort: (value: string) => void;
   documents: DocumentRecord[];
   onDeleteDocument: (document: DocumentRecord) => void;
+  onDeleteAllDocuments: () => void;
   onRefresh: () => void;
   refreshing: boolean;
 }) {
@@ -571,7 +573,7 @@ export function Settings({
         </ExternalLink>
       </section>
       <section className="settings-section">
-        <div className="settings-section-heading">
+        <div className="settings-section-heading settings-documents-heading">
           <FolderOpen size={20} strokeWidth={1.4} />
           <div>
             <h2>Gespeicherte Dokumente</h2>
@@ -580,6 +582,15 @@ export function Settings({
               Server. Löschen entfernt den gespeicherten Volltext.
             </p>
           </div>
+          <MotionButton
+            className="icon-button delete-all-documents"
+            onClick={onDeleteAllDocuments}
+            disabled={!documents.length}
+            aria-label="Alle gespeicherten Dokumente löschen"
+            title="Alle gespeicherten Dokumente löschen"
+          >
+            <Trash2 size={18} aria-hidden="true" />
+          </MotionButton>
         </div>
         {documents.length ? (
           <div className="document-management-list">

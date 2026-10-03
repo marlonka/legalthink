@@ -85,6 +85,47 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
         assert client.delete(f"/api/documents/{document['id']}").status_code == 404
 
 
+def test_bulk_document_deletion_only_removes_confirmed_sources(client):
+    analysis = client.post("/api/demo").json()
+    client.post("/api/playbooks", json={"name": "Standard", "content": "Haftung prüfen."})
+    confirmed = [doc["id"] for doc in client.get("/api/documents").json()]
+    newer = Document(
+        id=new_id(), name="Neu.txt", text="Später eingefügt", page_count=1, char_count=15
+    )
+    client.app.state.store.put("documents", newer.model_dump())
+    for _ in range(2):  # Safe to retry if a successful response was lost.
+        response = client.request("DELETE", "/api/documents", json={"document_ids": confirmed})
+        assert response.status_code == 204
+        assert client.get("/api/documents").json() == [newer.model_dump()]
+    assert client.get(f"/api/analyses/{analysis['id']}").json()["findings"] == analysis["findings"]
+    assert len(client.get("/api/playbooks").json()) == 1
+
+
+def test_bulk_document_deletion_rolls_back_on_storage_failure(client):
+    for doc_id in ("first", "second"):
+        document = Document(
+            id=doc_id, name=f"{doc_id}.txt", text="Quelle", page_count=1, char_count=6
+        )
+        client.app.state.store.put("documents", document.model_dump())
+    previous = client.get("/api/documents").json()
+    with client.app.state.store.connection() as db:
+        db.execute(
+            "CREATE TRIGGER stop_delete BEFORE DELETE ON documents WHEN OLD.id='second' "
+            "BEGIN SELECT RAISE(ABORT, 'Simulated failure'); END"
+        )
+    with pytest.raises(sqlite3.IntegrityError):
+        client.app.state.store.delete_documents(["first", "second"])
+    assert client.get("/api/documents").json() == previous
+
+
+@pytest.mark.parametrize("body", [{}, {"document_ids": []}])
+def test_bulk_document_deletion_requires_explicit_selection(client, body):
+    client.post("/api/demo")
+    previous = client.get("/api/documents").json()
+    assert client.request("DELETE", "/api/documents", json=body).status_code == 422
+    assert client.get("/api/documents").json() == previous
+
+
 def test_analysis_without_config_returns_explicit_error(client):
     response = client.post("/api/analyses", json={"workflow": "contract", "document_ids": ["doc"]})
     assert response.status_code == 503

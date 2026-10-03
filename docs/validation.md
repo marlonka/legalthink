@@ -1,14 +1,14 @@
 # Prüfprotokoll
 
-Stand: 3. Oktober 2026. Synthetische Unterlagen; keine echten OpenAI-Anfragen.
+Stand: 3. Oktober 2026. Automatisierte Tests ausschließlich mit synthetischen Unterlagen und simulierten Providerantworten. Ein gesonderter freigegebener API-Diagnoseaufruf mit synthetischem Text wurde wegen fehlenden Modellzugriffs abgelehnt.
 
 ## Durchgeführt
 
 | Prüfung | Ergebnis |
 | --- | --- |
 | TypeScript und Vite-Produktionsbuild | Erfolgreich |
-| Python-Tests | 82 bestanden |
-| Browserabläufe mit Chromium | 36 bestanden |
+| Python-Tests | 89 bestanden |
+| Browserabläufe mit Chromium | 38 bestanden |
 | Gebaute Oberfläche direkt über FastAPI | Bestanden; lokale Assets, CSP, Verlauf und Markdown-Export |
 | Ruff und Prettier | Erfolgreich |
 | Automatisierte WCAG-A/AA-Prüfungen mit axe | Keine gemeldeten Verstöße auf den geprüften Ansichten |
@@ -33,9 +33,17 @@ Die zusätzliche Texteingabe wurde in allen sieben Aufgaben geprüft: getrennte 
 
 Die Layoutmessung umfasst 100.000 eingefügte Zeichen bei 320, 390 und 1280 px in Hell und Dunkel. Tippen und Einfügen verändern die Positionen und Größen der Eingaben und Werkzeugleiste nicht; langer Text scrollt im Feld. Die Sichtprüfung erfolgte zusätzlich im lokalen Browser auf Desktop und 390-px-Mobilbreite. Bestehende Interaktionstests scrollen tiefere Bedienelemente vor ihrer Messung bewusst ins Bild; die Kontrastprüfung wartet das Einblenden der Optionen ab.
 
+## Modellzugriff und Sammellöschen
+
+Der Diagnoseaufruf für `gpt-6-luna` / `high` erreichte OpenAI und erhielt HTTP 403 mit `model_not_found`. Die `.env` wurde geladen; das API-Projekt hatte keinen Zugriff auf dieses Modell. Die abgefragte Modellliste enthielt weder Luna noch Sol. Es wurden keine Mandatsdaten übertragen und kein Modellwechsel vorgenommen. Die Anwendung zeigt fehlenden Modellzugriff und sonstige 403-Berechtigungsfehler gezielt an, ohne rohe Providerinhalte offenzulegen.
+
+Das Sammellöschen verlangt eine bestätigte Liste von Dokument-IDs. Backendtests prüfen, dass spätere Uploads, Analysen und Playbooks erhalten bleiben, Fehler alle Löschungen zurückrollen und eine Wiederholung sicher ist.
+
+Die Browserprüfung umfasst Abbrechen, Fehlermeldung mit erneutem Versuch, erhaltene Eingabetexte und bereinigte Dateiauswahl in allen Entwürfen. Dialog und Löschschaltfläche behalten beim Öffnen und während der Anfrage ihre Position und Größe. Desktop sowie 320 und 390 px wurden in Hell und Dunkel mit axe und Layoutmessungen geprüft; Desktop und 320 px zusätzlich visuell.
+
 ## Grenzen der Nachweise
 
-- Keine Live-Prüfung von Modellzugang, Ausgabequalität, Quellenrecherche, Kosten, Cache-Treffern oder Latenz. Dafür stehen [synthetische Evaluationsfälle](../evals/README.md) bereit.
+- Kein erfolgreicher Live-Modellaufruf; Ausgabequalität, Quellenrecherche, Kosten, Cache-Treffer und Latenz bleiben ungeprüft. Dafür stehen [synthetische Evaluationsfälle](../evals/README.md) bereit.
 - Word-Paginierung und Darstellung in Microsoft Word wurden nicht visuell geprüft. Der Export ist ein Prüfbericht mit Änderungsmarkierungen, keine formatgetreue Bearbeitung des Originalvertrags.
 - axe ersetzt keine vollständige Barrierefreiheitsprüfung. Getestet wurden Chromium und ausgewählte Desktop-/Mobilansichten; keine vollständige Screenreader- oder Browsermatrix.
 - Der Testlauf meldet eine vorgelagerte Starlette-Abkündigungswarnung für dessen httpx-Testclient. Alle Tests bestehen; Laufzeitintegration und künftige Dependency-Upgrades bleiben getrennt zu prüfen.

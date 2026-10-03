@@ -68,4 +68,4 @@ Text extraction cannot guarantee OCR of scans, preservation of layout, or recove
 
 Offline checks cover request validation, extraction, exact-quote matching, response parsing, failure handling, serialized API parameters, and browser interactions. Mocked provider responses establish integration behavior only. They cannot establish model quality, account access, API billing, live citations, cache hits, latency, GDPR compliance, or legal reliability.
 
-The user's delivery constraint prohibits real API calls during development. Live integration and representative legal-quality evaluation remain explicitly deferred. See [OpenAI integration decisions](openai-integration.md) for verified API settings and primary sources.
+Live API requests require user authorization. One authorized diagnostic with synthetic data reached OpenAI but was rejected because the project lacked model access; successful integration and representative legal-quality evaluation remain deferred. See [OpenAI integration decisions](openai-integration.md) for the diagnostic scope, API settings and primary sources.

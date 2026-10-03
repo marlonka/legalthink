@@ -239,7 +239,21 @@ class AnalysisService:
             raise AnalysisError(
                 "OpenAI ist nicht erreichbar. Bitte die Verbindung prüfen.", 503
             ) from None
-        except APIStatusError:
+        except APIStatusError as error:
+            if error.code == "model_not_found":
+                raise AnalysisError(
+                    f"Das Modell {request.model} ist für das OpenAI-Projekt dieses "
+                    "API-Schlüssels nicht verfügbar. Prüfen Sie den Modellzugriff im "
+                    "OpenAI-Projekt oder verwenden Sie einen Schlüssel aus einem "
+                    "freigeschalteten Projekt.",
+                    503,
+                ) from None
+            if error.status_code == 403:
+                raise AnalysisError(
+                    "OpenAI verweigert den Zugriff. Prüfen Sie die Berechtigungen des "
+                    "API-Schlüssels und des zugehörigen Projekts.",
+                    503,
+                ) from None
             raise AnalysisError(
                 "OpenAI konnte die Anfrage nicht verarbeiten. Bitte Modellzugang "
                 "und Konfiguration prüfen."

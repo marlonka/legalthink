@@ -1154,6 +1154,18 @@
   font-size: 14px;
   line-height: 1.7;
 }
+.settings-section-heading.settings-documents-heading {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 44px;
+}
+.settings-section-heading.settings-documents-heading > div {
+  min-width: 0;
+}
+.icon-button.delete-all-documents {
+  width: 44px;
+  height: 44px;
+  margin-top: -10px;
+}
 .connection-badge {
   display: inline-flex;
   align-items: center;
