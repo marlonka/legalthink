@@ -663,10 +663,34 @@ export default function Review({
           ))}
         </section>
       )}
-      {(analysis.usage || analysis.provider_request_id) && (
+      {(analysis.usage || analysis.provider_request_id || analysis.processing_region) && (
         <details className="analysis-details">
           <summary>Verarbeitung & Verbrauch</summary>
           <dl>
+            {analysis.processing_region && (
+              <>
+                <dt>API-Region</dt>
+                <dd>{analysis.processing_region === 'eu' ? 'Europa (EWR + Schweiz)' : 'Global'}</dd>
+              </>
+            )}
+            {analysis.requested_service_tier && (
+              <>
+                <dt>Angeforderte Verarbeitung</dt>
+                <dd>{analysis.requested_service_tier === 'flex' ? 'Flex' : 'Standard'}</dd>
+              </>
+            )}
+            {analysis.service_tier && (
+              <>
+                <dt>Von OpenAI bestätigte Verarbeitung</dt>
+                <dd>
+                  {analysis.service_tier === 'default'
+                    ? 'Standard'
+                    : analysis.service_tier === 'flex'
+                      ? 'Flex'
+                      : analysis.service_tier}
+                </dd>
+              </>
+            )}
             {analysis.usage && (
               <>
                 <dt>Eingabe</dt>

@@ -1006,6 +1006,42 @@
   gap: 15px;
   margin-left: 32px;
 }
+.settings-processing {
+  margin: 0 0 24px 32px;
+}
+.settings-processing-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
+  align-items: center;
+  gap: 12px 24px;
+  font-size: 14px;
+}
+.settings-processing > .service-tier-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
+  align-items: center;
+  gap: 0 24px;
+  padding-top: 24px;
+}
+.settings-processing .service-tier-field > .field-label {
+  margin-bottom: 0;
+}
+.settings-processing .service-tier-field > .field-help {
+  grid-column: 1 / -1;
+}
+.processing-region-details {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.75;
+}
+.processing-region-details > summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.processing-region-details > p {
+  margin-top: 12px;
+}
 .privacy-facts p {
   max-width: 650px;
   color: var(--text-secondary);
@@ -1370,12 +1406,21 @@
   .settings-section > .muted,
   .settings-section > .field-help,
   .privacy-facts,
+  .settings-processing,
   .document-management-list {
     margin-left: 0;
   }
   .settings-model-row {
     padding-left: 0;
     gap: 15px;
+  }
+  .settings-processing-row,
+  .settings-processing > .service-tier-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+  .settings-processing .service-tier-field > .field-help {
+    margin-top: 3px;
   }
   .privacy-facts p {
     font-size: 15px;

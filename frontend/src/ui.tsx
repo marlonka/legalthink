@@ -284,11 +284,11 @@ function StablePickerLabel({ value, alternatives }: { value: string; alternative
 
 const EFFORT_FLOW: Record<string, { count: number; speed: number }> = {
   none: { count: 0, speed: 1 },
-  low: { count: 4, speed: 1 },
-  medium: { count: 6, speed: 1.4 },
-  high: { count: 8, speed: 1.9 },
-  xhigh: { count: 10, speed: 2.5 },
-  max: { count: 12, speed: 3.2 },
+  low: { count: 4, speed: 2.5 },
+  medium: { count: 6, speed: 4.5 },
+  high: { count: 8, speed: 7 },
+  xhigh: { count: 10, speed: 10 },
+  max: { count: 12, speed: 15 },
 };
 
 function EffortParticles({ effort, disabled }: { effort: string; disabled: boolean }) {

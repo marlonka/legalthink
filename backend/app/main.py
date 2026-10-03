@@ -17,8 +17,8 @@ from starlette.staticfiles import StaticFiles
 
 from . import export
 from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
-from .config import Settings
-from .demo import demo_analysis, demo_documents
+from .config import OPENAI_BASE_URLS, Settings
+from .demo import demo_analysis, demo_documents, restore_demo_sources
 from .extraction import ExtractionError, extract_isolated, safe_filename
 from .schemas import (
     MAX_MATERIAL_CHARS,
@@ -34,7 +34,7 @@ from .schemas import (
     now,
 )
 from .security import RequestTooLarge, SecurityBoundary
-from .store import Store
+from .store import ProtectedDocumentError, Store
 
 DOCUMENT_MEDIA_TYPES = {
     ".pdf": "application/pdf",
@@ -50,15 +50,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.store = Store(config.data_dir)
+        restore_demo_sources(app.state.store)
         app.state.analysis_slots = asyncio.Semaphore(2)
         app.state.extraction_slots = asyncio.Semaphore(2)
         client = None
         app.state.analysis_service = None
         if config.api_key:
             client = AsyncOpenAI(
-                api_key=config.api_key, max_retries=0, timeout=config.request_timeout
+                api_key=config.api_key,
+                base_url=OPENAI_BASE_URLS[config.processing_region],
+                max_retries=0,
+                timeout=config.request_timeout,
             )
-            app.state.analysis_service = AnalysisService(client, config.request_timeout)
+            app.state.analysis_service = AnalysisService(
+                client, config.request_timeout, config.processing_region
+            )
         try:
             yield
         finally:
@@ -109,7 +115,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "api_configured": bool(config.api_key)}
+        return {
+            "status": "ok",
+            "api_configured": bool(config.api_key),
+            "default_processing_region": config.processing_region,
+        }
 
     @app.get("/api/models")
     def models():
@@ -232,7 +242,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.delete("/api/documents/{document_id}", status_code=204)
     def delete_document(document_id: str):
-        if not app.state.store.delete("documents", document_id):
+        try:
+            deleted = app.state.store.delete("documents", document_id)
+        except ProtectedDocumentError as error:
+            raise HTTPException(409, str(error)) from None
+        if not deleted:
             raise HTTPException(404, "Dokument nicht gefunden.")
 
     @app.get("/api/analyses", response_model=list[Analysis])

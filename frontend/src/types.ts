@@ -4,6 +4,8 @@ export type Workflow = 'contract' | 'compare' | 'chronology' | 'compliance' | 'a
 export type ComplianceTask = 'general' | 'avv' | 'dsfa';
 export type DemoScenario = Workflow | 'avv' | 'dsfa';
 export type Severity = 'high' | 'medium' | 'low' | 'info';
+export type ProcessingRegion = 'global' | 'eu';
+export type ServiceTier = 'default' | 'flex';
 export interface DocumentRecord {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface DocumentRecord {
   page_count: number;
   char_count: number;
   original_available?: boolean;
+  is_demo?: boolean;
 }
 export interface Model {
   id: string;
@@ -79,6 +82,9 @@ export interface Analysis {
   provider_request_id?: string | null;
   provider_duration_ms?: number | null;
   prompt_version?: string | null;
+  processing_region?: ProcessingRegion | null;
+  requested_service_tier?: ServiceTier | null;
+  service_tier?: string | null;
   sources?: { title: string; url: string }[];
 }
 export interface Playbook {
@@ -90,6 +96,7 @@ export interface Playbook {
 export interface Health {
   status: string;
   api_configured: boolean;
+  default_processing_region: ProcessingRegion;
 }
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {

@@ -20,6 +20,7 @@ from openai import (
 )
 from pydantic import ValidationError
 
+from .config import OPENAI_BASE_URLS
 from .prompts import COMPLIANCE_TASK_PROMPTS, PROMPT_VERSION, SYSTEM_PROMPT, WORKFLOW_PROMPTS
 from .schemas import (
     Analysis,
@@ -32,6 +33,7 @@ from .schemas import (
     ModelComparisonAnalysis,
     ModelComparisonFinding,
     Playbook,
+    ProcessingRegion,
     Source,
     TimelineEntry,
     Usage,
@@ -251,9 +253,15 @@ def provider_sources(response: Any) -> list[Source]:
 
 
 class AnalysisService:
-    def __init__(self, client: AsyncOpenAI, timeout: float = 180.0):
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        timeout: float = 180.0,
+        processing_region: ProcessingRegion = "global",
+    ):
         self.client = client
         self.timeout = timeout
+        self.processing_region = processing_region
 
     async def run(
         self,
@@ -263,6 +271,13 @@ class AnalysisService:
         *,
         pasted_document: Document | None = None,
     ) -> Analysis:
+        region = request.processing_region or self.processing_region
+        client = (
+            self.client
+            if region == self.processing_region
+            else self.client.with_options(base_url=OPENAI_BASE_URLS[region])
+        )
+        timeout = 900.0 if request.service_tier == "flex" else self.timeout
         evidence_documents = [*documents, *([pasted_document] if pasted_document else [])]
         scope = WORKFLOW_PROMPTS[request.workflow]
         if request.workflow == "compliance":
@@ -288,6 +303,7 @@ class AnalysisService:
         result_schema = ModelComparisonAnalysis if request.workflow == "compare" else ModelAnalysis
         kwargs: dict[str, Any] = {
             "model": request.model,
+            "service_tier": request.service_tier,
             "input": [
                 {
                     "role": "developer",
@@ -340,9 +356,15 @@ class AnalysisService:
             kwargs["max_tool_calls"] = 5
         started = perf_counter()
         try:
-            async with asyncio.timeout(self.timeout):
-                response = await self.client.responses.create(**kwargs)
+            async with asyncio.timeout(timeout):
+                response = await client.responses.create(**kwargs, timeout=timeout)
         except (TimeoutError, APITimeoutError):
+            if request.service_tier == "flex":
+                raise AnalysisError(
+                    "Flex hat das Zeitlimit von 15 Minuten erreicht. Bitte später erneut "
+                    "versuchen oder Standardverarbeitung wählen.",
+                    504,
+                ) from None
             raise AnalysisError(
                 "Die Analyse hat das Zeitlimit erreicht. Bitte den Umfang "
                 "reduzieren oder erneut starten.",
@@ -352,7 +374,13 @@ class AnalysisService:
             raise AnalysisError(
                 "OpenAI-Zugang nicht gültig. Bitte die Serverkonfiguration prüfen.", 503
             ) from None
-        except RateLimitError:
+        except RateLimitError as error:
+            if request.service_tier == "flex" and error.code == "resource_unavailable":
+                raise AnalysisError(
+                    "OpenAI hat derzeit keine Flex-Kapazität. Bitte später erneut starten "
+                    "oder Standardverarbeitung zum regulären Preis wählen.",
+                    429,
+                ) from None
             raise AnalysisError(
                 "OpenAI-Kontingent oder Ratenlimit erreicht. Bitte später erneut "
                 "versuchen und das API-Kontingent prüfen.",
@@ -374,7 +402,28 @@ class AnalysisService:
             if error.status_code == 403:
                 raise AnalysisError(
                     "OpenAI verweigert den Zugriff. Prüfen Sie die Berechtigungen des "
-                    "API-Schlüssels und des zugehörigen Projekts.",
+                    "API-Schlüssels und des zugehörigen Projekts."
+                    + (
+                        " Für EU-Verarbeitung muss das Projekt die regionalen "
+                        "Voraussetzungen erfüllen; die Anfrage wurde nicht global wiederholt."
+                        if region == "eu"
+                        else ""
+                    ),
+                    503,
+                ) from None
+            if error.status_code == 400 and (region == "eu" or request.service_tier == "flex"):
+                raise AnalysisError(
+                    "OpenAI hat die gewählte Verarbeitung abgewiesen. Bitte die "
+                    "Verfügbarkeit von "
+                    + " und ".join(
+                        label
+                        for enabled, label in (
+                            (region == "eu", "EU-Verarbeitung"),
+                            (request.service_tier == "flex", "Flex"),
+                        )
+                        if enabled
+                    )
+                    + " sowie den Modellzugang prüfen. Die Auswahl wurde nicht geändert.",
                     503,
                 ) from None
             raise AnalysisError(
@@ -437,6 +486,9 @@ class AnalysisService:
             sources=sources,
             provider_request_id=getattr(response, "_request_id", None),
             provider_duration_ms=provider_duration_ms,
+            processing_region=region,
+            requested_service_tier=request.service_tier,
+            service_tier=getattr(response, "service_tier", None),
             prompt_version=PROMPT_VERSION,
             document_ids=list(request.document_ids),
             source_text_document_id=pasted_document.id if pasted_document else None,

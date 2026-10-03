@@ -89,13 +89,27 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
             "name": "Kundensicht · SaaS",
             "content": "Haftung und Datenexport prüfen.",
         }
-        demo = client.post("/api/demo").json()
+        demo = client.post("/api/demo", json={"scenario": "compare"}).json()
         assert demo["is_demo"] is True and demo["model"] == "Synthetisches Beispiel"
+        # Existing installations had no demo flag and allowed deleting example sources.
+        first_id, second_id = demo["document_ids"]
+        legacy_source = client.app.state.store.get("documents", first_id)
+        legacy_source.pop("is_demo")
+        client.app.state.store.put("documents", legacy_source)
+        with client.app.state.store.connection() as db:
+            db.execute("DELETE FROM documents WHERE id=?", (second_id,))
     with TestClient(
         create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
     ) as client:
         assert any(d["id"] == document["id"] for d in client.get("/api/documents").json())
-        assert client.get(f"/api/analyses/{demo['id']}").json()["is_demo"] is True
+        restored = client.get(f"/api/analyses/{demo['id']}").json()
+        assert restored["is_demo"] is True
+        assert restored["findings"] == demo["findings"]
+        sources = {doc["id"]: doc for doc in client.get("/api/documents").json()}
+        for source_id in demo["document_ids"]:
+            assert sources[source_id]["is_demo"] is True
+            assert client.get(f"/api/documents/{source_id}/text").status_code == 200
+            assert client.delete(f"/api/documents/{source_id}").status_code == 409
         assert client.get("/api/playbooks").json() == [edited.json()]
         assert client.delete(f"/api/documents/{document['id']}").status_code == 204
         assert client.get(original_url).status_code == 404
@@ -107,6 +121,17 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
 def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     analysis = client.post("/api/demo").json()
     client.post("/api/playbooks", json={"name": "Standard", "content": "Haftung prüfen."})
+    example = client.get("/api/documents").json()[0]
+    # User uploads remain deletable even with the same filename and text as an example.
+    uploaded = Document(
+        id=new_id(),
+        name=example["name"],
+        text=example["text"],
+        page_count=1,
+        char_count=example["char_count"],
+        original_available=True,
+    )
+    client.app.state.store.save_document(uploaded.model_dump(), uploaded.text.encode())
     previous = client.get("/api/documents").json()
     assert client.request("DELETE", "/api/documents", json={"document_ids": []}).status_code == 422
     assert client.get("/api/documents").json() == previous
@@ -118,7 +143,10 @@ def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     for _ in range(2):  # Safe to retry if a successful response was lost.
         response = client.request("DELETE", "/api/documents", json={"document_ids": confirmed})
         assert response.status_code == 204
-        assert client.get("/api/documents").json() == [newer.model_dump()]
+        remaining = {doc["id"]: doc for doc in client.get("/api/documents").json()}
+        assert remaining == {example["id"]: example, newer.id: newer.model_dump()}
+        assert client.get(f"/api/documents/{uploaded.id}/original").status_code == 404
+        assert client.get(f"/api/documents/{example['id']}/text").text == example["text"]
     assert client.get(f"/api/analyses/{analysis['id']}").json()["findings"] == analysis["findings"]
     assert len(client.get("/api/playbooks").json()) == 1
 
