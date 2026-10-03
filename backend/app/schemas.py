@@ -16,6 +16,7 @@ ProcessingRegion = Literal["global", "eu"]
 ServiceTier = Literal["default", "flex"]
 Severity = Literal["high", "medium", "low", "info"]
 MAX_MATERIAL_CHARS = 1_000_000
+MAX_INSTRUCTION_CHARS = 10_000
 
 MODELS = [
     {
@@ -65,7 +66,7 @@ class AnalysisRequest(StrictModel):
     workflow: Workflow
     document_ids: list[str] = Field(default_factory=list, max_length=12)
     source_text: str = Field(default="", max_length=MAX_MATERIAL_CHARS)
-    context: str = Field(default="", max_length=20000)
+    context: str = Field(default="", max_length=MAX_INSTRUCTION_CHARS)
     model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
     effort: Effort = "xhigh"
     playbook_id: str | None = None

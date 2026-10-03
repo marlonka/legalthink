@@ -51,9 +51,31 @@
 }
 
 .composer-instruction-actions {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
   margin-top: 8px;
+}
+
+.composer-instruction-actions > .text-button {
+  justify-self: end;
+}
+
+.instruction-text-meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.context-input[aria-invalid='true'] {
+  border-color: var(--danger-border);
+}
+
+.context-input[aria-invalid='true'] + .composer-instruction-actions .instruction-text-meta {
+  color: var(--danger-text);
 }
 
 .instruction-template-preview {
@@ -402,6 +424,10 @@
 }
 
 @container composer (max-width: 480px) {
+  .composer-instruction-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .composer-toolbar .model-picker {
     grid-column: 1 / -1;
     justify-content: space-between;

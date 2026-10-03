@@ -1,4 +1,4 @@
-# LegalThinkGPT – Gestaltung
+# LegalThink – Gestaltung
 
 ## Grundlage und Geltungsbereich
 

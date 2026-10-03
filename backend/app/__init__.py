@@ -1,1 +1,1 @@
-"""LegalThinkGPT local API."""
+"""LegalThink local API."""

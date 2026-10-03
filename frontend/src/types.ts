@@ -1,4 +1,5 @@
 export const MAX_MATERIAL_CHARS = 1_000_000;
+export const MAX_INSTRUCTION_CHARS = 10_000;
 
 export type Workflow = 'contract' | 'compare' | 'chronology' | 'compliance' | 'advertising';
 export type ComplianceTask = 'general' | 'avv' | 'dsfa';

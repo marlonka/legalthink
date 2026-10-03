@@ -13,6 +13,7 @@ import {
   Plus,
   RotateCw,
   Search,
+  Scale,
   Server,
   ShieldCheck,
   Sun,
@@ -596,6 +597,53 @@ export function Settings({
         <ExternalLink url="https://developers.openai.com/api/docs/guides/your-data">
           Datenverarbeitung bei OpenAI
         </ExternalLink>
+      </section>
+      <section className="settings-section">
+        <div className="settings-section-heading">
+          <Scale size={20} strokeWidth={1.4} />
+          <div>
+            <h2>Nutzung und Verantwortung</h2>
+            <p>
+              Sie verantworten die eingegebenen Daten, den Betrieb und die Verwendung der
+              Ergebnisse.
+            </p>
+          </div>
+        </div>
+        <div className="privacy-facts">
+          <div>
+            <p>
+              Prüfen Sie vor der Übermittlung an OpenAI die Berechtigung zur Weitergabe, anwaltliche
+              Verschwiegenheit und Datenschutz. Übermitteln Sie nur erforderliche Inhalte.
+            </p>
+          </div>
+          <div>
+            <p>
+              KI-Ergebnisse können falsch oder unvollständig sein. Prüfen Sie Fundstellen,
+              Rechtslage, Fristen und Formulierungen vor der Verwendung selbst.
+            </p>
+          </div>
+          <div>
+            <p>
+              Dieser Arbeitsraum hat keine Benutzeranmeldung. Schützen Sie Serverzugriff,
+              API-Schlüssel und gespeicherte Daten. Gesetzliche Rechte und Haftung bleiben
+              unberührt.
+            </p>
+          </div>
+        </div>
+        <ExternalLink url="https://openai.com/policies/services-agreement/">
+          OpenAI-Vertragsbedingungen
+        </ExternalLink>
+        <a className="external-link" href="/LICENSE.txt" target="_blank" rel="noopener noreferrer">
+          MIT-Lizenz · Marlon Kaulich <ArrowUpRight size={13} />
+        </a>
+        <a
+          className="external-link"
+          href="/third-party-licenses.txt"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Lizenzen der Bibliotheken <ArrowUpRight size={13} />
+        </a>
       </section>
       <section className="settings-section">
         <div className="settings-section-heading settings-documents-heading">

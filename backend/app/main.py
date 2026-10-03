@@ -21,6 +21,7 @@ from .config import OPENAI_BASE_URLS, Settings
 from .demo import demo_analysis, demo_documents, restore_demo_sources
 from .extraction import ExtractionError, extract_isolated, safe_filename
 from .schemas import (
+    MAX_INSTRUCTION_CHARS,
     MAX_MATERIAL_CHARS,
     MODELS,
     Analysis,
@@ -72,7 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await client.close()
 
     app = FastAPI(
-        title="LegalThinkGPT",
+        title="LegalThink",
         version="0.1.0",
         lifespan=lifespan,
         docs_url=None,
@@ -91,6 +92,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         # Pydantic's default response may echo confidential input. Return safe field names only.
+        if any(
+            error["loc"] == ("body", "context") and error["type"] == "string_too_long"
+            for error in exc.errors()
+        ):
+            limit = f"{MAX_INSTRUCTION_CHARS:,}".replace(",", ".")
+            return JSONResponse(
+                {
+                    "detail": f"Der Prüfauftrag darf höchstens {limit} Zeichen enthalten. "
+                    "Bitte kürzen Sie den Prüfauftrag."
+                },
+                status_code=422,
+            )
         fields = ", ".join(sorted({str(e["loc"][-1]) for e in exc.errors()}))
         return JSONResponse(
             {"detail": f"Ungültige Eingabe: {fields}. Bitte Auswahl und Umfang prüfen."},
@@ -423,7 +436,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             data,
             media_type=mime,
             headers={
-                "Content-Disposition": f'attachment; filename="LegalThinkGPT-'
+                "Content-Disposition": f'attachment; filename="LegalThink-'
                 f'{analysis.id}.{format}"'
             },
         )

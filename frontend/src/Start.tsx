@@ -28,11 +28,9 @@ import type {
   ServiceTier,
   Workflow,
 } from './types';
-import { MAX_MATERIAL_CHARS } from './types';
+import { MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './composer-motion.css';
-
-const MAX_INSTRUCTION_CHARS = 20_000;
 
 interface Props {
   workflow: Workflow;
@@ -136,7 +134,8 @@ export default function Start(props: Props) {
   const templateInstruction = hasInstruction
     ? `${context}\n\n${instructionTemplate}`
     : instructionTemplate;
-  const templateTooLong = templateInstruction.length > MAX_INSTRUCTION_CHARS;
+  const instructionCharCount = Array.from(context).length;
+  const templateTooLong = Array.from(templateInstruction).length > MAX_INSTRUCTION_CHARS;
   function applyTemplate() {
     if (running || templateIncluded || templateTooLong) return;
     onContext(templateInstruction);
@@ -285,7 +284,7 @@ export default function Start(props: Props) {
         )}
         <div className="composer-source-text">
           <label className="context-label" htmlFor="analysis-source-text">
-            Text oder E-Mail-Verlauf <span>(optional)</span>
+            Zusätzlicher Kontext <span>(z. B. E-Mails, Notizen)</span>
           </label>
           <textarea
             id="analysis-source-text"
@@ -295,7 +294,7 @@ export default function Start(props: Props) {
             placeholder={
               workflow === 'compare'
                 ? 'Begleitende Korrespondenz oder weitere Angaben einfügen. Verglichen werden die beiden Dokumente.'
-                : 'E-Mail-Verlauf, Vertragstext oder weitere Unterlagen hier einfügen.'
+                : 'E-Mail-Verlauf, Gesprächsnotizen, Vertragstext oder Angaben zum Sachverhalt hier einfügen.'
             }
             rows={8}
             disabled={running}
@@ -345,10 +344,15 @@ export default function Start(props: Props) {
             onChange={(event) => onContext(event.target.value)}
             placeholder={workflow === 'compliance' ? currentCompliance.prompt : current.prompt}
             disabled={running}
-            maxLength={MAX_INSTRUCTION_CHARS}
+            aria-describedby="analysis-instruction-limit"
+            aria-invalid={instructionCharCount > MAX_INSTRUCTION_CHARS || undefined}
             rows={4}
           />
           <div className="composer-instruction-actions">
+            <span className="instruction-text-meta" id="analysis-instruction-limit">
+              {instructionCharCount.toLocaleString('de-DE')} /{' '}
+              {MAX_INSTRUCTION_CHARS.toLocaleString('de-DE')} Zeichen
+            </span>
             <MotionButton
               className="text-button"
               aria-haspopup="dialog"
@@ -514,8 +518,9 @@ export default function Start(props: Props) {
                 <p className="field-help">Diese Vorlage ist bereits im Prüfauftrag enthalten.</p>
               ) : templateTooLong ? (
                 <ErrorMessage>
-                  Die Vorlage überschreitet zusammen mit Ihrem Text die Grenze von 20.000 Zeichen.
-                  Kürzen Sie zuerst den Prüfauftrag.
+                  Die Vorlage überschreitet zusammen mit Ihrem Text die Grenze von{' '}
+                  {MAX_INSTRUCTION_CHARS.toLocaleString('de-DE')} Zeichen. Kürzen Sie zuerst den
+                  Prüfauftrag.
                 </ErrorMessage>
               ) : hasInstruction ? (
                 <p className="field-help">Die Vorlage wird am Ende Ihres Prüfauftrags ergänzt.</p>

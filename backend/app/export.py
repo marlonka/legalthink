@@ -131,7 +131,7 @@ def markdown(analysis: Analysis) -> bytes:
 def add_revision(paragraph, text: str, deletion: bool, revision_id: int) -> None:
     element = OxmlElement("w:del" if deletion else "w:ins")
     element.set(qn("w:id"), str(revision_id))
-    element.set(qn("w:author"), "LegalThinkGPT · Vorschlag")
+    element.set(qn("w:author"), "LegalThink · Vorschlag")
     element.set(qn("w:date"), datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
     run = OxmlElement("w:r")
     content = OxmlElement("w:delText" if deletion else "w:t")
@@ -176,7 +176,7 @@ def docx(analysis: Analysis) -> bytes:
         document.styles[name].font.color.rgb = RGBColor.from_string("183D37")
     # Word metadata has a 255-character limit; the document heading keeps the full title.
     document.core_properties.title = analysis.title[:255]
-    document.core_properties.author = "LegalThinkGPT"
+    document.core_properties.author = "LegalThink"
     document.add_heading(analysis.title, 0)
     if analysis.is_demo:
         document.add_paragraph("SYNTHETISCHES BEISPIEL · Keine Modellanalyse", "Subtitle")
