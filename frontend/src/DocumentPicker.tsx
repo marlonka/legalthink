@@ -46,8 +46,8 @@ export default function DocumentPicker({
       <div className="modal-body document-picker-body">
         <p className="modal-description" id={hintId}>
           {compare
-            ? 'Wählen Sie zuerst das Original, dann den Gegenentwurf. Die Reihenfolge lässt sich anschließend tauschen.'
-            : 'Verwenden Sie bereits hochgeladene Unterlagen für einen neuen Prüfauftrag. Bis zu 12 Dokumente pro Analyse.'}
+            ? 'Zuerst Original, dann Gegenentwurf auswählen.'
+            : 'Bis zu 12 Dokumente pro Analyse.'}
         </p>
         <label className="list-search document-picker-search">
           <Search size={16} />
@@ -144,18 +144,14 @@ export default function DocumentPicker({
               <p>
                 {search
                   ? 'Versuchen Sie einen anderen Suchbegriff.'
-                  : 'Laden Sie ein Dokument im Arbeitsraum hoch.'}
+                  : 'Dokument unter „Neue Analyse“ hochladen.'}
               </p>
             </div>
           )}
         </div>
         <p className="field-help document-picker-count" role="status">
           {selected.length} von {limit} Dokumenten ausgewählt
-          {compare && selected.length === 1
-            ? ' · Wählen Sie den Gegenentwurf.'
-            : selected.length === limit
-              ? ' · Auswahl vollständig.'
-              : '.'}
+          {compare && selected.length === 1 ? ' · Gegenentwurf auswählen.' : ''}
         </p>
       </div>
       <div className="modal-footer">

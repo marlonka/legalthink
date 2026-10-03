@@ -31,9 +31,9 @@ test('start page is usable, self-contained and accessible', async ({ page }) => 
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /Mehr Klarheit/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Beispiel erkunden' })).toBeVisible();
-  await expect(page.getByText('Beispielmodus verfügbar')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Beispiel öffnen' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'API einrichten' })).toBeVisible();
   await assertAccessible(page);
   expect(errors).toEqual([]);
   await page.screenshot({ path: 'artifacts/start-desktop.png', fullPage: true });
@@ -42,12 +42,12 @@ test('start page is usable, self-contained and accessible', async ({ page }) => 
 test('model selection resets an incompatible reasoning effort', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
-  await page.getByRole('button', { name: /GPT-6 Luna.*(?:zügige|fokussierte)/ }).click();
+  await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
   await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
   await page.getByRole('button', { name: 'Ohne', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Denkaufwand: Ohne' })).toBeVisible();
   await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
-  await page.getByRole('button', { name: /GPT-6.1 Sol.*anspruchsvolle/ }).click();
+  await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Denkaufwand: Mittel' })).toBeVisible();
   await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
   await expect(page.getByRole('button', { name: 'Ohne', exact: true })).toHaveCount(0);
@@ -65,19 +65,17 @@ test('upload stays local and unavailable AI produces a recoverable error', async
     ),
   });
   await expect(page.getByText('Lokaler-Testvertrag.txt', { exact: true })).toBeVisible();
-  await page.getByLabel('Prüfauftrag und Perspektive').fill('Aus Sicht des Auftraggebers prüfen.');
+  await page.getByLabel(/^Prüfauftrag/).fill('Aus Sicht des Auftraggebers prüfen.');
   await page.getByRole('button', { name: 'Analyse starten', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText(/API|Schlüssel|konfiguriert/i);
-  await expect(page.getByLabel('Prüfauftrag und Perspektive')).toHaveValue(
-    'Aus Sicht des Auftraggebers prüfen.',
-  );
+  await expect(page.getByLabel(/^Prüfauftrag/)).toHaveValue('Aus Sicht des Auftraggebers prüfen.');
 });
 
 test('mobile layout fits and respects reduced motion', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: /Mehr Klarheit/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
@@ -90,11 +88,11 @@ test('example connects findings, evidence, proposals, export and persistent hist
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Beispiel erkunden' }).click();
+  await page.getByRole('button', { name: 'Beispiel öffnen' }).click();
   await expect(
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
   ).toBeVisible();
-  await expect(page.getByText(/Fiktive Unterlagen und vorgefertigte Ergebnisse/)).toBeVisible();
+  await expect(page.getByText(/Fiktive Unterlagen mit vorgegebenen Ergebnissen/)).toBeVisible();
   await expect(page.getByRole('complementary', { name: 'Quellenansicht' })).toContainText(
     'Haftung',
   );
@@ -120,8 +118,8 @@ test('example connects findings, evidence, proposals, export and persistent hist
   await expect(
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: /^Ihre Analysen/ }).click();
-  await expect(page.getByRole('heading', { name: 'Ihre Analysen', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /^Analysen/ }).click();
+  await expect(page.getByRole('heading', { name: 'Analysen', exact: true })).toBeVisible();
   await page
     .locator('.history-item-main')
     .filter({ hasText: 'Cloud-Vertrag · Beispielprüfung' })
@@ -139,7 +137,7 @@ test('playbook is saved, edited, available to an analysis and explicitly deleted
   const dialog = page.getByRole('dialog', { name: 'Neues Playbook' });
   await dialog.getByLabel('Name', { exact: true }).fill('Offline-Prüfstandard');
   await dialog
-    .getByLabel('Prüfvorgaben & Muster')
+    .getByLabel('Prüfvorgaben')
     .fill('Aus Auftraggebersicht prüfen. Fehlende Anlagen als offene Fragen kennzeichnen.');
   await assertAccessible(page);
   await dialog.getByRole('button', { name: 'Playbook speichern' }).click();
@@ -149,7 +147,7 @@ test('playbook is saved, edited, available to an analysis and explicitly deleted
   await page.getByRole('button', { name: 'Bearbeiten', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Playbook bearbeiten' });
   await editor
-    .getByLabel('Prüfvorgaben & Muster')
+    .getByLabel('Prüfvorgaben')
     .fill('Geänderte Vorgabe: Kündigungsfristen gesondert prüfen.');
   await editor.getByRole('button', { name: 'Playbook speichern' }).click();
   await expect(editor).toHaveCount(0);
@@ -162,6 +160,8 @@ test('playbook is saved, edited, available to an analysis and explicitly deleted
   await page
     .getByRole('combobox', { name: 'Kanzlei-Playbook', exact: true })
     .selectOption({ label: 'Offline-Prüfstandard' });
+  await page.getByRole('button', { name: 'Prüfoptionen' }).click();
+  await expect(page.getByText('Playbook: Offline-Prüfstandard', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Kanzlei-Playbooks', exact: true }).click();
   await page.getByRole('button', { name: 'Offline-Prüfstandard löschen' }).click();
   await expect(page.getByRole('dialog', { name: 'Playbook löschen?' })).toBeVisible();

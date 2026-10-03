@@ -19,7 +19,7 @@ Die Browserabläufe prüfen Modellwechsel mit unzulässigem Denkaufwand, lokalen
 
 Die Python-Suite deckt API-Validierung, Persistenz, Host/Origin/Loopback-Zugriff, Dokumentlimits, Parsergrenzen, simulierte Providerfehler, Zitatverifikation, Chronologiebelege, Quellenzuordnung, Request-Serialisierung und Export ab. Lange Berichtstitel lösten zunächst einen Word-Exportfehler aus; der Regressionstest scheiterte vor der Korrektur und besteht danach. OOXML-Revisionen, Hyperlinks und erhaltene Überschriften werden strukturell geprüft.
 
-Die Oberfläche verwendet lokal ausgelieferte Inter-Schriften. Der Build enthält rund 134,5 kB komprimiertes JavaScript und 15,0 kB komprimiertes CSS. Das sind Dateigrößen, keine gemessenen Ladezeiten.
+Die Oberfläche verwendet lokal ausgelieferte Inter-Schriften. Dateigrößen und Komprimierung werden im Vite-Build ausgegeben; sie sind keine gemessenen Ladezeiten.
 
 ## Grenzen der Nachweise
 

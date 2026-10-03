@@ -1,6 +1,6 @@
 # LegalThinkGPT
 
-Ein ruhiger Arbeitsraum für juristische Dokumentenarbeit. Verträge prüfen, Fassungen vergleichen, Akten ordnen und Verhandlungsvorschläge mit ihren Fundstellen prüfen.
+Lokale Anwendung für Vertragsprüfung, Versionsvergleich, Chronologie, Datenschutz- und Werbeprüfung. Ergebnisse enthalten Fundstellen und Formulierungsvorschläge; Export als Word oder Markdown.
 
 React und TypeScript im Browser. FastAPI, SQLite und die OpenAI Responses API im Python-Backend. Keine API-Schlüssel im Frontend.
 
@@ -15,7 +15,7 @@ uv sync --project backend --extra dev
 npm run dev
 ```
 
-Öffnen: [localhost:5175](http://localhost:5175). **Beispiel erkunden** öffnet eine ausdrücklich fiktive Vertragsprüfung. Dafür wird kein API-Schlüssel benötigt und keine OpenAI-Anfrage gesendet.
+Öffnen: [localhost:5175](http://localhost:5175). **Beispiel öffnen** zeigt eine fiktive Vertragsprüfung ohne API-Aufruf.
 
 ## Eigene Dokumente analysieren
 

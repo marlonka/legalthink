@@ -642,20 +642,6 @@
   font-size: 11px;
   color: #626b59;
 }
-.suggestions-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  color: #626b59;
-  background: #f6f9ef;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 19px;
-}
-.suggestions-note p {
-  font-size: 11px;
-  line-height: 1.7;
-}
 .suggestion-card {
   border: 1px solid #e1ebd4;
   border-radius: 8px;
@@ -844,16 +830,6 @@
 .external-sources .external-link {
   font-size: 11px;
   color: #626b59;
-}
-.review-footer {
-  padding: 20px 0 27px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border-top: 1px solid #e9f0e0;
-  font-size: 11px;
-  color: #626b59;
-  line-height: 1.7;
 }
 .empty-state {
   text-align: center;
@@ -1062,23 +1038,6 @@
 .delete-hover:focus-visible {
   opacity: 1;
 }
-.playbook-intro {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  padding: 18px 20px;
-  border: 1px solid #e0ead3;
-  border-radius: 8px;
-  background: #f8fbf3;
-  margin-bottom: 30px;
-  color: #626b59;
-}
-.playbook-intro p {
-  font-size: 11px;
-  line-height: 1.85;
-  max-width: 660px;
-  color: #626b59;
-}
 .playbooks-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1137,72 +1096,6 @@
 }
 .playbook-card > footer .icon-button {
   color: #626b59;
-}
-.playbook-empty {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  align-items: center;
-  gap: 40px;
-  padding: 30px 0;
-}
-.playbook-example {
-  border: 1px solid #e1ecd5;
-  border-radius: 8px;
-  padding: 24px;
-  background: #fff;
-  box-shadow: 0 6px 25px #395b2104;
-  transform: rotate(-1deg);
-}
-.playbook-example > .eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: #626b59;
-}
-.playbook-example h3 {
-  font-size: 13px;
-  font-weight: 500;
-  color: #5c6555;
-  line-height: 1.5;
-  margin: 13px 0 19px;
-}
-.playbook-example > div {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  color: #626b59;
-  margin-bottom: 12px;
-}
-.playbook-example > div > span {
-  font-size: 11px;
-  line-height: 1.7;
-}
-.playbook-example > div > svg {
-  margin-top: 2px;
-  color: #626b59;
-}
-.playbook-example > .sample-label {
-  display: block;
-  margin-top: 19px;
-  color: #626b59;
-  font-size: 11px;
-}
-.playbook-empty-copy h2 {
-  font-size: 21px;
-  letter-spacing: -0.5px;
-  font-weight: 500;
-  line-height: 1.4;
-  color: #5c6555;
-}
-.playbook-empty-copy p {
-  font-size: 11px;
-  line-height: 1.9;
-  color: #626b59;
-  max-width: 250px;
-  margin: 13px 0 18px;
-}
-.playbook-empty-copy .text-button {
-  font-size: 11px;
-  color: #5c6555;
 }
 .playbook-textarea {
   display: block;
@@ -1400,14 +1293,6 @@
   margin-left: 32px;
   font-size: 11px;
 }
-.settings-footer {
-  display: flex;
-  gap: 8px;
-  font-size: 11px;
-  color: #626b59;
-  border-top: 1px solid #e5eeda;
-  padding-top: 26px;
-}
 
 @media (min-width: 1500px) {
   .review-page {
@@ -1479,12 +1364,6 @@
   }
   .standard-page-header h1 {
     font-size: 25px;
-  }
-  .playbook-empty {
-    gap: 28px;
-  }
-  .playbook-empty-copy h2 {
-    font-size: 19px;
   }
   .history-findings {
     gap: 10px;
@@ -1561,19 +1440,6 @@
   .page-heading-row > .button {
     font-size: 11px;
     padding: 8px 10px;
-  }
-  .playbook-empty {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-  .playbook-example {
-    max-width: 380px;
-  }
-  .playbook-empty-copy {
-    padding: 0 8px;
-  }
-  .playbook-empty-copy p {
-    max-width: 100%;
   }
   .playbooks-grid {
     gap: 12px;
@@ -1813,20 +1679,8 @@
   .legal-basis > span {
     font-size: 11px;
   }
-  .review-footer {
-    font-size: 11px;
-    align-items: flex-start;
-    gap: 7px;
-    padding: 20px 0;
-  }
-  .review-footer > svg {
-    margin-top: 1px;
-  }
   .suggestion-title h3 {
     font-size: 12px;
-  }
-  .suggestions-note p {
-    font-size: 11px;
   }
   .suggestion-card footer > .text-button,
   .mark-button {
@@ -1915,13 +1769,6 @@
   .empty-state h2 {
     font-size: 21px;
   }
-  .playbook-intro {
-    gap: 12px;
-    padding: 16px;
-  }
-  .playbook-intro p {
-    font-size: 11px;
-  }
   .playbooks-grid {
     gap: 14px;
   }
@@ -1929,30 +1776,6 @@
     font-size: 13px;
   }
   .playbook-card-content p {
-    font-size: 11px;
-  }
-  .playbook-empty {
-    grid-template-columns: 1fr;
-    gap: 32px;
-    padding-top: 14px;
-  }
-  .playbook-example {
-    max-width: none;
-    margin: 0 4px;
-  }
-  .playbook-example h3 {
-    font-size: 14px;
-  }
-  .playbook-example > div > span {
-    font-size: 11px;
-  }
-  .playbook-empty-copy h2 {
-    font-size: 23px;
-  }
-  .playbook-empty-copy p {
-    font-size: 12px;
-  }
-  .playbook-empty-copy .text-button {
     font-size: 11px;
   }
   .settings-section {
@@ -2020,9 +1843,6 @@
   }
   .settings-section > .field-help {
     margin-left: 0;
-    font-size: 11px;
-  }
-  .settings-footer {
     font-size: 11px;
   }
   .settings-section > .muted {
@@ -2099,9 +1919,6 @@
   }
   .playbook-card-content p {
     font-size: 12px;
-  }
-  .playbook-example {
-    padding: 20px;
   }
   .history-item-title > strong {
     font-size: 11px;

@@ -21,13 +21,13 @@ test('Python serves the built workspace with local assets, CSP and working expor
   const response = await page.goto('/');
   expect(response?.status()).toBe(200);
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
-  await expect(page.getByRole('heading', { name: /Mehr Klarheit/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
   await page.getByRole('button', { name: /^Beispiel öffnen/ }).click();
   await expect(
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
   ).toBeVisible();
   await expect(page.getByRole('complementary', { name: 'Quellenansicht' })).toContainText(
-    'Textbeleg bestätigt',
+    'Zitat im Dokument gefunden',
   );
   await page.getByRole('button', { name: 'Exportieren' }).click();
   const downloading = page.waitForEvent('download');

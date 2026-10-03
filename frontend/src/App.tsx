@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ArrowUpRight,
   BookOpen,
   Check,
-  ChevronRight,
-  CircleHelp,
   FileText,
   History as HistoryIcon,
   LoaderCircle,
   Menu,
   Plus,
   Settings2,
-  ShieldCheck,
   X,
 } from 'lucide-react';
 import { MotionConfig } from 'motion/react';
@@ -154,7 +150,7 @@ export default function App() {
   }, [models, model, effort]);
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
-    document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Ihre Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Arbeitsraum'} · LegalThinkGPT`;
+    document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Neue Analyse'} · LegalThinkGPT`;
     if (!route.startsWith('analysis/')) return;
     const id = route.split('/')[1];
     if (analysis?.id === id) return;
@@ -289,7 +285,7 @@ export default function App() {
     }
     if (!health?.api_configured) {
       setError(
-        'Für eigene Analysen fehlt die API-Verbindung. Hinterlegen Sie den OpenAI-API-Schlüssel in den Einstellungen des Servers. Das Beispiel können Sie bereits erkunden.',
+        'API-Schlüssel fehlt. Hinterlegen Sie OPENAI_API_KEY in backend/.env und starten Sie den Server neu.',
       );
       return;
     }
@@ -362,7 +358,7 @@ export default function App() {
     if (refreshing || loading) return;
     setRefreshing(true);
     try {
-      if (await loadWorkspace()) setToast('Arbeitsraum aktualisiert.');
+      if (await loadWorkspace()) setToast('Daten aktualisiert.');
     } finally {
       setRefreshing(false);
     }
@@ -374,7 +370,7 @@ export default function App() {
       body: JSON.stringify({ name, content }),
     });
     setPlaybooks((previous) => [result, ...previous]);
-    setToast('Playbook gespeichert. Für die nächste Analyse auswählbar.');
+    setToast('Playbook gespeichert.');
     void api<DocumentRecord[]>('/documents')
       .then(setDocuments)
       .catch(() => {});
@@ -388,7 +384,7 @@ export default function App() {
     setPlaybooks((previous) =>
       previous.map((playbook) => (playbook.id === id ? result : playbook)),
     );
-    setToast('Playbook aktualisiert. Die neuen Vorgaben gelten für kommende Analysen.');
+    setToast('Playbook aktualisiert.');
   }
 
   async function confirmDelete() {
@@ -465,7 +461,7 @@ export default function App() {
   const pageName = isReview
     ? 'Analyse'
     : route === 'history'
-      ? 'Ihre Analysen'
+      ? 'Analysen'
       : route === 'playbooks'
         ? 'Kanzlei-Playbooks'
         : route === 'settings'
@@ -518,12 +514,6 @@ export default function App() {
               <X size={18} />
             </button>
           </div>
-          <div className="workspace-label">
-            <span className="workspace-monogram">L</span>
-            <span>
-              Persönlicher Arbeitsraum<small>DEUTSCHES RECHT</small>
-            </span>
-          </div>
           <nav className="primary-nav">
             <button
               className={`nav-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
@@ -531,16 +521,13 @@ export default function App() {
             >
               <Plus size={18} strokeWidth={1.6} />
               <span>Neue Analyse</span>
-              <span className="nav-shortcut">
-                <ArrowUpRight size={12} />
-              </span>
             </button>
             <button
               className={`nav-item ${route === 'history' || isReview ? 'active' : ''}`}
               onClick={() => navigate('history')}
             >
               <HistoryIcon size={17} strokeWidth={1.6} />
-              <span>Ihre Analysen</span>
+              <span>Analysen</span>
               {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
             </button>
             <button
@@ -551,10 +538,10 @@ export default function App() {
               <span>Kanzlei-Playbooks</span>
             </button>
           </nav>
-          <div className="sidebar-recent">
-            <div className="nav-section-label">LETZTE ANALYSEN</div>
-            {analyses.length ? (
-              analyses.slice(0, 4).map((item) => (
+          {analyses.length > 0 && (
+            <div className="sidebar-recent">
+              <div className="nav-section-label">Letzte Analysen</div>
+              {analyses.slice(0, 4).map((item) => (
                 <button
                   className={`recent-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
                   key={item.id}
@@ -567,24 +554,10 @@ export default function App() {
                   <span>{item.title}</span>
                   {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
                 </button>
-              ))
-            ) : (
-              <div className="recent-empty">
-                Ihre nächste Erkenntnis
-                <br />
-                beginnt mit einem Dokument.
-              </div>
-            )}
-          </div>
-          <div className="sidebar-bottom">
-            <div className="workspace-note">
-              <span className="workspace-note-icon">
-                <ShieldCheck size={17} strokeWidth={1.4} />
-              </span>
-              <p>
-                Raum für gutes Urteil.<span>Die letzte Entscheidung liegt bei Ihnen.</span>
-              </p>
+              ))}
             </div>
+          )}
+          <div className="sidebar-bottom">
             <button
               className={`nav-item ${route === 'settings' ? 'active' : ''}`}
               onClick={() => navigate('settings')}
@@ -592,16 +565,6 @@ export default function App() {
               <Settings2 size={17} strokeWidth={1.6} />
               <span>Einstellungen</span>
             </button>
-            <div className="sidebar-footer">
-              <span className="profile-avatar">M</span>
-              <div>
-                Mein Arbeitsraum<small>LegalThinkGPT</small>
-              </div>
-              <span
-                className={`status-dot ${health?.api_configured ? 'connected' : ''}`}
-                title={health?.api_configured ? 'API konfiguriert' : 'Beispielmodus'}
-              />
-            </div>
           </div>
         </aside>
         <div className="main-shell" inert={mobileOpen}>
@@ -617,31 +580,25 @@ export default function App() {
               >
                 <Menu size={20} />
               </button>
-              <span className="topbar-workspace">Arbeitsraum</span>
-              <ChevronRight size={12} />
-              <span>{pageName}</span>
+              <span className="mobile-page-name">LegalThinkGPT</span>
             </div>
             <button className="topbar-status" onClick={() => navigate('settings')}>
               <span className={`status-dot ${health?.api_configured ? 'connected' : ''}`} />
               {health?.api_configured
-                ? 'API konfiguriert'
+                ? 'API-Schlüssel hinterlegt'
                 : health
-                  ? 'Lokal · Beispiel verfügbar'
+                  ? 'API einrichten'
                   : loading
-                    ? 'Verbindung wird geprüft'
+                    ? 'Server wird geprüft …'
                     : 'Server nicht erreichbar'}
-              <CircleHelp size={13} />
             </button>
           </header>
           <main ref={contentRef} id="main-content" className="main-content" tabIndex={-1}>
             {loadFailures.length > 0 && (
               <section className="workspace-load-error" aria-label="Arbeitsraum erneut laden">
                 <div role="alert">
-                  <strong>Der Arbeitsraum konnte nicht vollständig geladen werden.</strong>
-                  <p>
-                    Nicht geladen: {loadFailures.join(', ')}. Prüfen Sie die Verbindung und laden
-                    Sie die Daten erneut.
-                  </p>
+                  <strong>Daten konnten nicht geladen werden.</strong>
+                  <p>Betroffen: {loadFailures.join(', ')}.</p>
                 </div>
                 <button
                   className="button secondary small-button"
@@ -670,7 +627,7 @@ export default function App() {
                 <div className="standard-page">
                   <ErrorMessage>{pageError}</ErrorMessage>
                   <button className="button secondary" onClick={() => navigate('new')}>
-                    Zum Arbeitsraum
+                    Neue Analyse
                   </button>
                 </div>
               ) : route === 'history' ? (
@@ -754,8 +711,6 @@ export default function App() {
                   onRun={() => void runAnalysis()}
                   onCancel={() => requestController.current?.abort()}
                   onDemo={() => void openDemo()}
-                  onPlaybooks={() => navigate('playbooks')}
-                  health={health}
                   uploading={uploading}
                   running={running}
                   demoLoading={demoLoading}

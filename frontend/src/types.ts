@@ -76,7 +76,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new Error(
-      'Der Arbeitsraum ist gerade nicht erreichbar. Prüfen Sie, ob der Server läuft, und versuchen Sie es erneut.',
+      'Server nicht erreichbar. Prüfen Sie, ob er läuft, und versuchen Sie es erneut.',
     );
   }
   if (!response.ok) {

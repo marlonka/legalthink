@@ -8,14 +8,14 @@ export const DEFAULT_MODELS: Model[] = [
   {
     id: 'gpt-6.1-sol',
     name: 'GPT-6.1 Sol',
-    description: 'Für anspruchsvolle juristische Arbeit',
+    description: '',
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     default_effort: 'medium',
   },
   {
     id: 'gpt-6-luna',
     name: 'GPT-6 Luna',
-    description: 'Für zügige, fokussierte Prüfungen',
+    description: '',
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     default_effort: 'medium',
   },
@@ -225,7 +225,6 @@ export function ModelPicker({
                   >
                     <span>
                       <strong>{item.name}</strong>
-                      <small>{item.description}</small>
                     </span>
                     {model === item.id && <Check size={16} />}
                   </button>
@@ -243,14 +242,14 @@ export function ModelPicker({
                   >
                     <span>
                       {EFFORT_NAMES[value] ?? value}
-                      {value === 'medium' && <small>Ausgewogen · Standard</small>}
+                      {value === 'medium' && <small>Standard</small>}
                     </span>
                     {effort === value && <Check size={16} />}
                   </button>
                 ))}
             {open === 'effort' && (
               <p className="popover-note">
-                Mehr Denkaufwand kann die Prüfung vertiefen und Zeit sowie Kosten erhöhen.
+                Höherer Denkaufwand kann länger dauern und mehr kosten.
               </p>
             )}
           </motion.div>

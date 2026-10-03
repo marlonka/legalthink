@@ -16,8 +16,6 @@ import {
   PanelRightClose,
   Quote,
   Search,
-  ShieldAlert,
-  Sparkles,
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Analysis, DocumentRecord, Finding, Severity } from './types';
@@ -86,23 +84,21 @@ export default function Review({
     <div className="review-page">
       <div className="review-breadcrumb">
         <button className="text-button" onClick={onBack}>
-          <ArrowLeft size={14} /> Arbeitsraum
+          <ArrowLeft size={14} /> Neue Analyse
         </button>
         <span>/</span>
         <span>{workflowName(analysis.workflow)}</span>
       </div>
       {analysis.is_demo && (
         <div className="demo-banner">
-          <Sparkles size={15} />
+          <FileText size={15} />
           <span>
-            <strong>Beispielanalyse</strong> · Fiktive Unterlagen und vorgefertigte Ergebnisse. Kein
-            API-Aufruf.
+            <strong>Beispielanalyse</strong> · Fiktive Unterlagen mit vorgegebenen Ergebnissen.
           </span>
         </div>
       )}
       <header className="review-heading">
         <div>
-          <div className="eyebrow">{workflowName(analysis.workflow)}</div>
           <h1>{analysis.title}</h1>
           <div className="review-meta">
             <span>{dateLabel(analysis.created_at)}</span>
@@ -138,7 +134,7 @@ export default function Review({
               >
                 <FileText size={16} />
                 <span>
-                  Word-Dokument<small>Prüfbericht mit Vorschlägen</small>
+                  Word-Dokument<small>Prüfbericht mit Änderungsvorschlägen</small>
                 </span>
               </button>
               <button
@@ -149,7 +145,7 @@ export default function Review({
               >
                 <FileText size={16} />
                 <span>
-                  Markdown<small>Für Ihre weitere Bearbeitung</small>
+                  Markdown<small>Prüfbericht als Textdatei</small>
                 </span>
               </button>
             </div>
@@ -158,7 +154,6 @@ export default function Review({
       </header>
       <div className="review-overview">
         <div className="summary-block">
-          <span className="eyebrow">EINORDNUNG</span>
           <p>{analysis.summary}</p>
         </div>
         <div className="risk-summary">
@@ -311,11 +306,6 @@ export default function Review({
                   <h3>
                     {analysis.findings.length ? 'Keine passenden Befunde' : 'Keine Befunde erfasst'}
                   </h3>
-                  <p>
-                    {analysis.findings.length
-                      ? 'Wählen Sie eine andere Priorität oder ändern Sie Ihren Suchbegriff.'
-                      : 'Das Ergebnis ersetzt keine abschließende juristische Prüfung.'}
-                  </p>
                   {analysis.findings.length > 0 && (
                     <button
                       className="text-button"
@@ -350,13 +340,6 @@ export default function Review({
           className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
         >
           <section className="suggestions-column">
-            <div className="suggestions-note">
-              <FileCheck2 size={17} />
-              <p>
-                Formulierungsvorschläge für Ihre Bearbeitung. Prüfen Sie jeden Vorschlag im
-                Vertragskontext.
-              </p>
-            </div>
             {suggestions.map((finding, index) => (
               <article
                 className={`suggestion-card ${selectedId === finding.id ? 'active' : ''}`}
@@ -404,7 +387,6 @@ export default function Review({
               <div className="empty-state">
                 <FileText size={30} />
                 <h3>Keine Formulierungsvorschläge</h3>
-                <p>Diese Analyse enthält keine alternativen Klauseln.</p>
               </div>
             )}
             {marked.size > 0 && (
@@ -459,7 +441,7 @@ export default function Review({
                         {event.source_quote && (
                           <details className="table-source-evidence">
                             <summary>
-                              {event.verified ? 'Textbeleg bestätigt' : 'Textbeleg prüfen'}
+                              {event.verified ? 'Zitat im Dokument gefunden' : 'Zitat prüfen'}
                             </summary>
                             <blockquote>{event.source_quote}</blockquote>
                           </details>
@@ -475,7 +457,6 @@ export default function Review({
             <div className="empty-state">
               <CircleHelp size={30} />
               <h3>Keine zeitlichen Ereignisse erfasst</h3>
-              <p>Die Unterlagen enthielten keine zuordenbaren Ereignisse.</p>
             </div>
           )}
           {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
@@ -519,13 +500,6 @@ export default function Review({
           </dl>
         </details>
       )}
-      <footer className="review-footer">
-        <ShieldAlert size={13} />
-        <span>
-          KI-Ergebnisse können unvollständig oder fehlerhaft sein. Fundstellen, Rechtslage und
-          Formulierungen fachlich prüfen.
-        </span>
-      </footer>
     </div>
   );
 }
@@ -663,13 +637,13 @@ function SourcePanel({
               <FileText size={22} strokeWidth={1.3} />
             </div>
             <div>
-              <strong>{document?.name ?? 'Zugeordnete Fundstelle'}</strong>
-              <span>{finding.source_location || 'Keine genaue Position angegeben'}</span>
+              <strong>{document?.name ?? 'Dokument nicht mehr verfügbar'}</strong>
+              <span>{finding.source_location || 'Position nicht angegeben'}</span>
             </div>
           </div>
           <div className="source-paper">
             <div className="source-paper-eyebrow">
-              {finding.source_location || 'DOKUMENTAUSSCHNITT'}
+              {finding.source_location || 'Dokumentausschnitt'}
             </div>
             {finding.source_quote ? (
               <>
@@ -693,7 +667,7 @@ function SourcePanel({
             ) : (
               <div className="missing-source">
                 <Search size={25} />
-                <p>Für diesen Befund ist kein wörtlicher Textbeleg hinterlegt.</p>
+                <p>Kein Zitat hinterlegt.</p>
               </div>
             )}
           </div>
@@ -702,9 +676,9 @@ function SourcePanel({
             <span>
               {finding.verified
                 ? document
-                  ? 'Textbeleg bestätigt'
-                  : 'Textbeleg zum Analysezeitpunkt bestätigt'
-                : 'Fundstelle manuell verifizieren'}
+                  ? 'Zitat im Dokument gefunden'
+                  : 'Zitat bei der Analyse im Dokument gefunden'
+                : 'Zitat nicht bestätigt – im Original prüfen'}
             </span>
           </div>
           {document?.text && (
@@ -715,7 +689,7 @@ function SourcePanel({
                 aria-expanded={expanded}
                 aria-controls={documentTextId}
               >
-                {expanded ? 'Dokumenttext schließen' : 'Extrahierten Dokumenttext öffnen'}
+                {expanded ? 'Dokumenttext schließen' : 'Dokumenttext öffnen'}
                 <ChevronDown size={13} />
               </button>
               {expanded && (
@@ -727,23 +701,21 @@ function SourcePanel({
           )}
           {!document && (
             <p className="document-unavailable">
-              Der ursprüngliche Dokumenttext ist nicht mehr verfügbar. Dieses Zitat ist im
-              Analysebericht gespeichert.
+              Der Dokumenttext ist nicht mehr gespeichert. Das Zitat bleibt Teil dieses Berichts.
             </p>
           )}
-          <div className="source-note">
-            <span className="eyebrow">IHR PRÜFMASSSTAB</span>
+          <details className="source-note">
+            <summary>Zum Zitatabgleich</summary>
             <p>
-              Ein Textbeleg bestätigt die Fundstelle. Die rechtliche Bewertung bleibt Ihre
-              Entscheidung.
+              Geprüft wird der Wortlaut im Dokument. Die rechtliche Bewertung wird nicht
+              verifiziert.
             </p>
-          </div>
+          </details>
         </>
       ) : (
         <div className="empty-source">
           <Quote size={27} strokeWidth={1.2} />
-          <h3>Jeder Befund braucht Kontext.</h3>
-          <p>Öffnen Sie einen Befund, um die zugehörige Fundstelle zu prüfen.</p>
+          <p>Befund auswählen, um die Fundstelle anzuzeigen.</p>
         </div>
       )}
     </aside>
@@ -755,9 +727,8 @@ function OpenQuestions({ questions }: { questions: string[] }) {
     <section className="open-questions">
       <h3>
         <CircleHelp size={16} />
-        Noch zu klären
+        Offene Fragen
       </h3>
-      <p>Diese Fragen helfen, die Prüfung zu vervollständigen.</p>
       <ol>
         {questions.map((question, index) => (
           <li key={index}>{question}</li>

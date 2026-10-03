@@ -9,16 +9,6 @@
   font-size: 11px;
   white-space: nowrap;
 }
-.intro-demo-link {
-  margin-top: 14px;
-  font-size: 11px;
-}
-.intro-demo-link > span {
-  font-size: 10px;
-  font-weight: 400;
-  color: #5c6555;
-  margin-left: 4px;
-}
 .compliance-presets {
   display: flex;
   flex-wrap: wrap;

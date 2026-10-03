@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  ArrowRight,
   ArrowUpRight,
   BookOpen,
   Check,
@@ -44,11 +43,9 @@ export function History({
   return (
     <div className="standard-page">
       <header className="standard-page-header">
-        <div className="eyebrow">IHR ARBEITSRAUM</div>
         <div className="page-heading-row">
           <div>
-            <h1>Ihre Analysen</h1>
-            <p>Prüfungen wieder aufnehmen. Gedanken weiterführen.</p>
+            <h1>Analysen</h1>
           </div>
           <button className="button primary" onClick={onNew}>
             <Plus size={16} />
@@ -126,18 +123,7 @@ export function History({
           <div className="empty-state-icon">
             <Clock3 size={29} strokeWidth={1.3} />
           </div>
-          <h2>{search ? 'Keine Analysen gefunden' : 'Raum für Ihre nächste Erkenntnis.'}</h2>
-          <p>
-            {search
-              ? 'Versuchen Sie einen anderen Suchbegriff.'
-              : 'Ihre Prüfungen werden hier gespeichert. Beginnen Sie mit einem Dokument oder erkunden Sie das Beispiel.'}
-          </p>
-          {!search && (
-            <button className="button secondary" onClick={onNew}>
-              Erste Analyse vorbereiten
-              <ArrowRight size={16} />
-            </button>
-          )}
+          <h2>{search ? 'Keine Analysen gefunden' : 'Noch keine Analysen'}</h2>
         </div>
       )}
     </div>
@@ -221,11 +207,10 @@ export function Playbooks({
   return (
     <div className="standard-page">
       <header className="standard-page-header">
-        <div className="eyebrow">KANZLEIWISSEN</div>
         <div className="page-heading-row">
           <div>
-            <h1>Ihre Standards. Immer dabei.</h1>
-            <p>Playbooks geben Ihren Prüfungen eine gemeinsame Linie.</p>
+            <h1>Kanzlei-Playbooks</h1>
+            <p>Prüfvorgaben speichern und vor einer Analyse auswählen.</p>
           </div>
           <button
             className="button primary"
@@ -242,13 +227,6 @@ export function Playbooks({
           </button>
         </div>
       </header>
-      <div className="playbook-intro">
-        <BookOpen size={22} strokeWidth={1.4} />
-        <p>
-          Halten Sie Verhandlungspositionen, Musterklauseln und Sprachregeln fest. Wählen Sie Ihr
-          Playbook vor einer Analyse unter den Prüfoptionen aus.
-        </p>
-      </div>
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {playbooks.length ? (
         <div className="playbooks-grid">
@@ -276,45 +254,11 @@ export function Playbooks({
           ))}
         </div>
       ) : (
-        <div className="playbook-empty">
-          <div className="playbook-example">
-            <span className="eyebrow">SO KÖNNTE IHR PLAYBOOK AUSSEHEN</span>
-            <h3>Unsere Position als Auftraggeber</h3>
-            <div>
-              <Check size={15} />
-              <span>Haftung bei Vorsatz und grober Fahrlässigkeit ausnehmen</span>
-            </div>
-            <div>
-              <Check size={15} />
-              <span>Kündigung und Datenherausgabe zusammen betrachten</span>
-            </div>
-            <div>
-              <Check size={15} />
-              <span>Klare, kurze Formulierungen ohne unnötige Fachsprache</span>
-            </div>
-            <span className="sample-label">Beispiel · noch nicht gespeichert</span>
+        <div className="empty-state large">
+          <div className="empty-state-icon">
+            <BookOpen size={29} strokeWidth={1.3} />
           </div>
-          <div className="playbook-empty-copy">
-            <h2>
-              Was macht eine gute Klausel
-              <br />
-              für Ihre Kanzlei aus?
-            </h2>
-            <p>Machen Sie aus bewährtem Wissen einen wiederverwendbaren Prüfmaßstab.</p>
-            <button
-              className="text-button"
-              onClick={() => {
-                setEditingId(null);
-                setName('');
-                setContent('');
-                setOpen(true);
-                setFormError('');
-              }}
-            >
-              Erstes Playbook erstellen
-              <ArrowRight size={15} />
-            </button>
-          </div>
+          <h2>Noch keine Playbooks</h2>
         </div>
       )}
       {open && (
@@ -332,10 +276,6 @@ export function Playbooks({
             }}
           >
             <div className="modal-body">
-              <p className="modal-description">
-                Beschreiben Sie die Standards Ihrer Kanzlei. Importieren Sie ein Muster oder
-                schreiben Sie Ihre Vorgaben direkt.
-              </p>
               <label className="field-label">
                 Name
                 <input
@@ -349,7 +289,7 @@ export function Playbooks({
                 />
               </label>
               <div className="field-label-row">
-                <label htmlFor="playbook-content">Prüfvorgaben & Muster</label>
+                <label htmlFor="playbook-content">Prüfvorgaben</label>
                 <button
                   className="text-button"
                   type="button"
@@ -437,10 +377,10 @@ export function Playbooks({
                 setOpen(true);
               }}
             >
-              Als Vorlage verwenden
+              Duplizieren
             </button>
             <button className="button primary" onClick={() => setSelected(null)}>
-              Fertig
+              Schließen
             </button>
           </div>
         </Modal>
@@ -475,21 +415,18 @@ export function Settings({
   return (
     <div className="standard-page settings-page">
       <header className="standard-page-header">
-        <div className="eyebrow">ARBEITSUMGEBUNG</div>
         <h1>Einstellungen</h1>
-        <p>Ein klarer Blick auf Modelle, Verbindung und Ihre Daten.</p>
       </header>
       <section className="settings-section">
         <div className="settings-section-heading">
           <Server size={20} strokeWidth={1.4} />
           <div>
-            <h2>API-Verbindung</h2>
-            <p>Der API-Schlüssel wird ausschließlich auf dem Server hinterlegt.</p>
+            <h2>OpenAI API</h2>
           </div>
           <span className={`connection-badge ${health?.api_configured ? 'connected' : ''}`}>
             <span className="status-dot" />
             {health?.api_configured
-              ? 'Konfiguriert'
+              ? 'Schlüssel hinterlegt'
               : health
                 ? 'Nicht eingerichtet'
                 : 'Nicht erreichbar'}
@@ -497,31 +434,27 @@ export function Settings({
         </div>
         {!health?.api_configured && (
           <div className="setup-instructions">
-            <p>Für eigene Analysen braucht der Server einen OpenAI-API-Schlüssel.</p>
+            <p>Für Analysen wird ein OpenAI-API-Schlüssel benötigt.</p>
             <ol>
               <li>
-                Tragen Sie <code>OPENAI_API_KEY</code> in der serverseitigen <code>.env</code>-Datei
-                ein.
+                Tragen Sie <code>OPENAI_API_KEY</code> in <code>backend/.env</code> ein.
               </li>
-              <li>Starten Sie den Backend-Server neu und prüfen Sie die Verbindung.</li>
+              <li>Starten Sie den Server neu und aktualisieren Sie den Status.</li>
             </ol>
-            <p className="field-help">
-              Das Beispiel funktioniert ohne API-Schlüssel. Schlüssel niemals in das Frontend oder
-              ein Playbook kopieren.
-            </p>
+            <p className="field-help">Das Beispiel funktioniert ohne API-Schlüssel.</p>
           </div>
         )}
         <button className="button secondary small-button" onClick={onRefresh} disabled={refreshing}>
-          {refreshing ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}Verbindung
-          prüfen
+          {refreshing ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}Status
+          aktualisieren
         </button>
       </section>
       <section className="settings-section">
         <div className="settings-section-heading">
           <BookOpen size={20} strokeWidth={1.4} />
           <div>
-            <h2>Modell & Denkaufwand</h2>
-            <p>Ihre Auswahl für die nächste Analyse. Sie bleibt in diesem Browser gespeichert.</p>
+            <h2>Modell und Denkaufwand</h2>
+            <p>Voreinstellung für neue Analysen. In diesem Browser gespeichert.</p>
           </div>
         </div>
         <div className="settings-model-row">
@@ -539,8 +472,7 @@ export function Settings({
         <div className="settings-section-heading">
           <ShieldCheck size={20} strokeWidth={1.4} />
           <div>
-            <h2>Daten & Verantwortung</h2>
-            <p>Transparenz vor der ersten Analyse.</p>
+            <h2>Datenverarbeitung</h2>
           </div>
         </div>
         <div className="privacy-facts">
@@ -606,9 +538,6 @@ export function Settings({
           enthalten. Löschen Sie bei Bedarf auch die zugehörigen Analysen.
         </p>
       </section>
-      <footer className="settings-footer">
-        LegalThinkGPT <span>·</span> Ein Arbeitsraum für juristisches Denken.
-      </footer>
     </div>
   );
 }
