@@ -24,6 +24,7 @@ export interface Finding {
   description: string;
   source_quote: string;
   source_document_id: string;
+  source_document_name?: string;
   source_location: string;
   suggestion: string;
   legal_basis: string;
@@ -53,8 +54,15 @@ export interface Analysis {
   model: string;
   effort: string;
   is_demo: boolean;
-  usage?: { input_tokens: number; output_tokens: number; cached_tokens: number };
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    cached_tokens: number;
+    cache_write_tokens?: number | null;
+  };
   provider_request_id?: string | null;
+  provider_duration_ms?: number | null;
+  prompt_version?: string | null;
   sources?: { title: string; url: string }[];
 }
 export interface Playbook {

@@ -77,8 +77,9 @@ def _contract_analysis() -> Analysis:
             "Nach Vertragsende stellt der Anbieter die Kundendaten für sieben Tage zum\n"
             "Download bereit. Anschließend werden sämtliche Kundendaten gelöscht.",
             "Sieben Tage lassen wenig Zeit für Migration und Prüfung der Vollständigkeit. "
-            "Format, Unterstützung, gesetzliche Aufbewahrung und Löschbestätigung bleiben offen.",
-            "Der Anbieter stellt die Kundendaten nach Vertragsende für 30 Tage in einem "
+            "Format, Unterstützung, gesetzliche Aufbewahrung und Löschbestätigung bleiben offen. "
+            "Die Exportfrist [Anzahl] ist anhand der benötigten Migrationszeit festzulegen.",
+            "Der Anbieter stellt die Kundendaten nach Vertragsende für [Anzahl] Tage in einem "
             "gängigen, maschinenlesbaren Format zum Export bereit. Die Löschung erfolgt nach "
             "bestätigtem Export oder Ablauf dieser Frist, soweit keine gesetzlichen "
             "Aufbewahrungspflichten entgegenstehen.",
@@ -112,6 +113,7 @@ def _contract_analysis() -> Analysis:
             suggestion=r[6],
             legal_basis=r[7],
             source_document_id=DEMO_ID,
+            source_document_name=demo_document().name,
             verified=True,
             source_urls=[],
         )
@@ -200,9 +202,18 @@ Er bat um vollständige Lieferung bis zum 23.09.2026.
             "chronology",
             "notiz",
             "03 Wareneingangsnotiz",
-            """Interne Notiz vom 24.09.2026
+            """Wareneingangsnotiz des Kunden vom 24.09.2026
 Am 23.09.2026 wurden sechs von zehn bestellten Rechnern angeliefert.
 Ein unterschriebener Lieferschein liegt der Akte nicht bei.
+""",
+        ),
+        _document(
+            "chronology",
+            "lieferant",
+            "04 Lieferbehauptung des Lieferanten",
+            """E-Mail des Lieferanten vom 25.09.2026
+Nach unserer Versandliste wurden am 22.09.2026 alle zehn Rechner beim Kunden abgeliefert.
+Eine vom Kunden unterzeichnete Empfangsbestätigung ist nicht beigefügt.
 """,
         ),
     ],
@@ -367,7 +378,7 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
             ],
         )
     if scenario == "chronology":
-        email, note = documents[1:]
+        email, note, supplier = documents[1:]
         events = [
             (
                 "2026-09-05",
@@ -393,25 +404,39 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
                 "hat die Lieferbitte?",
             ),
             (
+                "2026-09-22",
+                "Lieferant behauptet Lieferung aller zehn Rechner (E-Mail vom 25.09.)",
+                supplier,
+                "Nach unserer Versandliste wurden am 22.09.2026 alle zehn Rechner "
+                "beim Kunden abgeliefert.",
+                "Welche Empfangsbelege stützen die Lieferantenangabe trotz "
+                "abweichender Kundennotiz?",
+            ),
+            (
                 "2026-09-23",
-                "Sechs Rechner laut interner Notiz eingetroffen",
+                "Kundennotiz vom 24.09. nennt Eingang von sechs Rechnern",
                 note,
                 "Am 23.09.2026 wurden sechs von zehn bestellten Rechnern angeliefert.",
-                "Wo sind Lieferschein und Nachweis der noch fehlenden vier Rechner?",
+                "Wer hat Menge und Empfang dokumentiert, und welche Lieferscheine liegen vor?",
             ),
         ]
         return ModelAnalysis(
             title="Rechnerlieferung · Chronologie",
-            summary="Vier Ereignisse zwischen dem "
-            "5. und 23. September 2026. Der Wareneingang von sechs Rechnern ist intern notiert; "
-            "ein unterschriebener Lieferschein fehlt.",
+            summary="Fünf Einträge zu Angaben vom "
+            "5. bis 23. September 2026. Der Lieferant nennt zehn Rechner am 22. September, "
+            "die Kundennotiz sechs am Folgetag. Menge und Liefertag sind nicht geklärt; "
+            "eine unterzeichnete Empfangsbestätigung fehlt.",
             findings=[
                 _finding(
-                    note,
-                    "Ein unterschriebener Lieferschein liegt der Akte nicht bei.",
-                    "Wareneingang nur durch interne Notiz belegt",
-                    "Die Notiz nennt sechs gelieferte Rechner. Menge, Empfang und "
-                    "Zustand sollten durch Lieferschein oder weitere Belege geklärt werden.",
+                    supplier,
+                    "Nach unserer Versandliste wurden am 22.09.2026 alle zehn Rechner "
+                    "beim Kunden abgeliefert.",
+                    "Lieferdatum und Menge widersprüchlich",
+                    "Die Lieferanten-E-Mail vom 25.09. nennt zehn Rechner am 22.09. "
+                    "Die Wareneingangsnotiz des Kunden vom 24.09. nennt sechs am 23.09. "
+                    "Beide Angaben sind dokumentiert, aber nicht durch eine unterzeichnete "
+                    "Empfangsbestätigung geklärt. Versand- und Empfangsbelege abgleichen; "
+                    "keine Angabe als unstreitig behandeln.",
                     "Beweismittel",
                     legal_basis="Beweisbarkeit des Sachverhalts prüfen.",
                 )
@@ -428,7 +453,7 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
                 for date, event, doc, quote, question in events
             ],
             questions=[
-                "Welche vier Geräte fehlen und wurden sie später geliefert?",
+                "Welche Geräte wurden nachweislich wann von wem entgegengenommen?",
                 "Welche konkreten Ausfallkosten sind dokumentiert?",
             ],
         )
@@ -629,7 +654,9 @@ def demo_analysis(scenario: DemoScenario = "contract") -> Analysis:
             title=analysis.title,
             summary=analysis.summary,
             findings=[
-                ModelFinding.model_validate(item.model_dump(exclude={"id", "verified"}))
+                ModelFinding.model_validate(
+                    item.model_dump(exclude={"id", "verified", "source_document_name"})
+                )
                 for item in analysis.findings
             ],
             timeline=[],

@@ -96,6 +96,7 @@ class ModelFinding(StrictModel):
 class Finding(ModelFinding):
     id: str
     verified: bool
+    source_document_name: str = ""
 
 
 class ModelTimelineEntry(StrictModel):
@@ -132,6 +133,7 @@ class Usage(StrictModel):
     input_tokens: int
     output_tokens: int
     cached_tokens: int
+    cache_write_tokens: int | None = None
 
 
 class Source(StrictModel):
@@ -154,6 +156,8 @@ class Analysis(StrictModel):
     usage: Usage | None = None
     sources: list[Source] = Field(default_factory=list)
     provider_request_id: str | None = None
+    provider_duration_ms: int | None = None
+    prompt_version: str | None = None
     document_ids: list[str] = Field(default_factory=list)
     compliance_task: ComplianceTask = "general"
     demo_scenario: DemoScenario | None = None

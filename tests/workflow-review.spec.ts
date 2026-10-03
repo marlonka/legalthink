@@ -86,5 +86,42 @@ test('comparison results preserve the original and counterproposal identity afte
     if (reload) await page.reload();
     await expect(original).toContainText('Beispiel · 01 Originalentwurf.txt');
     await expect(counterproposal).toContainText('Beispiel · 02 Gegenentwurf.txt');
+    const source = page.getByRole('complementary', { name: 'Quellenansicht' });
+    await expect(source.getByText('Gegenentwurf', { exact: true })).toBeVisible();
+  }
+});
+
+test('saved report diagnostics preserve missing metrics and source identity', async ({ page }) => {
+  const response = await page.request.post('/api/demo', { data: { scenario: 'compare' } });
+  const analysis = await response.json();
+  // Exercise saved-result rendering; these are synthetic diagnostics, not measured API usage.
+  Object.assign(analysis, {
+    usage: { input_tokens: 2000, output_tokens: 400, cached_tokens: 1000, cache_write_tokens: 512 },
+    provider_duration_ms: 12500,
+    prompt_version: 'legal-review-fixture',
+  });
+  await page.route('**/api/analyses', (route) => route.fulfill({ json: [analysis] }));
+  await page.route(`**/api/analyses/${analysis.id}`, (route) => route.fulfill({ json: analysis }));
+  // The original documents may have been deleted after the report was saved.
+  await page.route('**/api/documents', (route) => route.fulfill({ json: [] }));
+  await page.goto(`/#analysis/${analysis.id}`);
+  const source = page.getByRole('complementary', { name: 'Quellenansicht' });
+  await expect(source.getByText('Beispiel · 02 Gegenentwurf.txt', { exact: true })).toBeVisible();
+  await expect(source.getByText(/Der Dokumenttext ist nicht mehr gespeichert/)).toBeVisible();
+  const details = page
+    .locator('details')
+    .filter({ has: page.getByText('Verarbeitung & Verbrauch', { exact: true }) });
+  await expect(details.getByText('Davon in Cache geschrieben', { exact: true })).not.toBeVisible();
+  await details.getByText('Verarbeitung & Verbrauch', { exact: true }).click();
+  await expect(details).toContainText('512 Token');
+  await expect(details).toContainText('12,5 s');
+  await expect(details).toContainText('legal-review-fixture');
+  for (const writeTokens of [null, 0]) {
+    analysis.usage.cache_write_tokens = writeTokens;
+    await page.reload();
+    await details.getByText('Verarbeitung & Verbrauch', { exact: true }).click();
+    const writeLabel = details.getByText('Davon in Cache geschrieben', { exact: true });
+    if (writeTokens === null) await expect(writeLabel).toHaveCount(0);
+    else await expect(writeLabel.locator('xpath=following-sibling::dd[1]')).toHaveText('0 Token');
   }
 });

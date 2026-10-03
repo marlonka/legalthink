@@ -152,7 +152,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         value = app.state.store.get("analyses", analysis_id)
         if not value:
             raise HTTPException(404, "Analyse nicht gefunden.")
-        return Analysis.model_validate(value)
+        analysis = Analysis.model_validate(value)
+        # Older reports can recover a file name while the source is still available.
+        # Do not rewrite the saved report or accept model-generated document names.
+        for finding in analysis.findings:
+            if not finding.source_document_name:
+                source = app.state.store.get("documents", finding.source_document_id)
+                if source:
+                    finding.source_document_name = source["name"]
+        return analysis
 
     @app.get("/api/analyses/{analysis_id}", response_model=Analysis)
     def read_analysis(analysis_id: str):

@@ -16,13 +16,19 @@ Use the Responses API. Omit `temperature`, `top_p`, and log-probability options 
 ## Request and output contract
 
 - Keep the API key on the Python server. No key in frontend source, build variables, browser storage, or client responses.
-- Place stable, versioned legal-review instructions first. Put documents, playbook content, and the user's task in explicitly delimited input data. Treat instructions found inside documents and retrieved pages as untrusted.
+- Place stable, versioned legal-review instructions first, followed by a separate developer block with the selected workflow, privacy task, and research permission. Keep documents, playbook content, and the user's task in a JSON user message. The user's task controls the mandate; playbooks supply negotiation preferences. Embedded source instructions cannot override the developer rules or authorize tools.
 - Request a strict JSON Schema through Responses `text.format`, or the Python SDK's `responses.parse(text_format=...)` helper. Validate the returned content against application models before rendering it.
 - Handle refusal, incomplete output, malformed output, and missing parsed content explicitly. A schema validates shape, not evidence or legal correctness. Keep gaps and uncertainty in the result contract.
 - Require exact document quotes and document identifiers. Check quotes against supplied text before calling them verified. Verification of a quotation is distinct from verification of its legal interpretation.
 - Use bounded input/output sizes, an explicit timeout, bounded retries, and sanitized provider errors. Avoid automatically retrying a semantically invalid result with the same request.
 
 Source: [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+### Prompt review, version `legal-review-v4`
+
+Use direct task instructions and explicit evidence requirements. Do not request hidden chain of thought, add model self-praise, or add examples just to lengthen the cache prefix. The GPT-6 family guide is a starting point for Luna and Sol; its prompting observations were primarily developed with Astra and still require workload evaluation. The Sol model page confirms the API capabilities, not the quality of legal results. Sources: [GPT-6 prompting guidance](https://developers.openai.com/api/docs/guides/latest-model), [reasoning best practices](https://developers.openai.com/api/docs/guides/reasoning-best-practices#how-to-prompt-reasoning-models-effectively).
+
+The legal review tightened contract roles, deleted comparison clauses, statement attribution, privacy review scope, and publication-dependent advertising checks. Evidence and limits: [German legal workflow review](legal-prompt-review.md). No new mandatory fields or additional model calls were introduced.
 
 ## Prompt caching
 
@@ -38,6 +44,9 @@ For GPT-6, use `prompt_cache_options`; the older `prompt_cache_retention` field 
         "type": "input_text",
         "text": "Stable versioned review instructions...",
         "prompt_cache_breakpoint": { "mode": "explicit" }
+      }, {
+        "type": "input_text",
+        "text": "Selected workflow and research permission..."
       }]
     },
     { "role": "user", "content": "Changing matter and document input..." }
@@ -51,6 +60,12 @@ The explicit breakpoint belongs on a supported content block; top-level `instruc
 
 Keep tool ordering and schema stable. For future multi-turn work, append history rather than rewriting it. GPT-6 `configuration_update` can change effort while preserving the prefix, subject to documented compatibility; independent analysis requests do not need it. Source: [Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching).
 
+The application places one breakpoint after the common review rules. Changing matter data, workflow instructions, and playbooks remain after it. The key depends on the prompt version, never on document IDs, filenames, timestamps, or user context. Model, reasoning effort, schema, and tool configuration can still separate cache reuse. Research-off requests continue to omit tools; they do not acquire tools merely for cache reuse.
+
+Successful reports save input, output, cached-read and cache-write tokens, provider-call duration, and prompt version. Missing write-token counts remain unknown (`null`), including older saved reports. These values appear only inside the existing processing details. Saved duration covers the provider request, not import or later review work. No automatic prewarming, extra calls, or cost estimates are added.
+
+For a future approved evaluation, compare a cold request with repeated requests using the same model/effort/tools/schema and a changing synthetic matter suffix. Record cache reads **and** writes. At a fixed price tier, input cost is based on `(input − cached − writes) × ordinary rate + cached × cache-read rate + writes × cache-write rate`; cached and write counts are not extra tokens on top of total input. Offline tests verify the request boundary and usage serialization; they cannot establish a cache hit, provider acceptance, savings, or real latency.
+
 ### SDK compatibility
 
 The documentation can advance ahead of a pinned SDK's generated argument types. Inspect the installed Python SDK signature before passing `prompt_cache_options`. If the typed argument is absent, the SDK's supported `extra_body` extension can carry the documented JSON field; test the serialized HTTP body with a mocked transport. Do not send both the obsolete and current caching fields. An offline serialization test does not prove the provider accepted the request. Upgrade the SDK and repeat that test when native typing becomes available.
@@ -61,6 +76,8 @@ Make research an explicit user option. Use the current `web_search` tool and req
 
 Use an allowlist of relevant primary legal sources for focused legal research where appropriate. Tool availability does not prove a search occurred; inspect output tool calls. Search broadens data transmission and may expose generated queries to external search services. Do not send case identifiers or confidential text as search terms by design. Source: [Web search](https://developers.openai.com/api/docs/guides/tools-web-search).
 
+The allowlist includes DSK, EDPB and BfDI for privacy guidance. Hosted search still operates in the same model request that sees the matter. Query minimization is a prompt instruction, not a deterministic redaction boundary. The default remains research off; the opt-in warns that queries may include document content. Do not describe this arrangement as technically enforcing professional secrecy. A separate research stage with reviewed abstract questions would require a further architecture decision; generated “anonymous” questions alone would not establish that boundary.
+
 ## Data handling claims
 
 Set `store: false` to avoid ordinary stored Responses application state. This does **not** enable Zero Data Retention or eliminate all provider retention. API content is not used for model training by default unless the customer opts in. Abuse-monitoring logs may retain customer content for up to 30 days, with documented exceptions. Zero Data Retention and Modified Abuse Monitoring require provider approval and have feature limitations.
@@ -69,4 +86,4 @@ EU residency is a project/account configuration with eligibility and feature res
 
 ## Deferred live validation
 
-After the user configures a project and key: verify the chosen model and effort; send a synthetic document; inspect schema/refusal handling, citations, cache usage, timeout behavior, and provider request identifiers. Review project retention and regional settings separately. Do not use real client matters for the initial integration check.
+Only after explicit authorization: use `gpt-6-luna` with `high`, send synthetic material, and inspect schema/refusal handling, citations, cache reads/writes, latency, and provider request identifiers. A configured key alone is not permission to run a paid check. Keep Luna/high as the application default. Sol remains an explicit user choice. Review project retention and regional settings separately; do not use real client matters for the initial integration check.
