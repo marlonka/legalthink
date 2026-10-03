@@ -34,6 +34,6 @@
 
 Die Browserläufe speichern neue Start- und Ergebnisaufnahmen für alle sieben Schritte unter `artifacts/workflow-audit/`. Diese lokalen Prüfdateien werden nicht eingecheckt. Die Aufnahmen wurden visuell geprüft, einschließlich Datenschutz bei 390 px in heller und dunkler Darstellung. Die initialen Probleme wurden vorher im Browser nachvollzogen.
 
-Automatisierte Prüfungen stehen in `tests/workflow-composer.spec.ts`, `tests/workflow-review.spec.ts`, `tests/workspace.spec.ts` und `tests/stability.spec.ts`. Sie prüfen Auswahl, Übermittlung, getrennte Entwürfe, Quellennavigation, Fokus, Modellpräferenzen, Responsivität und Positionen über mehrere Frames. Backendtests prüfen die sieben Offline-Fälle, geordnete Quellen, strukturierte Datenschutz-Aufgaben und Export. Ergebniszahlen und Grenzen: [Prüfprotokoll](validation.md).
+Die damaligen Browserprüfungen wurden am 3. Oktober 2026 entfernt. Erhalten bleiben ein Start-/Exporttest sowie Backendprüfungen für Datenspeicherung, Quellenzuordnung und die OpenAI-Anbindung. Aktueller Umfang und Grenzen: [Prüfprotokoll](validation.md).
 
 Diese Prüfung belegt Bedienverhalten und deterministische Anwendungseigenschaften. Rechtliche Ergebnisqualität, reale Modellantworten, Recherche und Kosten bleiben Gegenstand späterer freigegebener Tests mit Luna/Hoch.
