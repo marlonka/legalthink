@@ -19,4 +19,5 @@ Verbotene Muster: „Mehr Klarheit. Für Ihr nächstes Argument.“, „Raum fü
 - Vorhandene Bedienabläufe und Barrierefreiheit bei Text- und Layoutänderungen erhalten. Desktop und Mobilansicht prüfen.
 - Keine echten OpenAI-Anfragen in Entwicklung oder Tests, sofern Marlon sie nicht ausdrücklich freigibt.
 - Für freigegebene echte Modelltests ausschließlich `gpt-6-luna` mit `high` verwenden. Standardauswahl der Anwendung ist Luna/Sehr hoch (`xhigh`).
+- Tests auf wesentliche Produktrisiken begrenzen: Datenverlust, Zugriffsschutz, Quellenintegrität, kostenpflichtige API-Aufrufe und den bestehenden Build-Smoke-Test. Vorhandene Fälle bevorzugt erweitern; keine neuen Variantenmatrizen für kleine Änderungen an Texten, Layout oder Standardwerten. Keine Tests, die nur Implementierungsdetails oder ihre eigenen Mocks bestätigen.
 - Änderungen mit Conventional Commit committen und pushen.

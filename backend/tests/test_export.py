@@ -27,11 +27,17 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
 
 
 def test_comparison_exports_both_versions_and_revises_only_counterdraft():
-    analysis = demo_analysis("compare")
+    title = "Prüfung eines umfangreichen Rahmenvertrags – " * 8
+    analysis = demo_analysis("compare").model_copy(update={"title": title})
     finding = analysis.findings[0]
     text = markdown(analysis).decode("utf-8")
     document = Document(io.BytesIO(docx(analysis)))
     paragraphs = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert document.core_properties.title == title[:255]
+    assert title in paragraphs
+    assert "SYNTHETISCHES BEISPIEL" in paragraphs
+    assert "ursprüngliche Vertragsdokument" in paragraphs
+    assert finding.suggestion in [node.text for node in document.element.xpath("//w:ins//w:t")]
     for exported in (text, paragraphs):
         assert "Original" in exported and "Gegenentwurf" in exported
         assert finding.comparison.original.source_quote in exported

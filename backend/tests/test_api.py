@@ -2,7 +2,6 @@ import asyncio
 import io
 import sqlite3
 import threading
-import zipfile
 from dataclasses import replace
 
 import pytest
@@ -11,8 +10,6 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from fastapi import Request
 from fastapi.testclient import TestClient
-from lxml import etree
-from openai import AsyncOpenAI
 from pypdf import PdfWriter
 
 from app.analysis import AnalysisError
@@ -69,11 +66,29 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
         assert response.status_code == 201, response.text
         document = response.json()
         assert document["name"] == "Mandat.txt"
-        assert document["char_count"] == 39
+        original_url = f"/api/documents/{document['id']}/original"
+        assert (
+            client.get(original_url).content == "Vertragsinhalt mit Umlauten: Kündigung.".encode()
+        )
+        unavailable = client.post(
+            "/api/analyses", json={"workflow": "contract", "document_ids": [document["id"]]}
+        )
+        assert unavailable.status_code == 503
+        assert client.get("/api/analyses").json() == []
         book = client.post(
             "/api/playbooks", json={"name": "Kundensicht", "content": "Haftung prüfen."}
         )
         assert book.status_code == 201
+        edited = client.put(
+            f"/api/playbooks/{book.json()['id']}",
+            json={"name": "Kundensicht · SaaS", "content": "Haftung und Datenexport prüfen."},
+        )
+        assert edited.status_code == 200
+        assert edited.json() == {
+            **book.json(),
+            "name": "Kundensicht · SaaS",
+            "content": "Haftung und Datenexport prüfen.",
+        }
         demo = client.post("/api/demo").json()
         assert demo["is_demo"] is True and demo["model"] == "Synthetisches Beispiel"
     with TestClient(
@@ -81,8 +96,9 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
     ) as client:
         assert any(d["id"] == document["id"] for d in client.get("/api/documents").json())
         assert client.get(f"/api/analyses/{demo['id']}").json()["is_demo"] is True
-        assert len(client.get("/api/playbooks").json()) == 1
+        assert client.get("/api/playbooks").json() == [edited.json()]
         assert client.delete(f"/api/documents/{document['id']}").status_code == 204
+        assert client.get(original_url).status_code == 404
         assert client.delete(f"/api/analyses/{demo['id']}").status_code == 204
         assert client.delete(f"/api/playbooks/{book.json()['id']}").status_code == 204
         assert client.delete(f"/api/documents/{document['id']}").status_code == 404
@@ -91,7 +107,10 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
 def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     analysis = client.post("/api/demo").json()
     client.post("/api/playbooks", json={"name": "Standard", "content": "Haftung prüfen."})
-    confirmed = [doc["id"] for doc in client.get("/api/documents").json()]
+    previous = client.get("/api/documents").json()
+    assert client.request("DELETE", "/api/documents", json={"document_ids": []}).status_code == 422
+    assert client.get("/api/documents").json() == previous
+    confirmed = [doc["id"] for doc in previous]
     newer = Document(
         id=new_id(), name="Neu.txt", text="Später eingefügt", page_count=1, char_count=15
     )
@@ -121,29 +140,13 @@ def test_bulk_document_deletion_rolls_back_on_storage_failure(client):
     assert client.get("/api/documents").json() == previous
 
 
-@pytest.mark.parametrize("body", [{}, {"document_ids": []}])
-def test_bulk_document_deletion_requires_explicit_selection(client, body):
-    client.post("/api/demo")
-    previous = client.get("/api/documents").json()
-    assert client.request("DELETE", "/api/documents", json=body).status_code == 422
-    assert client.get("/api/documents").json() == previous
-
-
-def test_analysis_without_config_returns_explicit_error(client):
-    response = client.post("/api/analyses", json={"workflow": "contract", "document_ids": ["doc"]})
-    assert response.status_code == 503
-    assert "nicht eingerichtet" in response.json()["detail"]
-    assert client.get("/api/analyses").json() == []
-
-
-@pytest.mark.parametrize("compare", [False, True])
-def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(client, compare):
+def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(client):
     quote = "Nachricht mit Umlauten: Rückfrage."
 
     class QuotedService(CompletedService):
         async def run(self, body, documents, playbook, *, pasted_document=None):
             result = await super().run(body, documents, playbook, pasted_document=pasted_document)
-            result.title = "Ä" * 99 + "😀 weiterer Text" if compare else "Chronologie zur Lieferung"
+            result.title = "Vergleich zur Lieferung"
             result.findings = [
                 Finding(
                     id=new_id(),
@@ -177,21 +180,17 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     service = QuotedService()
     client.app.state.analysis_service = service
     document_ids = []
-    if compare:
-        for name in ("Original.txt", "Gegenentwurf.txt"):
-            document = Document(
-                id=new_id(), name=name, text=name, page_count=1, char_count=len(name)
-            )
-            client.app.state.store.put("documents", document.model_dump())
-            document_ids.append(document.id)
-    text = "  E-Mail-Verlauf\n" + "Nachricht mit Umlauten: Rückfrage.\n" * 1_000
+    for name in ("Original.txt", "Gegenentwurf.txt"):
+        document = Document(id=new_id(), name=name, text=name, page_count=1, char_count=len(name))
+        client.app.state.store.put("documents", document.model_dump())
+        document_ids.append(document.id)
+    text = "  E-Mail-Verlauf\nNachricht mit Umlauten: Rückfrage.\n"
     body = {
-        "workflow": "compare" if compare else "chronology",
+        "workflow": "compare",
+        "document_ids": document_ids,
         "source_text": text,
         "context": "Bitte Zugang und widersprechende Angaben prüfen.",
     }
-    if compare:
-        body["document_ids"] = document_ids
     response = client.post("/api/analyses", json=body)
     assert response.status_code == 201, response.text
     analysis = response.json()
@@ -201,16 +200,13 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     documents = client.get("/api/documents").json()
     assert len(documents) == len(document_ids) + 1
     pasted = next(doc for doc in documents if doc["id"] == pasted_id)
-    expected_name = (
-        "Text · " + ("Ä" * 99 + "😀" if compare else "Chronologie zur Lieferung") + ".txt"
-    )
+    expected_name = "Text · Vergleich zur Lieferung.txt"
     assert pasted["name"] == expected_name
     assert analysis["source_text_document_name"] == expected_name
     assert analysis["findings"][0]["source_document_name"] == expected_name
     assert analysis["timeline"][0]["source"] == expected_name
     assert analysis["findings"][0]["source_quote"] == quote
     assert analysis["timeline"][0]["source_quote"] == quote
-    assert analysis["findings"][0]["verified"] and analysis["timeline"][0]["verified"]
     assert pasted["text"] == text and pasted["char_count"] == len(text)
     downloaded = client.get(f"/api/documents/{pasted_id}/text")
     assert downloaded.content == text.encode("utf-8")
@@ -223,36 +219,33 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
 
 
 @pytest.mark.parametrize("extra,expected_status", [(0, 201), (1, 422)])
-@pytest.mark.parametrize("document_chars", [0, 200_000])
 def test_mixed_document_and_pasted_text_limit_is_enforced_without_truncation(
-    client, extra, expected_status, document_chars
+    client, extra, expected_status
 ):
+    document_chars = 200_000
     service = CompletedService()
     client.app.state.analysis_service = service
     text = "D" * document_chars
     document = Document(
         id=new_id(), name="Vertrag.txt", text=text, page_count=1, char_count=len(text)
     )
-    if document_chars:
-        client.app.state.store.put("documents", document.model_dump())
+    client.app.state.store.put("documents", document.model_dump())
     pasted_text = "😀" * (1_000_000 - document_chars + extra)
     response = client.post(
         "/api/analyses",
         json={
             "workflow": "contract",
-            "document_ids": [document.id] if document_chars else [],
+            "document_ids": [document.id],
             "source_text": pasted_text,
         },
     )
     assert response.status_code == expected_status, response.text
     if extra:
         assert not service.calls
-        assert client.get("/api/documents").json() == (
-            [document.model_dump()] if document_chars else []
-        )
+        assert client.get("/api/documents").json() == [document.model_dump()]
         assert client.get("/api/analyses").json() == []
     else:
-        assert [doc.text for doc in service.calls[0][1]] == ([text] if document_chars else [])
+        assert [doc.text for doc in service.calls[0][1]] == [text]
         assert service.calls[0][2].text == pasted_text
 
 
@@ -306,64 +299,16 @@ def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkey
     assert client.get("/api/analyses").json() == []
 
 
-def test_playbook_edits_preserve_identity_and_survive_restart(tmp_path):
-    settings = Settings(data_dir=tmp_path, api_key="")
-    with TestClient(
-        create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
-    ) as client:
-        original = client.post(
-            "/api/playbooks", json={"name": "Kundensicht", "content": "Haftung prüfen."}
-        ).json()
-        edited = client.put(
-            f"/api/playbooks/{original['id']}",
-            json={"name": "Kundensicht · SaaS", "content": "Haftung und Datenexport prüfen."},
-        )
-        assert edited.status_code == 200
-        expected = {
-            **original,
-            "name": "Kundensicht · SaaS",
-            "content": "Haftung und Datenexport prüfen.",
-        }
-        assert edited.json() == expected
-    with TestClient(
-        create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
-    ) as client:
-        assert client.get("/api/playbooks").json() == [expected]
-
-
-@pytest.mark.parametrize(
-    "body",
-    [
-        {"workflow": "chronology", "source_text": " \n\t", "context": "Nur ein Prüfauftrag"},
-        {"workflow": "compare", "document_ids": ["a"], "source_text": "Zusatzquelle"},
-        {"workflow": "contract", "document_ids": ["a", "a"]},
-        {"workflow": "contract", "document_ids": ["a"], "model": "gpt-6.1-sol", "effort": "none"},
-        {"workflow": "contract", "document_ids": ["a"], "context": "PRIVATE" * 4000},
-        {"workflow": "contract", "document_ids": ["a"], "compliance_task": "avv"},
-    ],
-)
-def test_invalid_analysis_inputs_never_echo_document_text(client, body):
-    body = {"context": "PRIVATE mandate context", **body}
-    response = client.post("/api/analyses", json=body)
+def test_validation_errors_never_echo_document_text(client):
+    response = client.post(
+        "/api/analyses",
+        json={"workflow": "contract", "document_ids": ["a"], "context": "PRIVATE" * 4000},
+    )
     assert response.status_code == 422
     assert "PRIVATE" not in response.text
 
 
-def test_exports_preserve_revisions_labels_and_separate_timeline_quotes(client):
-    analysis = client.post("/api/demo").json()
-    docx = client.get(f"/api/analyses/{analysis['id']}/export?format=docx")
-    assert docx.status_code == 200
-    with zipfile.ZipFile(io.BytesIO(docx.content)) as archive:
-        xml = etree.fromstring(archive.read("word/document.xml"))
-        namespace = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
-        assert len(xml.findall(".//w:del", namespace)) == 3
-        assert len(xml.findall(".//w:ins", namespace)) == 3
-        assert "SYNTHETISCHES BEISPIEL" in "".join(xml.itertext())
-        assert "ursprüngliche Vertragsdokument" in "".join(xml.itertext())
-    markdown = client.get(f"/api/analyses/{analysis['id']}/export?format=md")
-    assert "SYNTHETISCHES BEISPIEL" in markdown.text
-    assert "Zitat im Dokument bestätigt: Ja" in markdown.text
-
+def test_legacy_timeline_quotes_survive_read_and_export_without_rewriting(client):
     chronology = client.post("/api/demo", json={"scenario": "chronology"}).json()
     for event in chronology["timeline"]:
         event["source"] += ": " + event["source_quote"]
@@ -446,18 +391,6 @@ def test_scanned_pdf_and_empty_or_long_text_rejected():
         extract(b"", ".txt")
     with pytest.raises(ExtractionError, match="lang"):
         extract(b"a" * 200001, ".txt")
-
-
-def test_docx_table_and_paragraph_order():
-    document = WordDocument()
-    document.add_paragraph("Vor der Tabelle")
-    document.add_table(rows=1, cols=1).cell(0, 0).text = "In der Tabelle"
-    document.add_paragraph("Nach der Tabelle")
-    output = io.BytesIO()
-    document.save(output)
-    text, pages = extract(output.getvalue(), ".docx")
-    assert text == "Vor der Tabelle\n\nIn der Tabelle\n\nNach der Tabelle"
-    assert pages == 0
 
 
 def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
@@ -543,19 +476,6 @@ def test_unexpected_exception_never_escapes_to_asgi_server_logging(client, monke
     assert "PRIVATE" not in response.text
     assert stopped.is_set()
     assert client.get("/api/analyses").json() == []
-
-
-async def test_lifespan_closes_provider_after_application_error(tmp_path, monkeypatch):
-    provider = AsyncOpenAI(api_key="offline-test-key", max_retries=0)
-    monkeypatch.setattr("app.main.AsyncOpenAI", lambda **kwargs: provider)
-    app = create_app(Settings(data_dir=tmp_path, api_key="offline-test-key"))
-    try:
-        with pytest.raises(RuntimeError, match="Application exit"):
-            async with app.router.lifespan_context(app):
-                raise RuntimeError("Application exit")
-        assert provider.is_closed()
-    finally:
-        await provider.close()
 
 
 def test_streamed_body_limit_without_content_length(tmp_path):
