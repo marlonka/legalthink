@@ -13,6 +13,7 @@ DemoScenario = Literal[
 ]
 Effort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 Severity = Literal["high", "medium", "low", "info"]
+MAX_MATERIAL_CHARS = 1_000_000
 
 MODELS = [
     {
@@ -59,7 +60,7 @@ class DocumentDeleteRequest(StrictModel):
 class AnalysisRequest(StrictModel):
     workflow: Workflow
     document_ids: list[str] = Field(default_factory=list, max_length=12)
-    source_text: str = Field(default="", max_length=300_000)
+    source_text: str = Field(default="", max_length=MAX_MATERIAL_CHARS)
     context: str = Field(default="", max_length=20000)
     model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
     effort: Effort = "high"

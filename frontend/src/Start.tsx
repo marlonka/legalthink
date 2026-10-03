@@ -14,6 +14,7 @@ import { ErrorMessage, ModelPicker } from './ui';
 import DocumentPicker from './DocumentPicker';
 import { COMPLIANCE_TASKS, WORKFLOWS } from './workflows';
 import type { ComplianceTask, DocumentRecord, Model, Playbook, Workflow } from './types';
+import { MAX_MATERIAL_CHARS } from './types';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './composer-motion.css';
 
@@ -256,11 +257,14 @@ export default function Start(props: Props) {
             disabled={running}
             spellCheck={false}
             aria-describedby="analysis-source-limit"
-            aria-invalid={materialCharCount > 300_000 || undefined}
+            aria-invalid={materialCharCount > MAX_MATERIAL_CHARS || undefined}
           />
           <div className="source-text-meta" id="analysis-source-limit">
             <span>Text und Dokumente zusammen</span>
-            <span>{materialCharCount.toLocaleString('de-DE')} / 300.000 Zeichen</span>
+            <span>
+              {materialCharCount.toLocaleString('de-DE')} /{' '}
+              {MAX_MATERIAL_CHARS.toLocaleString('de-DE')} Zeichen
+            </span>
           </div>
         </div>
         <div className="composer-context-header">

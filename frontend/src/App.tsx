@@ -15,7 +15,7 @@ import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
 import Review from './Review';
 import { History, Playbooks, Settings } from './WorkspacePages';
-import { api } from './types';
+import { api, MAX_MATERIAL_CHARS } from './types';
 import { useThemePreference } from './theme';
 import { MotionButton, useMotionPreferences } from './motion';
 import type {
@@ -437,9 +437,9 @@ export default function App() {
       );
       return;
     }
-    if (materialCharCount > 300_000) {
+    if (materialCharCount > MAX_MATERIAL_CHARS) {
       setError(
-        'Text und Dokumente dürfen zusammen höchstens 300.000 Zeichen enthalten. Bitte den Umfang reduzieren.',
+        `Text und Dokumente dürfen zusammen höchstens ${MAX_MATERIAL_CHARS.toLocaleString('de-DE')} Zeichen enthalten. Bitte den Umfang reduzieren.`,
       );
       document.getElementById('analysis-source-text')?.focus();
       return;
