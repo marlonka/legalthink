@@ -11,6 +11,9 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --page-inset: 32px;
+  --page-top: 38px;
+  --page-bottom: 48px;
 }
 * {
   box-sizing: border-box;
@@ -409,6 +412,8 @@ code {
 .main-content {
   flex: 1;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar) transparent;
 }
@@ -420,14 +425,15 @@ code {
 }
 
 /* Analysis input. */
-.start-page {
-  width: min(calc(100% - 64px), var(--content-width));
+.start-page,
+.standard-page {
+  width: min(calc(100% - 2 * var(--page-inset)), var(--content-width));
   margin: 0 auto;
-  padding: 38px 0 48px;
+  padding: var(--page-top) 0 var(--page-bottom);
 }
 .analysis-start-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 24px;
@@ -816,6 +822,8 @@ code {
   max-width: 460px;
   max-height: 90dvh;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-card);
   color: var(--text-primary);
@@ -933,9 +941,9 @@ code {
 }
 
 @media (max-width: 1150px) {
-  .start-page {
-    width: calc(100% - 48px);
-    padding-top: 30px;
+  :root {
+    --page-inset: 24px;
+    --page-top: 30px;
   }
   .workflow-selector button {
     font-size: 13px;
@@ -954,9 +962,7 @@ code {
 @media (max-width: 900px) and (min-width: 701px) {
   :root {
     --sidebar-width: 240px;
-  }
-  .start-page {
-    width: calc(100% - 40px);
+    --page-inset: 20px;
   }
   .topbar {
     padding: 0 20px;
@@ -1043,9 +1049,10 @@ code {
   .main-content {
     scrollbar-width: none;
   }
-  .start-page {
-    width: calc(100% - 40px);
-    padding: 27px 0 36px;
+  :root {
+    --page-inset: 20px;
+    --page-top: 27px;
+    --page-bottom: 36px;
   }
   .analysis-start-heading {
     gap: 12px;
@@ -1182,8 +1189,8 @@ code {
   }
 }
 @media (max-width: 420px) {
-  .start-page {
-    width: calc(100% - 32px);
+  :root {
+    --page-inset: 16px;
   }
   .analysis-start-heading h1 {
     font-size: 24px;

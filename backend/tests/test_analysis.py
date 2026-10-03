@@ -54,7 +54,7 @@ def provider_response(result=None, status="completed", refusal=False, annotation
         "id": "resp_offline",
         "object": "response",
         "created_at": 1,
-        "model": "gpt-6.1-sol",
+        "model": "gpt-6-luna",
         "status": status,
         "output": [
             {
@@ -101,8 +101,8 @@ async def test_serialized_openai_request_and_verified_evidence():
     finally:
         await client.close()
     body = captured[0]
-    assert body["model"] == "gpt-6.1-sol"
-    assert body["reasoning"] == {"effort": "medium"}
+    assert body["model"] == "gpt-6-luna"
+    assert body["reasoning"] == {"effort": "high"}
     assert body["store"] is False
     assert body["prompt_cache_options"] == {"mode": "explicit", "ttl": "30m"}
     assert body["input"][0]["content"][0]["prompt_cache_breakpoint"] == {"mode": "explicit"}

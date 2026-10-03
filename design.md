@@ -168,6 +168,8 @@ Technische Informationen nur dort, wo sie zur Einrichtung oder Diagnose nötig s
 - Hintergrundfläche hebt sich von Composer oder Seite ab; eine dünne Kontur reicht neben einem zurückhaltenden Schatten.
 - Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
 - Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
+- Standardauswahl: GPT-6 Luna mit Denkaufwand Hoch. Explizite Nutzerauswahl bleibt gespeichert.
+- Playbook-Auswahl und Webrecherche-Aktion stehen am Desktop auf einer gemeinsamen Zeile; Feldbeschriftung darüber, Hinweis darunter. Auf schmalen Ansichten stehen die Felder untereinander.
 - Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
 - Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
 - Der Slider hat eine zugängliche Beschriftung, `aria-valuetext` für den benannten Wert und native Tastaturbedienung mit Pfeiltasten, Home und End. Ein knapper Kosten-/Zeithinweis bleibt dem Slider zugeordnet.
@@ -200,32 +202,32 @@ Die Screenshots belegen keine Dauer oder Physik von ChatGPT. Die folgenden Werte
 
 | Preset | Steifigkeit | Dämpfung | Masse | Verwendung |
 | --- | --- | --- | --- | --- |
-| `control` | 500 | 38 | 0,8 | Druckfeedback, kleine Auswahlflächen und Icons |
-| `layout` | 420 | 36 | 0,85 | Auswahlposition und kompakte aufklappbare Bereiche |
-| `panel` | 400 | 38 | 0,9 | Dialoge, Popover und mobile Navigation |
+| `control` | 500 | 38 | 0,8 | Rotation kleiner Statusicons innerhalb einer festen Fläche |
+| `panel` | 400 | 38 | 0,9 | Eintritt und Austritt der mobilen Navigation |
 | `fade` | — | — | — | Deckkraft: 120 ms, `easeOut` |
 
-Federn steuern räumliche Bewegung. Die Dämpfung verhindert dekoratives Überschwingen. Neue Eingaben dürfen laufende Bewegungen umkehren; niemals Animationen abwarten, bevor sich der Zustand ändert. [Motion: physikalische Übergänge](https://motion.dev/docs/react-transitions)
+Layoutstabilität hat Vorrang. Die mobile Navigation darf räumlich ein- und ausfahren; ihre Bewegung liegt über dem Seiteninhalt. Kleine Icons dürfen sich innerhalb einer festen Fläche drehen. Neue Eingaben dürfen laufende Übergänge umkehren; niemals Animationen abwarten, bevor sich der Zustand ändert. [Motion: physikalische Übergänge](https://motion.dev/docs/react-transitions)
 
 #### Interaktionen
 
-- Schaltflächen geben beim Drücken nach, standardmäßig auf Faktor `0.985`. Breite Textzeilen erhalten höchstens sehr kleines oder kein Skalieren. Kein Schweben bei Hover. Deaktivierte Aktionen reagieren nicht mit Druckbewegung.
-- Navigation, Prüfungsart, Tabs und Darstellung bewegen die Auswahlfläche. Die Beschriftung bleibt an ihrem Platz. Getrennte Auswahlgruppen verwenden getrennte Layout-IDs.
-- Dokumentchips animieren ihre Position beim Tauschen und Entfernen. Text und Eingabefelder werden nicht bei jedem Tastendruck vermessen oder skaliert.
-- Prüfoptionen und einzelne Befunde dürfen ihre kompakte Höhe mit einer Feder ändern. Lange Dokumenttexte, Tabellen und Berichte wechseln ohne animierte Gesamthöhe.
-- Menüs öffnen an ihrem Auslöser mit wenigen Pixeln Verschiebung und einer kurzen Einblendung. Dialoge verwenden eine geringe Skalierung. Der mobile Drawer folgt einer Feder; die Desktop-Navigation erscheint direkt.
-- Ein Seitenwechsel ersetzt den Inhalt sofort und blendet ihn kurz ein. Keine Warteschlange, keine lange Ausblendung der alten Seite, kein fliegender Lesetext.
-- Neue Statusmeldungen dürfen einmal kurz eintreten. Keine dekorativen Dauerschleifen, gestaffelten Listenauftritte oder wiederholten Erfolgseffekte.
-- Der native Denkaufwand-Slider aktualisiert Wert, Beschriftung und Übermittlung unmittelbar. Bewegung darf keinen anderen Wert vortäuschen oder die Tastaturbedienung verzögern.
+- Schaltflächen behalten Position und Größe beim Drücken. Feedback über Farbe oder kurze Deckkraftänderung. Keine `scale`-, `x`- oder `y`-Animation auf Bedienelementen oder deren Beschriftungen, auch nicht um wenige Pixel.
+- Navigation, Prüfungsart, Tabs und Darstellung markieren die Auswahl an Ort und Stelle. Keine zwischen Controls wandernde Auswahlfläche und kein Wechsel der Schriftstärke, der die Breite verändert.
+- Seiten, Popover, Dialoge und Statusmeldungen blenden nur ein beziehungsweise aus. Keine Verschiebung oder Skalierung der Leseflächen. Keine Verzögerung vor der nächsten Aktion.
+- Bei Modell, Denkaufwand, Auswahlzahlen, Ladezuständen und Aktionsbeschriftungen Platz für die längste unterstützte Variante vorhalten. Unsichtbare Messbeschriftungen bleiben `aria-hidden`; nur der aktuelle Wert gehört zum zugänglichen Namen.
+- Neue Analyse, Analysen, Playbooks und Einstellungen verwenden dasselbe Seitenraster. `--page-inset`, `--page-top` und `--page-bottom` legen Abstand und Ursprung gemeinsam fest. Lange Seiten erhalten reservierten Platz für Scrollleisten.
+- Der Wechsel der Prüfungsart verschiebt weder Prüfauftrag noch Werkzeugleiste. Zusätzliche Hinweise und Optionen stehen unterhalb der Hauptbedienung. Dokumentchips behalten unabhängig von Metadaten und Vergleichsrolle feste Spalten.
+- In der Dokumentauswahl bleiben Zeile, Dialog und Fußzeile beim An- und Abwählen stabil. Vergleichsreihenfolge und wechselnde Zähler dürfen oberhalb der Zeilen keinen neuen Platz beanspruchen.
+- Aufklappen ändert die benötigte Fläche einmal direkt unter dem Auslöser, ohne federnde Höhenänderung. Eine Befundauswahl klappt nicht gleichzeitig einen anderen Befund oberhalb zu. Quellenwahl und geöffnete Befunde sind getrennte Zustände.
+- Der native Denkaufwand-Slider aktualisiert Wert, Beschriftung und Übermittlung unmittelbar. Sein Auslöser bleibt bei allen Werten gleich breit.
 
 #### Unterbrechung und Barrierefreiheit
 
 - `useMotionPreferences()` beobachtet die Betriebssystempräferenz auch während einer geöffneten Sitzung. Bei `prefers-reduced-motion: reduce` sind Übergänge sofort; räumliche Bewegung und Ladespinner entfallen. Status bleibt als Text erkennbar.
-- Mit `AnimatePresence` ausblendende Inhalte werden sofort `inert` und `aria-hidden`. Sie dürfen während des sichtbaren Nachlaufs keine Klicks, Tabstopps oder doppelten Screenreader-Inhalte behalten. [Motion: Anwesenheit während des Entfernens](https://motion.dev/docs/react-animate-presence)
+- Mit `AnimatePresence` ausblendende Overlays werden sofort `inert` und `aria-hidden`. Sie dürfen während des sichtbaren Nachlaufs keine Klicks, Tabstopps oder doppelten Screenreader-Inhalte behalten. Inhalte im normalen Dokumentfluss werden beim Schließen sofort entfernt. [Motion: Anwesenheit während des Entfernens](https://motion.dev/docs/react-animate-presence)
 - Beim Schließen eines Dialogs wird die Fokusführung sofort freigegeben und der Auslöser fokussiert. Der Hintergrund ist während des offenen Dialogs gesperrt. Erneutes Öffnen darf keinen zweiten Dialog oder veralteten Fokus erzeugen.
 - Fundstellen scrollen nur auf ausdrückliche Auswahl und nur, wenn der Bereich außerhalb der sichtbaren Fläche liegt. Bei reduzierter Bewegung erfolgt der Sprung direkt.
-- Shared Layout nur für Auswahlflächen und kurze bewegte Elemente; `layout="position"` schützt Texte vor Verzerrung. Keine permanente `will-change`-Belegung aller Elemente. [Motion: Layout-Animationen](https://motion.dev/docs/react-layout-animations)
-- Schnelles Öffnen, Schließen, erneutes Öffnen, Tastaturbedienung und ein Präferenzwechsel während der Sitzung gehören zur Prüfung. Screenshots und Kontrastprüfung erst nach abgeschlossenem Übergang erstellen.
+- Keine Layout-Projektion auf Eingabefeldern, Textzeilen oder Dokumentchips. Keine permanente `will-change`-Belegung. Scrollanker dürfen bei Zustandswechseln nicht die Seite verschieben; Fokuswiederherstellung verwendet `preventScroll`.
+- Schnelles Öffnen, Schließen, erneutes Öffnen, Tastaturbedienung und ein Präferenzwechsel während der Sitzung gehören zur Prüfung. Zusätzlich Position und Größe über mehrere Animationsframes messen: höchstens 0,5 CSS-Pixel Abweichung für unveränderte Bedienflächen. Screenshots und Kontrastprüfung erst nach abgeschlossenem Übergang erstellen.
 
 ## Textregeln
 

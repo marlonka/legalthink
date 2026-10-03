@@ -1,22 +1,3 @@
-/* Animate selection surfaces only; labels keep their measured position. */
-.sidebar[data-motion-navigation] .nav-motion-item {
-  position: relative;
-  isolation: isolate;
-}
-
-.sidebar[data-motion-navigation] .nav-motion-item.active {
-  background: transparent;
-}
-
-.sidebar[data-motion-navigation] .nav-selection {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: var(--radius-control);
-  background: var(--surface-hover);
-  pointer-events: none;
-}
-
 /* Motion owns drawer transforms. CSS retains layout and settled visibility. */
 .sidebar[data-motion-navigation] {
   transition: none;

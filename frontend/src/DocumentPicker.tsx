@@ -1,9 +1,8 @@
-import { useId, useState } from 'react';
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDownUp, Check, FileText, Search, X } from 'lucide-react';
 import type { DocumentRecord } from './types';
 import { Modal } from './ui';
-import { Collapse, MotionButton, useMotionPreferences } from './motion';
+import { MotionButton } from './motion';
 
 interface Props {
   documents: DocumentRecord[];
@@ -22,9 +21,9 @@ export default function DocumentPicker({
 }: Props) {
   const [selection, setSelection] = useState(selectedIds);
   const [search, setSearch] = useState('');
+  const [listHeight, setListHeight] = useState<number>();
+  const listRef = useRef<HTMLDivElement>(null);
   const hintId = useId();
-  const orderMotionId = useId();
-  const { reduced, transition } = useMotionPreferences();
   const limit = compare ? 2 : 12;
   const filtered = documents.filter((document) =>
     document.name.toLocaleLowerCase('de-DE').includes(search.trim().toLocaleLowerCase('de-DE')),
@@ -34,6 +33,12 @@ export default function DocumentPicker({
     .filter((document): document is DocumentRecord => Boolean(document));
   const valid =
     selected.length > 0 && selected.length <= limit && (!compare || selected.length === 2);
+
+  useLayoutEffect(() => {
+    // Keep the opening list size while searching; CSS still caps it on short screens.
+    const height = listRef.current?.getBoundingClientRect().height;
+    if (height) setListHeight(height);
+  }, []);
 
   function toggle(id: string) {
     setSelection((previous) =>
@@ -61,52 +66,27 @@ export default function DocumentPicker({
             placeholder="Dokument suchen …"
             aria-label="Gespeicherte Dokumente durchsuchen"
           />
-          {search && (
-            <MotionButton
-              className="icon-button small"
-              onClick={() => setSearch('')}
-              aria-label="Dokumentsuche zurücksetzen"
-            >
-              <X size={14} />
-            </MotionButton>
-          )}
+          <MotionButton
+            className={`icon-button small document-search-clear ${search ? '' : 'is-empty'}`}
+            onClick={(event) => {
+              setSearch('');
+              event.currentTarget
+                .closest('label')
+                ?.querySelector('input')
+                ?.focus({ preventScroll: true });
+            }}
+            aria-label="Dokumentsuche zurücksetzen"
+            aria-hidden={!search || undefined}
+            tabIndex={search ? 0 : -1}
+            disabled={!search}
+          >
+            <X size={14} />
+          </MotionButton>
         </label>
-        <Collapse open={compare && selected.length > 0} className="document-order-collapse">
-          <div className="document-order" aria-label="Vergleichsreihenfolge">
-            <LayoutGroup id={orderMotionId}>
-              <div>
-                {selected.map((document, index) => (
-                  <motion.div
-                    key={document.id}
-                    layout={reduced ? false : 'position'}
-                    initial={false}
-                    transition={transition('layout')}
-                  >
-                    <span>
-                      {index === 0
-                        ? '01 · Original'
-                        : index === 1
-                          ? '02 · Gegenentwurf'
-                          : 'Zusätzlich'}
-                    </span>
-                    <strong>{document.name}</strong>
-                  </motion.div>
-                ))}
-              </div>
-            </LayoutGroup>
-            {selected.length === 2 && (
-              <MotionButton
-                className="text-button"
-                onClick={() => setSelection((previous) => [...previous].reverse())}
-              >
-                <ArrowDownUp size={14} />
-                Reihenfolge tauschen
-              </MotionButton>
-            )}
-          </div>
-        </Collapse>
         <div
+          ref={listRef}
           className="document-picker-list"
+          style={listHeight === undefined ? undefined : { height: listHeight }}
           role="group"
           aria-label="Dokumentauswahl"
           aria-describedby={hintId}
@@ -139,44 +119,51 @@ export default function DocumentPicker({
                     </small>
                   </span>
                   <span className="document-picker-status-slot" aria-hidden="true">
-                    <AnimatePresence initial={false}>
-                      {checked && (
-                        <motion.span
-                          key={compare ? index : 'selected'}
-                          className="document-picker-number"
-                          initial={reduced ? false : { opacity: 0, scale: 0.78 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: reduced ? 1 : 0.9 }}
-                          transition={{ scale: transition('control'), opacity: transition('fade') }}
-                        >
-                          {compare ? String(index + 1).padStart(2, '0') : <Check size={14} />}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
+                    {checked && (
+                      <span className="document-picker-number">
+                        {compare ? String(index + 1).padStart(2, '0') : <Check size={14} />}
+                      </span>
+                    )}
                   </span>
                 </label>
               );
             })
           ) : (
             <div className="document-picker-empty">
-              <FileText size={24} strokeWidth={1.4} />
               <strong>
                 {search ? 'Keine Dokumente gefunden' : 'Noch keine Dokumente gespeichert'}
               </strong>
-              <p>
-                {search
-                  ? 'Versuchen Sie einen anderen Suchbegriff.'
-                  : 'Dokument unter „Neue Analyse“ hochladen.'}
-              </p>
+              {!search && <p>Dokument unter „Neue Analyse“ hochladen.</p>}
             </div>
           )}
         </div>
         <p className="field-help document-picker-count" role="status">
           {selected.length} von {limit} Dokumenten ausgewählt
-          {compare && selected.length === 1 ? ' · Gegenentwurf auswählen.' : ''}
         </p>
+        {compare && (
+          <div className="document-order" aria-label="Vergleichsreihenfolge">
+            <div>
+              {['01 · Original', '02 · Gegenentwurf'].map((label, index) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong title={selected[index]?.name}>
+                    {selected[index]?.name ?? 'Nicht ausgewählt'}
+                  </strong>
+                </div>
+              ))}
+            </div>
+            <MotionButton
+              className="text-button"
+              disabled={selected.length !== 2}
+              onClick={() => setSelection((previous) => [...previous].reverse())}
+            >
+              <ArrowDownUp size={14} />
+              Reihenfolge tauschen
+            </MotionButton>
+          </div>
+        )}
       </div>
-      <div className="modal-footer">
+      <div className="modal-footer document-picker-footer">
         <MotionButton className="button secondary" onClick={onClose}>
           Abbrechen
         </MotionButton>
@@ -185,7 +172,14 @@ export default function DocumentPicker({
           disabled={!valid}
           onClick={() => onApply(selection)}
         >
-          {selected.length} {selected.length === 1 ? 'Dokument' : 'Dokumente'} übernehmen
+          <span className="stable-action-label">
+            <span className="stable-action-size" aria-hidden="true">
+              12 Dokumente übernehmen
+            </span>
+            <span>
+              {selected.length} {selected.length === 1 ? 'Dokument' : 'Dokumente'} übernehmen
+            </span>
+          </span>
         </MotionButton>
       </div>
     </Modal>

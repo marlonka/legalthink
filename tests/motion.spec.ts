@@ -21,16 +21,16 @@ test('rapid disclosure and menu changes keep only current controls interactive',
   await expect(page.getByRole('combobox', { name: 'Kanzlei-Playbook' })).toHaveCount(0);
   await expect(options).toBeFocused();
 
-  const model = page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true });
+  const model = page.getByRole('button', { name: 'GPT-6 Luna', exact: true });
   await model.focus();
   await page.keyboard.press('Enter');
   await page.keyboard.press('Escape');
   await expect(model).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('button', { name: 'GPT-6 Luna', exact: true })).toHaveCount(1);
-  const effort = page.getByRole('button', { name: 'Denkaufwand: Mittel' });
+  await expect(page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true })).toHaveCount(1);
+  const effort = page.getByRole('button', { name: 'Denkaufwand: Hoch' });
   await effort.click();
-  await expect(page.getByRole('button', { name: 'GPT-6 Luna', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true })).toHaveCount(0);
   const slider = page.getByRole('slider', { name: 'Denkaufwand' });
   await slider.focus();
   await page.keyboard.press('End');

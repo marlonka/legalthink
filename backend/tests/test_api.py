@@ -131,6 +131,8 @@ def test_invalid_analysis_inputs_never_echo_document_text(client, body):
 def test_model_options_and_optional_luna_none(client):
     models = client.get("/api/models").json()["models"]
     assert {m["id"] for m in models} == {"gpt-6.1-sol", "gpt-6-luna"}
+    luna = next(model for model in models if model["id"] == "gpt-6-luna")
+    assert luna["default_effort"] == "high"
     response = client.post(
         "/api/analyses",
         json={

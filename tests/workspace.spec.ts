@@ -36,6 +36,8 @@ test('start page is usable, self-contained and accessible', async ({ page }) => 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Beispiel öffnen' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'GPT-6 Luna', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Denkaufwand: Hoch' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'API einrichten' })).toBeVisible();
   await assertAccessible(page);
   expect(errors).toEqual([]);
@@ -44,9 +46,7 @@ test('start page is usable, self-contained and accessible', async ({ page }) => 
 
 test('model selection resets an incompatible reasoning effort', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
-  await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
-  await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
+  await page.getByRole('button', { name: 'Denkaufwand: Hoch' }).click();
   const slider = page.getByRole('slider', { name: 'Denkaufwand' });
   await slider.focus();
   await page.keyboard.press('Home');
@@ -122,7 +122,7 @@ for (const theme of ['Dunkel', 'Hell'] as const) {
     await page.getByRole('button', { name: 'Neue Analyse', exact: true }).click();
     await assertAccessible(page);
     await page.screenshot({ path: `artifacts/start-${name}.png` });
-    await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
+    await page.getByRole('button', { name: 'Denkaufwand: Hoch' }).click();
     await expect(page.getByRole('slider', { name: 'Denkaufwand' })).toBeVisible();
     await assertAccessible(page);
     await page.screenshot({ path: `artifacts/effort-${name}.png` });
@@ -155,10 +155,10 @@ for (const theme of ['Dunkel', 'Hell'] as const) {
       const runButton = page.getByRole('button', { name: 'Analyse starten', exact: true });
       await runButton.scrollIntoViewIfNeeded();
       await expect(runButton).toBeInViewport();
-      await page.getByRole('button', { name: 'Denkaufwand: Mittel', exact: true }).click();
+      await page.getByRole('button', { name: 'Denkaufwand: Hoch', exact: true }).click();
       await expect(page.locator('.effort-popover')).toBeInViewport({ ratio: 1 });
       await page.keyboard.press('Escape');
-      await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
+      await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
       await expect(page.locator('.picker-popover')).toBeInViewport({ ratio: 1 });
       await page.keyboard.press('Escape');
     }

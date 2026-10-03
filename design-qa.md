@@ -27,7 +27,7 @@ Zusätzliche gerenderte Zustände: neue Analyse, Befunde mit Quelle, Formulierun
 
 1. **P2 – unruhiger Umbruch der Prüfungsarten.** Vier lange Aktionen und eine einzelne zweite Zeile bei 768 px Inhaltsbreite. Sichtbare Bezeichnungen auf Vertrag, Vergleich, Chronologie, Datenschutz und Werbung gekürzt. Der Aktionswortlaut bleibt als Tooltip verfügbar. Nachprüfung: `start-dark.png`, `start-light.png`, beide Mobilbilder.
 2. **P2 – übergroße Modusauswahl.** Drei separate Karten statt einer kompakten Einstellungszeile. Durch eine gemeinsame Kontur, Modus links und native Auswahl rechts ersetzt. Nachprüfung: beide Einstellungenbilder und kombinierte Vergleiche.
-3. **P2 – Zitat unnötig weit unten.** Fundstelle doppelt und Kontextaktion vor dem Zitat. Wiederholung entfernt, Aktion darunter platziert. Nachprüfung: `review-dark.png` und `review-light.png`; Zitat und Kontext bleiben erreichbar.
+3. **P2 – doppelte Fundstelle.** Wiederholte Angabe entfernt. Die Kontextaktion bleibt vor dem aufklappbaren Inhalt, damit sie beim Öffnen und Schließen an derselben Position steht. Nachprüfung: Befundbilder und Positionsmessung in `tests/stability.spec.ts`.
 4. **P2 – Popover bei mittlerer Breite abgeschnitten.** Im eingebetteten Browser bei 563 px stand der Regler links außerhalb des Inhalts. Menüs bis 900 px links am Auslöserbereich ausgerichtet. Anschließend im selben Browser erneut geöffnet: gesamter Regler und Hinweis sichtbar. Browserprüfungen verlangen vollständig sichtbare Modell- und Denkaufwand-Menüs bei 320, 390, 568, 768 und 1024 px, jeweils dunkel und hell.
 
 Zwischenstände mit diesen Befunden waren nicht freigegeben. Nach den Korrekturen wurden die betroffenen Ansichten erneut gerendert und angesehen. Eine weitere unabhängige visuelle Prüfung der Mobil-, Einstellungs-, Regler- und Befundbilder fand keine weiteren P0/P1/P2-Abweichungen.
@@ -47,7 +47,7 @@ Zwischenstände mit diesen Befunden waren nicht freigegeben. Nach den Korrekture
 ## Technische Prüfung
 
 - Produktionsbuild und TypeScript erfolgreich.
-- 16 Browser-Testfälle erfolgreich, einschließlich Theme-Persistenz, Systemwechsel, gesperrtem Browser-Speicher, schmalen Menüs und unterbrochenen Übergängen.
+- Browserprüfungen umfassen Theme-Persistenz, Systemwechsel, gesperrten Browser-Speicher, schmale Menüs, unterbrochene Übergänge und Positionsmessungen über mehrere Frames. Aktueller Prüfumfang unten.
 - Produktions-Smoke-Test über FastAPI erfolgreich: lokale Assets, CSP und Export.
 - 43 API-Tests erfolgreich. Keine echten OpenAI-Anfragen; Testschlüssel leer.
 - Keine Konsolenfehler in der geprüften Produktionsansicht des eingebetteten Browsers.
@@ -68,20 +68,47 @@ Zwischenstände mit diesen Befunden waren nicht freigegeben. Nach den Korrekture
 - [x] Gestaltungsregeln in `design.md` dokumentiert und in `AGENTS.md` verankert.
 - [x] Referenzbilder und private Inhalte außerhalb des Repositories belassen.
 
-## Motion-Überarbeitung · 3. Oktober 2026
+## Layoutstabilität · 3. Oktober 2026
 
-Fünf Subagents bearbeiteten die gemeinsame Physik, Navigation, Composer, Befunde und Overlays. Die Integration verwendet eine gemeinsame Motion-Basis und die vorhandene `motion/react`-Abhängigkeit.
+Drei Subagents bearbeiteten Composer und Dokumente, Befunde sowie Overlays. Die gemeinsame Integration vereinheitlicht das Seitenraster und entfernt Positions- und Größenanimationen von Bedienflächen. Ein zusätzlicher unabhängiger Review fand den Suchsprung im Dokumentdialog.
 
-| Prüfung | Nachweis |
-| --- | --- |
-| Auswahl und Positionswechsel | Navigation, Prüfungsarten, Tabs und Darstellung bewegen ihre Auswahlfläche; Dokumentchips animieren die Position. Beschriftungen und Texteingabe behalten ihre Größe. |
-| Schnelle Unterbrechung | Neuer Browsertest öffnet und schließt Prüfoptionen mehrfach, kehrt eine Menüschließung um und wechselt direkt zum Regler. Nur aktuelle Bedienelemente bleiben erreichbar. |
-| Dialoge | Neuer Browsertest schließt und öffnet denselben Dialog dreimal während des Nachlaufs, prüft Fokuswiederherstellung und zwölf Tab-Schritte. Bestehender Ablauf prüft Playbook-Vorschau → Bearbeiten → Speichern. |
-| Reduzierte Bewegung | Neuer Browsertest wechselt die OS-Präferenz bei bereits geöffneter App und prüft acht aufeinanderfolgende Frames des Drawers. Keine Verschiebung oder Einblendung; Dialog und Fokus bleiben bedienbar. |
-| Entfernte Dokumente | Bestehender Vergleichstest prüft zusätzlich Fokusübergabe an das verbleibende Dokument und danach an den Prüfauftrag. |
-| Visuelle Kontrolle | Eingebetteter Browser: Regler und Playbook-Dialog auf Desktop, Drawer-Eintritt und Endzustand bei 390 × 844 px. Aktuelle Browserbilder für helle Einstellungen und dunkle Befunde geprüft. |
-| Regressionen | Build, 43 API-Tests, 16 Browser-Tests und Produktions-Smoke-Test erfolgreich. Keine echten OpenAI-Anfragen. |
+### Reproduzierte Fehler
 
-Dialoge werden außerhalb des App-Inhalts gerendert, damit Seitenbewegung ihre Position nicht verschiebt. Offene Dialoge sperren den Hintergrund. Ausblendende Dialoge, Chips, Menüs und Befunddetails werden sofort inert; die sichtbare Ausblendung verlängert ihre Bedienbarkeit nicht.
+Die neuen Positionsprüfungen wurden zuerst gegen den unveränderten Produktionsbuild von `c252f0f` ausgeführt. Alle sieben damaligen Fälle schlugen an. Die vorhandenen Funktionstests hatten diese Fehler nicht erfasst.
 
-Die Prüfung bestätigt Verhalten und sichtbare Zustände in Chromium. Ein geräteübergreifender Framerate-Benchmark wurde nicht durchgeführt.
+| Ablauf | Gemessene Abweichung vor der Korrektur | Korrektur |
+| --- | --- | --- |
+| Button gedrückt halten | Breite änderte sich bereits im frühen Frame um 0,62 px | Deckkraft statt Skalierung |
+| Neue Analyse → Playbooks | Überschrift um 76 px horizontal versetzt | Gemeinsame Inhaltsbreite und Seitenabstände |
+| Prüfungsart wechseln | Eingabefeld um 31 px am Desktop, 52 px bei 390 px versetzt | Zusätzliche Optionen unter gemeinsamen Eingabebereich und Toolbar verschoben |
+| Dokument auswählen | Angeklickte Checkbox um 18 px versetzt | Feste Statusfelder und Vergleichsplätze |
+| Zweiten Befund öffnen | Dessen Überschrift bereits im frühen Frame um 3,91 px versetzt | Befunde unabhängig öffnen; vorherigen Befund oberhalb nicht automatisch schließen |
+| Dokumentliste filtern | Nach der ersten Korrekturrunde weiterhin 41 px am Suchfeld bzw. 81 px am Footer | Ausgangshöhe der Liste behalten, auch ohne Treffer |
+
+Die Werte zeigen konkrete Fehler in den Testabläufen, keine gemessenen Maxima über die gesamte Oberfläche.
+
+### Geprüfte Abläufe
+
+`tests/stability.spec.ts` enthält acht Fälle. Unveränderte Bedienflächen dürfen höchstens 0,5 CSS-Pixel in Position oder Größe abweichen; animierte Abläufe werden über 18 aufeinanderfolgende Frames gemessen.
+
+- Gedrückter Button, Dialogeintritt, Dialogschließen und Fokuswiederherstellung.
+- Gemeinsamer Ursprung der Überschriften für Neue Analyse, Analysen, Playbooks und Einstellungen, einschließlich wechselnder Scrollhöhe.
+- Prüfungsarten, Modellwahl und Denkaufwand bei 390, 768 und 1280 px; kein horizontaler Überlauf.
+- Dokumentauswahl, Filter mit Treffern, leere Suche und Zurücksetzen bei 390 × 844 und 320 × 620 px. Suchfeld, Dialog und Footer behalten ihre Geometrie.
+- Zweiter Befund, Quellenkontext und wechselnder Prüfstatus; der jeweils angeklickte Auslöser bleibt stehen.
+
+Prüfoptionen zusätzlich: Playbook-Dropdown und Webrecherche-Aktion sind auf derselben Bedienzeile ausgerichtet. Öffnen der Optionen und Umschalten der Checkbox bewegen den bestehenden Eingabebereich nicht. Browserbilder: `artifacts/options-1280.png`, `artifacts/options-768.png`, `artifacts/options-390.png`.
+
+Wechselnde Beschriftungen reservieren ihre längste Variante. Ladeindikatoren ersetzen vorhandene Icons im selben Platz. Scrollbereiche reservieren Scrollleistenbreite. Seiten, Dialoge und Menüs blenden nur ein; Auswahlflächen wechseln ohne Fahrt. Zusätzlicher Inhalt erscheint sofort unter dem Auslöser. Die mobile Navigation behält ihren räumlichen Drawer-Übergang.
+
+Die bestehenden Prüfungen für schnelle Menüwechsel, wiederholtes Öffnen von Dialogen, Fokusführung, Dokumententfernung und live geänderte Bewegungspräferenzen bleiben erhalten. Dialoge liegen außerhalb des App-Inhalts und sperren den Hintergrund. Ausblendende Overlays werden sofort inert. Entfernte Inhalte im Dokumentfluss verschwinden unmittelbar.
+
+Grenzen: Chromium, synthetische Daten und lokale Beispiele; keine echten OpenAI-Anfragen. Keine geräteübergreifende Framerate-Messung. Die Tests belegen die genannten Abläufe und ersetzen keine Prüfung künftiger UI-Erweiterungen.
+
+### Abschlussprüfung
+
+- 24 Browserfälle bestanden, darunter acht Tests der Layoutstabilität.
+- 43 Offline-API-Tests bestanden; SDK-Anfragen über MockTransport verwenden Luna/High.
+- TypeScript, Produktionsbuild, Produktions-Smoke-Test, Ruff, Formatprüfung und Diff-Prüfung bestanden.
+- Standard Luna/Hoch in Frontend und Backend; die Auswahl im vorhandenen Browser wurde ebenfalls umgestellt.
+- Die lokalen Windows-Sandbox-Probleme mit `uv` und AsyncIO wurden durch direkten Aufruf der vorhandenen Python-Umgebung und Ausführung der betroffenen Tests außerhalb der Sandbox umgangen. Keine Produktänderung für diese Einschränkung.

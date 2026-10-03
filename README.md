@@ -46,7 +46,7 @@ Für den Vergleich zuerst den eigenen Entwurf, dann den Gegenentwurf wählen. Ge
 | `gpt-6.1-sol` | `low`, `medium`, `high`, `xhigh`, `max` |
 | `gpt-6-luna` | `none`, `low`, `medium`, `high`, `xhigh`, `max` |
 
-Standard: `medium`. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
+Standard: `gpt-6-luna` mit Denktiefe `high`. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
 
 ## Daten und Betrieb
 

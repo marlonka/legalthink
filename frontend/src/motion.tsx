@@ -1,15 +1,8 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
-import {
-  AnimatePresence,
-  motion,
-  useIsPresent,
-  type HTMLMotionProps,
-  type Transition,
-} from 'motion/react';
+import { motion, type HTMLMotionProps, type Transition } from 'motion/react';
 
 export const SPRING = {
   control: { type: 'spring', stiffness: 500, damping: 38, mass: 0.8 },
-  layout: { type: 'spring', stiffness: 420, damping: 36, mass: 0.85 },
   panel: { type: 'spring', stiffness: 400, damping: 38, mass: 0.9 },
 } satisfies Record<string, Transition>;
 
@@ -45,19 +38,18 @@ export function useMotionPreferences() {
 
 export function MotionButton({
   disabled,
-  whileTap,
   transition,
   type = 'button',
   ...props
-}: HTMLMotionProps<'button'>) {
+}: Omit<HTMLMotionProps<'button'>, 'whileTap' | 'whileHover'>) {
   const preferences = useMotionPreferences();
   return (
     <motion.button
       {...props}
       type={type}
       disabled={disabled}
-      whileTap={disabled || preferences.reduced ? undefined : (whileTap ?? { scale: 0.985 })}
-      transition={preferences.reduced ? INSTANT : (transition ?? SPRING.control)}
+      whileTap={disabled || preferences.reduced ? undefined : { opacity: 0.82 }}
+      transition={preferences.reduced ? INSTANT : (transition ?? FADE)}
     />
   );
 }
@@ -70,33 +62,21 @@ type CollapseProps = {
   innerClassName?: string;
 };
 
-function CollapseContent({ children, id, className, innerClassName }: Omit<CollapseProps, 'open'>) {
-  const present = useIsPresent();
+// Apply the requested disclosure once. Height springs move every following control.
+export function Collapse({ open, children, id, className, innerClassName }: CollapseProps) {
   const { reduced, transition } = useMotionPreferences();
+  if (!open) return null;
   return (
     <motion.div
       id={id}
       className={className}
-      inert={!present}
-      aria-hidden={!present || undefined}
-      initial={reduced ? false : { height: 0, opacity: 0 }}
-      animate={{ height: 'auto', opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ height: transition('layout'), opacity: transition('fade') }}
-      style={{ overflow: 'clip' }}
+      initial={reduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={transition('fade')}
     >
       <div className={innerClassName} style={{ display: 'flow-root' }}>
         {children}
       </div>
     </motion.div>
-  );
-}
-
-// For compact disclosures. Long reading surfaces should change without reflow animation.
-export function Collapse({ open, ...props }: CollapseProps) {
-  return (
-    <AnimatePresence initial={false}>
-      {open && <CollapseContent key="content" {...props} />}
-    </AnimatePresence>
   );
 }
