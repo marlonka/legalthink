@@ -20,6 +20,7 @@ from .config import Settings
 from .demo import demo_analysis, demo_documents
 from .extraction import ExtractionError, extract_isolated, safe_filename
 from .schemas import (
+    MAX_MATERIAL_CHARS,
     MODELS,
     Analysis,
     AnalysisRequest,
@@ -192,10 +193,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not value:
                 raise HTTPException(404, "Ein ausgewähltes Dokument ist nicht mehr vorhanden.")
             documents.append(Document.model_validate(value))
-        if sum(len(d.text) for d in documents) + len(body.source_text) > 300_000:
+        if sum(len(d.text) for d in documents) + len(body.source_text) > MAX_MATERIAL_CHARS:
             raise HTTPException(
                 422,
-                "Die Auswahl überschreitet 300.000 Zeichen. Bitte den Prüfungsumfang reduzieren.",
+                (
+                    f"Die Auswahl überschreitet {MAX_MATERIAL_CHARS:,} Zeichen. "
+                    "Bitte den Prüfungsumfang reduzieren."
+                ).replace(",", "."),
             )
         pasted_document = None
         if body.source_text.strip():

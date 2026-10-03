@@ -217,32 +217,36 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
 
 
 @pytest.mark.parametrize("extra,expected_status", [(0, 201), (1, 422)])
+@pytest.mark.parametrize("document_chars", [0, 200_000])
 def test_mixed_document_and_pasted_text_limit_is_enforced_without_truncation(
-    client, extra, expected_status
+    client, extra, expected_status, document_chars
 ):
     service = CompletedService()
     client.app.state.analysis_service = service
-    text = "D" * 200_000
+    text = "D" * document_chars
     document = Document(
         id=new_id(), name="Vertrag.txt", text=text, page_count=1, char_count=len(text)
     )
-    client.app.state.store.put("documents", document.model_dump())
-    pasted_text = "P" * (100_000 + extra)
+    if document_chars:
+        client.app.state.store.put("documents", document.model_dump())
+    pasted_text = "😀" * (1_000_000 - document_chars + extra)
     response = client.post(
         "/api/analyses",
         json={
             "workflow": "contract",
-            "document_ids": [document.id],
+            "document_ids": [document.id] if document_chars else [],
             "source_text": pasted_text,
         },
     )
     assert response.status_code == expected_status, response.text
     if extra:
         assert not service.calls
-        assert client.get("/api/documents").json() == [document.model_dump()]
+        assert client.get("/api/documents").json() == (
+            [document.model_dump()] if document_chars else []
+        )
         assert client.get("/api/analyses").json() == []
     else:
-        assert service.calls[0][1][0].text == text
+        assert [doc.text for doc in service.calls[0][1]] == ([text] if document_chars else [])
         assert service.calls[0][2].text == pasted_text
 
 
@@ -351,7 +355,7 @@ def test_playbook_edit_cors_preflight_allows_configured_origin(client):
     "body",
     [
         {"workflow": "chronology", "source_text": " \n\t", "context": "Nur ein Prüfauftrag"},
-        {"workflow": "contract", "source_text": "PRIVATE" * 42_858},
+        {"workflow": "contract", "source_text": "PRIVATE" * 142_858},
         {"workflow": "compare", "source_text": "Zusatzquelle ohne beide Vertragsfassungen"},
         {"workflow": "compare", "document_ids": ["a"], "source_text": "Zusatzquelle"},
         {"workflow": "compare", "document_ids": ["a", "b", "c"], "source_text": "Zusatzquelle"},

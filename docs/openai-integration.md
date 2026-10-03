@@ -1,6 +1,6 @@
 # OpenAI integration decisions
 
-Verified against official OpenAI documentation on **3 October 2026**. This records the API contract and implementation rationale. An authorized diagnostic request with synthetic input and `gpt-6-luna` / `high` was rejected with HTTP 403 (`model_not_found`): the configured project lacked model access. Its model catalog also omitted both configured models. No successful live model response or legal-quality evaluation was obtained; billing, output quality, latency and regional configuration remain unverified.
+Verified against official OpenAI documentation on **3 October 2026**. This records the API contract and implementation rationale. An authorized diagnostic request with synthetic input and `gpt-6-luna` / `high` was rejected with HTTP 403 (`model_not_found`): the configured project lacked model access. After the user changed project permissions, a subsequent authorized model-list check returned both `gpt-6-luna` and `gpt-6.1-sol`. No successful live model response or legal-quality evaluation was obtained; billing, output quality, latency and regional configuration remain unverified.
 
 ## Models and reasoning
 

@@ -84,13 +84,20 @@ test('task drafts keep evidence separate from instructions through switches and 
     await expect(contextInput(page)).toHaveValue(instruction);
     await expect(runButton(page)).toBeEnabled();
   }
-  const oversized = 'A'.repeat(300_001);
+  const maximum = 'A'.repeat(999_999) + '😀';
+  await sourceInput(page).fill(maximum);
+  await expect(sourceInput(page)).not.toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByText('1.000.000 / 1.000.000 Zeichen', { exact: true })).toBeVisible();
+  await runButton(page).click();
+  await expect(page.getByRole('alert')).toContainText('Offline-Test: Analyse fehlgeschlagen.');
+  expect(requests.at(-1)?.source_text).toBe(maximum);
+  const oversized = maximum + 'A';
   const count = requests.length;
   await sourceInput(page).fill(oversized);
   await expect(sourceInput(page)).toHaveValue(oversized);
   await expect(sourceInput(page)).toHaveAttribute('aria-invalid', 'true');
   await runButton(page).click();
-  await expect(page.getByRole('alert')).toContainText('300.000');
+  await expect(page.getByRole('alert')).toContainText('1.000.000');
   expect(requests).toHaveLength(count);
   await expect(sourceInput(page)).toHaveValue(oversized);
 });
@@ -289,18 +296,19 @@ async function expectStableInput(page: Page, input: () => Promise<void>) {
   }
 }
 
-test('100k pasted characters scroll inside the field without moving controls in either theme', async ({
+test('1M pasted characters scroll inside the field without moving controls in either theme', async ({
   page,
 }) => {
-  test.setTimeout(60_000);
+  // Six native paste operations at the full input limit need a larger test budget.
+  test.setTimeout(120_000);
   const evidence = (
     'Von: Mandant\nBetreff: Lieferverlauf\nAm 17. September war die Lieferung noch offen.\n\n' +
     'Aktenzeichen-ohne-Leerzeichen-'.repeat(40) +
     '\n'
   )
-    .repeat(100)
-    .slice(0, 100_000);
-  expect(evidence.length).toBe(100_000);
+    .repeat(1_000)
+    .slice(0, 1_000_000);
+  expect(evidence.length).toBe(1_000_000);
   for (const theme of ['Hell', 'Dunkel']) {
     await page.setViewportSize({ width: 1280, height: 1000 });
     await page.goto('/#settings');
@@ -330,6 +338,7 @@ test('100k pasted characters scroll inside the field without moving controls in 
       expect(scroll.content).toBeGreaterThan(scroll.visible);
       expect(scroll.top).toBeGreaterThan(0);
       await expect(contextInput(page)).toHaveValue('');
+      await page.screenshot({ path: `artifacts/million-characters-${theme}-${width}.png` });
     }
   }
 });

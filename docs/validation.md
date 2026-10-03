@@ -7,7 +7,7 @@ Stand: 3. Oktober 2026. Automatisierte Tests ausschließlich mit synthetischen U
 | Prüfung | Ergebnis |
 | --- | --- |
 | TypeScript und Vite-Produktionsbuild | Erfolgreich |
-| Python-Tests | 89 bestanden |
+| Python-Tests | 91 bestanden |
 | Browserabläufe mit Chromium | 38 bestanden |
 | Gebaute Oberfläche direkt über FastAPI | Bestanden; lokale Assets, CSP, Verlauf und Markdown-Export |
 | Ruff und Prettier | Erfolgreich |
@@ -29,13 +29,13 @@ Das aktualisierte Chronologiebeispiel mit widersprechenden Lieferangaben wurde i
 
 ## Eingefügte Texte
 
-Die zusätzliche Texteingabe wurde in allen sieben Aufgaben geprüft: getrennte Übermittlung von Quellenmaterial und Prüfauftrag, Textprüfung ohne Datei, Vergleich mit zwei festen Vertragsfassungen, erhaltene Eingaben nach Fehler und Abbruch sowie sofort verfügbare Quellenansicht. Backendtests prüfen unveränderte Textspeicherung, passende Quellennamen und den gemeinsamen Rollback bei Speicherfehlern. Die Grenze von 300.000 Zeichen wird auch für gemischte Eingaben geprüft; 300.001 Zeichen bleiben im Browser erhalten und verhindern den Start.
+Die zusätzliche Texteingabe wurde in allen sieben Aufgaben geprüft: getrennte Übermittlung von Quellenmaterial und Prüfauftrag, Textprüfung ohne Datei, Vergleich mit zwei festen Vertragsfassungen, erhaltene Eingaben nach Fehler und Abbruch sowie sofort verfügbare Quellenansicht. Backendtests prüfen unveränderte Textspeicherung, passende Quellennamen und den gemeinsamen Rollback bei Speicherfehlern. Die Grenze von 1.000.000 Zeichen wird auch für gemischte Eingaben geprüft; 1.000.001 Zeichen bleiben im Browser erhalten und verhindern den Start.
 
-Die Layoutmessung umfasst 100.000 eingefügte Zeichen bei 320, 390 und 1280 px in Hell und Dunkel. Tippen und Einfügen verändern die Positionen und Größen der Eingaben und Werkzeugleiste nicht; langer Text scrollt im Feld. Die Sichtprüfung erfolgte zusätzlich im lokalen Browser auf Desktop und 390-px-Mobilbreite. Bestehende Interaktionstests scrollen tiefere Bedienelemente vor ihrer Messung bewusst ins Bild; die Kontrastprüfung wartet das Einblenden der Optionen ab.
+Die Layoutmessung umfasst 1.000.000 eingefügte Zeichen bei 320, 390 und 1280 px in Hell und Dunkel. Tippen und Einfügen verändern die Positionen und Größen der Eingaben und Werkzeugleiste nicht; langer Text scrollt im Feld. Die Sichtprüfung erfolgte zusätzlich im lokalen Browser auf Desktop und 390-px-Mobilbreite. Bestehende Interaktionstests scrollen tiefere Bedienelemente vor ihrer Messung bewusst ins Bild; die Kontrastprüfung wartet das Einblenden der Optionen ab.
 
 ## Modellzugriff und Sammellöschen
 
-Der Diagnoseaufruf für `gpt-6-luna` / `high` erreichte OpenAI und erhielt HTTP 403 mit `model_not_found`. Die `.env` wurde geladen; das API-Projekt hatte keinen Zugriff auf dieses Modell. Die abgefragte Modellliste enthielt weder Luna noch Sol. Es wurden keine Mandatsdaten übertragen und kein Modellwechsel vorgenommen. Die Anwendung zeigt fehlenden Modellzugriff und sonstige 403-Berechtigungsfehler gezielt an, ohne rohe Providerinhalte offenzulegen.
+Der Diagnoseaufruf für `gpt-6-luna` / `high` erreichte OpenAI und erhielt HTTP 403 mit `model_not_found`. Die `.env` wurde geladen; das API-Projekt hatte keinen Zugriff auf dieses Modell. Die erste Modellliste enthielt weder Luna noch Sol. Nach der Projektfreigabe durch den Nutzer enthielt ein erneut freigegebener Listenabruf beide Modelle; dabei wurde keine Modellantwort angefordert. Es wurden keine Mandatsdaten übertragen und kein Modellwechsel vorgenommen. Die Anwendung zeigt fehlenden Modellzugriff und sonstige 403-Berechtigungsfehler gezielt an, ohne rohe Providerinhalte offenzulegen.
 
 Das Sammellöschen verlangt eine bestätigte Liste von Dokument-IDs. Backendtests prüfen, dass spätere Uploads, Analysen und Playbooks erhalten bleiben, Fehler alle Löschungen zurückrollen und eine Wiederholung sicher ist.
 
