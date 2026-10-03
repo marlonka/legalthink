@@ -23,11 +23,17 @@ class Store:
                     "(id TEXT PRIMARY KEY, body TEXT NOT NULL, "
                     "created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')))"
                 )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS document_originals "
+                "(document_id TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE, "
+                "content BLOB NOT NULL)"
+            )
 
     @contextmanager
     def connection(self):
         db = sqlite3.connect(self.path, timeout=10)
         db.execute("PRAGMA secure_delete=ON")
+        db.execute("PRAGMA foreign_keys=ON")
         try:
             with db:
                 yield db
@@ -54,6 +60,44 @@ class Store:
                 ).rowcount
                 > 0
             )
+
+    def save_document(self, document: dict[str, Any], original: bytes | None = None) -> None:
+        with self.connection() as db:
+            db.execute(
+                "INSERT INTO documents (id,body) VALUES (?,?)",
+                (document["id"], json.dumps(document, ensure_ascii=False)),
+            )
+            if original is not None:
+                db.execute(
+                    "INSERT INTO document_originals (document_id,content) VALUES (?,?)",
+                    (document["id"], original),
+                )
+
+    def attach_original(self, document_id: str, original: bytes) -> dict[str, Any] | None:
+        with self.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT body FROM documents WHERE id=?", (document_id,)).fetchone()
+            if row is None:
+                return None
+            document = json.loads(row[0])
+            document["original_available"] = True
+            db.execute(
+                "UPDATE documents SET body=? WHERE id=?",
+                (json.dumps(document, ensure_ascii=False), document_id),
+            )
+            db.execute(
+                "INSERT INTO document_originals (document_id,content) VALUES (?,?) "
+                "ON CONFLICT(document_id) DO UPDATE SET content=excluded.content",
+                (document_id, original),
+            )
+            return document
+
+    def original(self, document_id: str) -> bytes | None:
+        with self.connection() as db:
+            row = db.execute(
+                "SELECT content FROM document_originals WHERE document_id=?", (document_id,)
+            ).fetchone()
+        return row[0] if row else None
 
     def save_analysis(
         self, analysis: dict[str, Any], pasted_document: dict[str, Any] | None = None

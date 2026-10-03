@@ -144,6 +144,9 @@ Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im g
 - Haupttitel ist der konkrete Berichtstitel. Prüfungsart, Modell und Zeitpunkt sind Metadaten.
 - Zusammenfassung ohne zusätzliche werbliche Überschrift.
 - Befunde, Formulierungen und Chronologie bleiben unterschiedliche Ansichten.
+- Chronologien zeigen keine Risikozähler. Leere Nebenansichten entfallen; bei nur einer Ansicht ersetzt eine Abschnittsüberschrift die Tab-Leiste.
+- „Quellen“ führt gespeicherte Dokumente und eingefügten Text auf. TXT-Downloads erhalten den vollständigen Quelltext.
+- Fundstellen einer Chronologie öffnen einen Dialog und erhalten die Leseposition der Tabelle. PDFs erscheinen mit stabiler Werkzeugleiste, Seitenwahl, Zoom und internem Scrollbereich; eine Zitatmarkierung setzt einen eindeutigen Texttreffer auf der angezeigten Seite voraus.
 - Jeder Befund hat eine lesbare Priorität, Beschreibung und bei Bedarf einen Rechtsbezug.
 - Zitat und Änderungsvorschlag sind eindeutig bezeichnet. Keine bloße Farbmarkierung als angebliche Änderungsverfolgung.
 - Der Dokumentbereich zeigt den tatsächlichen Dateinamen, die Fundstelle und den Wortlaut. Weiterer Dokumenttext bleibt bei Bedarf aufklappbar.

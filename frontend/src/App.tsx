@@ -913,6 +913,11 @@ export default function App() {
                   <Review
                     analysis={analysis}
                     documents={documents}
+                    onDocumentUpdated={(updated) =>
+                      setDocuments((previous) =>
+                        previous.map((doc) => (doc.id === updated.id ? updated : doc)),
+                      )
+                    }
                     onBack={() => navigate('new')}
                     onExport={(format) => void exportAnalysis(format)}
                     exporting={exporting}

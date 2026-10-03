@@ -579,7 +579,7 @@ export function Settings({
             <h2>Gespeicherte Dokumente</h2>
             <p>
               {documents.length} {documents.length === 1 ? 'Dokument' : 'Dokumente'} auf diesem
-              Server. Löschen entfernt den gespeicherten Volltext.
+              Server. Löschen entfernt den Volltext und gespeicherte PDF-Originale.
             </p>
           </div>
           <MotionButton

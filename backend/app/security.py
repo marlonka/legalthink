@@ -89,8 +89,10 @@ class SecurityBoundary:
                     (b"x-frame-options", b"DENY"),
                     (
                         b"content-security-policy",
-                        b"default-src 'self'; script-src 'self'; "
-                        b"style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; "
+                        b"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; "
+                        b"style-src 'self' 'unsafe-inline'; font-src 'self' blob:; "
+                        b"img-src 'self' data:; "
+                        b"worker-src 'self'; "
                         b"connect-src 'self'; base-uri 'none'; object-src 'none'; "
                         b"frame-ancestors 'none'; form-action 'self'",
                     ),

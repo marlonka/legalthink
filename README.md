@@ -50,7 +50,9 @@ Standard für neue Browserprofile und API-Anfragen ohne Modellauswahl: `gpt-6-lu
 
 ## Daten und Betrieb
 
-Dies ist ein lokal betriebener Einzelbenutzer-Arbeitsraum. Dokumenttexte, Playbooks und Analysen werden in einer lokalen SQLite-Datenbank gespeichert. Keine integrierte Anmeldung, Mandantentrennung oder Verschlüsselung der Datenbank. Der Entwicklungsserver bindet standardmäßig an die Loopback-Adresse.
+Dies ist ein lokal betriebener Einzelbenutzer-Arbeitsraum. Dokumenttexte, PDF-Originale, Playbooks und Analysen werden in einer lokalen SQLite-Datenbank gespeichert. Keine integrierte Anmeldung, Mandantentrennung oder Verschlüsselung der Datenbank. Der Entwicklungsserver bindet standardmäßig an die Loopback-Adresse.
+
+Eingefügter Text wird mit der abgeschlossenen Analyse als TXT-Quelle gespeichert und kann unter „Quellen“ heruntergeladen werden. PDF-Fundstellen öffnen das Original mit Seitenwahl, Zoom und Markierung eines eindeutig gefundenen Zitats. Frühere PDF-Uploads enthalten nur den ausgelesenen Text; das Original kann nachträglich hinzugefügt werden, wenn der Text übereinstimmt. Das Löschen eines Dokuments entfernt auch sein gespeichertes PDF-Original.
 
 Bei einer gestarteten KI-Analyse werden die ausgewählten Dokumenttexte, der Prüfauftrag und das ausgewählte Playbook an OpenAI übertragen. `store=false` verhindert die Speicherung der Response als abrufbares API-Objekt. Es ist **keine** Zusage zu Zero Data Retention oder EU-Verarbeitung. Projektverträge, Aufbewahrungsregeln und freigegebene Verarbeitung müssen zur Kanzlei passen. Details: [OpenAI-Integration](docs/openai-integration.md).
 

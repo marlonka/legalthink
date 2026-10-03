@@ -4,6 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -15,7 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
 from . import export
-from .analysis import AnalysisError, AnalysisService
+from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
 from .config import Settings
 from .demo import demo_analysis, demo_documents
 from .extraction import ExtractionError, extract_isolated, safe_filename
@@ -136,10 +137,77 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "Das Lesen der Datei dauerte zu lange. Bitte eine vereinfachte Version hochladen.",
             ) from None
         document = Document(
-            id=new_id(), name=name, text=text, page_count=pages, char_count=len(text)
+            id=new_id(),
+            name=name,
+            text=text,
+            page_count=pages,
+            char_count=len(text),
+            original_available=suffix == ".pdf",
         )
-        await run_in_threadpool(app.state.store.put, "documents", document.model_dump())
+        await run_in_threadpool(
+            app.state.store.save_document, document.model_dump(), data if suffix == ".pdf" else None
+        )
         return document
+
+    @app.get("/api/documents/{document_id}/text")
+    def download_text(document_id: str):
+        source = app.state.store.get("documents", document_id)
+        if not source:
+            raise HTTPException(404, "Dokument nicht gefunden.")
+        name = Path(safe_filename(source["name"])).stem + ".txt"
+        return Response(
+            source["text"].encode("utf-8"),
+            media_type="text/plain; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"},
+        )
+
+    @app.get("/api/documents/{document_id}/original")
+    def download_original(document_id: str):
+        source = app.state.store.get("documents", document_id)
+        original = app.state.store.original(document_id)
+        if not source or original is None:
+            raise HTTPException(404, "Das PDF-Original ist nicht gespeichert.")
+        return Response(
+            original,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": (
+                    f"attachment; filename*=UTF-8''{quote(safe_filename(source['name']))}"
+                )
+            },
+        )
+
+    @app.put("/api/documents/{document_id}/original", response_model=Document)
+    async def attach_original(document_id: str, file: Annotated[UploadFile, File()]):
+        source = app.state.store.get("documents", document_id)
+        try:
+            if not source:
+                raise HTTPException(404, "Dokument nicht gefunden.")
+            if Path(source["name"]).suffix.lower() != ".pdf":
+                raise HTTPException(422, "Diese Quelle ist kein PDF.")
+            data = await file.read(config.max_upload_bytes + 1)
+        finally:
+            await file.close()
+        if len(data) > config.max_upload_bytes:
+            raise HTTPException(413, "Die Datei ist zu groß. Maximal 12 MB sind erlaubt.")
+        slots = app.state.extraction_slots
+        if slots.locked():
+            raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
+        try:
+            async with slots:
+                text, _ = await extract_isolated(data, ".pdf")
+        except ExtractionError as error:
+            raise HTTPException(422, str(error)) from None
+        except TimeoutError:
+            raise HTTPException(422, "Das Lesen der PDF-Datei dauerte zu lange.") from None
+        if normalized(text) != normalized(source["text"]):
+            raise HTTPException(
+                422, "Dieses PDF stimmt nicht mit dem gespeicherten Quelltext überein."
+            )
+        updated = await run_in_threadpool(app.state.store.attach_original, document_id, data)
+        if updated is None:
+            raise HTTPException(404, "Dokument nicht mehr verfügbar.")
+        return updated
 
     @app.delete("/api/documents", status_code=204)
     def delete_documents(body: DocumentDeleteRequest):
@@ -152,21 +220,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/analyses", response_model=list[Analysis])
     def list_analyses():
-        return app.state.store.list("analyses")
+        documents = {doc["id"]: doc for doc in app.state.store.list("documents")}
+        return [prepare_analysis(value, documents) for value in app.state.store.list("analyses")]
+
+    def prepare_analysis(value: dict, documents: dict | None = None) -> Analysis:
+        def source_document(source_id):
+            if documents is not None:
+                return documents.get(source_id)
+            return app.state.store.get("documents", source_id)
+
+        analysis = Analysis.model_validate(value)
+        source_ids = {*analysis.document_ids, analysis.source_text_document_id} - {None}
+        sources = [
+            Document.model_validate(source)
+            for source_id in source_ids
+            if (source := source_document(source_id))
+        ]
+        recover_source_references(analysis, sources)
+        # Older reports can recover a file name while the source is still available.
+        # Do not rewrite the saved report or accept model-generated document names.
+        for finding in analysis.findings:
+            if not finding.source_document_name:
+                source = source_document(finding.source_document_id)
+                if source:
+                    finding.source_document_name = source["name"]
+        return analysis
 
     def get_analysis(analysis_id: str) -> Analysis:
         value = app.state.store.get("analyses", analysis_id)
         if not value:
             raise HTTPException(404, "Analyse nicht gefunden.")
-        analysis = Analysis.model_validate(value)
-        # Older reports can recover a file name while the source is still available.
-        # Do not rewrite the saved report or accept model-generated document names.
-        for finding in analysis.findings:
-            if not finding.source_document_name:
-                source = app.state.store.get("documents", finding.source_document_id)
-                if source:
-                    finding.source_document_name = source["name"]
-        return analysis
+        return prepare_analysis(value)
 
     @app.get("/api/analyses/{analysis_id}", response_model=Analysis)
     def read_analysis(analysis_id: str):
