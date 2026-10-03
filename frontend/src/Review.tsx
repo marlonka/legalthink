@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import type { Analysis, DocumentRecord, Finding, Severity } from './types';
-import { dateLabel, EFFORT_NAMES, ExternalLink } from './ui';
+import { dateLabel, EFFORT_NAMES, ExternalLink, Modal } from './ui';
+import { SourceFile } from './SourceFile';
 import { workflowName } from './workflows';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './review-motion.css';
@@ -48,6 +49,7 @@ export default function Review({
   onExport,
   exporting,
   onCopy,
+  onDocumentUpdated,
 }: {
   analysis: Analysis;
   documents: DocumentRecord[];
@@ -55,6 +57,7 @@ export default function Review({
   onExport: (format: 'docx' | 'md') => void;
   exporting: boolean;
   onCopy: (text: string) => void;
+  onDocumentUpdated: (document: DocumentRecord) => void;
 }) {
   const [tab, setTab] = useState<Tab>(analysis.workflow === 'chronology' ? 'timeline' : 'findings');
   const [filter, setFilter] = useState<Severity | 'all'>('all');
@@ -77,7 +80,6 @@ export default function Review({
   const exportRef = useRef<HTMLDivElement>(null);
   const exportTrigger = useRef<HTMLButtonElement>(null);
   const sourceTrigger = useRef<HTMLButtonElement>(null);
-  const timelineSourceTrigger = useRef<HTMLButtonElement | null>(null);
   const { reduced, transition } = useMotionPreferences();
   function closeExport(restoreFocus = false) {
     setExportOpen(false);
@@ -86,8 +88,6 @@ export default function Review({
   function closeSource() {
     if (tab === 'timeline') {
       setTimelineSourceIndex(null);
-      timelineSourceTrigger.current?.focus({ preventScroll: true });
-      timelineSourceTrigger.current?.scrollIntoView({ behavior: 'instant', block: 'nearest' });
       return;
     }
     setSourceVisible(false);
@@ -189,6 +189,27 @@ export default function Review({
   );
   const suggestions = analysis.findings.filter((item) => item.suggestion);
   const hasTimeline = analysis.timeline.length > 0 || analysis.workflow === 'chronology';
+  const views: { id: Tab; label: string; count: number }[] = [
+    ...(analysis.workflow !== 'chronology' || analysis.findings.length > 0
+      ? [
+          {
+            id: 'findings' as const,
+            label: analysis.workflow === 'chronology' ? 'Prüfpunkte' : 'Befunde',
+            count: analysis.findings.length,
+          },
+        ]
+      : []),
+    ...(suggestions.length
+      ? [{ id: 'suggestions' as const, label: 'Formulierungen', count: suggestions.length }]
+      : []),
+    ...(hasTimeline
+      ? [{ id: 'timeline' as const, label: 'Chronologie', count: analysis.timeline.length }]
+      : []),
+  ];
+  if (analysis.workflow === 'chronology')
+    views.sort((a, b) => Number(b.id === 'timeline') - Number(a.id === 'timeline'));
+  const sourceIds = new Set([...(analysis.document_ids ?? []), analysis.source_text_document_id]);
+  const analysisDocuments = documents.filter((doc) => sourceIds.has(doc.id));
   const counts = { high: 0, medium: 0, low: 0, info: 0 };
   analysis.findings.forEach((finding) => counts[finding.severity]++);
   function mark(id: string) {
@@ -268,6 +289,7 @@ export default function Review({
           <AnimatePresence initial={false}>
             {exportOpen && (
               <ExportPopover
+                chronology={analysis.workflow === 'chronology'}
                 onExport={(format) => {
                   closeExport(true);
                   onExport(format);
@@ -277,6 +299,26 @@ export default function Review({
           </AnimatePresence>
         </div>
       </header>
+      {analysisDocuments.length > 0 && (
+        <details className="analysis-documents">
+          <summary>Quellen · {analysisDocuments.length}</summary>
+          <ul>
+            {analysisDocuments.map((doc) => (
+              <li key={doc.id}>
+                <span>{doc.name}</span>
+                <a
+                  className="text-button"
+                  href={`/api/documents/${doc.id}/text`}
+                  download
+                  aria-label={`${doc.name} als TXT herunterladen`}
+                >
+                  <ArrowDownToLine size={14} /> TXT
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {comparisonDocumentNames && (
         <dl className="review-comparison-documents" aria-label="Vergleichsdokumente">
           {['Original', 'Gegenentwurf'].map((role, index) => (
@@ -293,79 +335,80 @@ export default function Review({
         <div className="summary-block">
           <p>{analysis.summary}</p>
         </div>
-        <div className="risk-summary">
-          {(['high', 'medium', 'low'] as Severity[]).map((severity) => (
-            <button
-              key={severity}
-              aria-label={`${counts[severity]} Befunde, Priorität ${SEVERITIES[severity].short}`}
-              onClick={() => {
-                setFilter(severity);
-                setTab('findings');
-              }}
-              className="risk-stat"
-            >
-              <span className="risk-count">{counts[severity].toString().padStart(2, '0')}</span>
-              <span>
-                <i className={`severity-dot ${severity}`} />
-                {SEVERITIES[severity].short}
-              </span>
-            </button>
-          ))}
-        </div>
+        {analysis.workflow !== 'chronology' && counts.high + counts.medium + counts.low > 0 && (
+          <div className="risk-summary">
+            {(['high', 'medium', 'low'] as Severity[]).map((severity) => (
+              <button
+                key={severity}
+                aria-label={`${counts[severity]} Befunde, Priorität ${SEVERITIES[severity].short}`}
+                onClick={() => {
+                  setFilter(severity);
+                  setTab('findings');
+                }}
+                className="risk-stat"
+              >
+                <span className="risk-count">{counts[severity]}</span>
+                <span>
+                  <i className={`severity-dot ${severity}`} />
+                  {SEVERITIES[severity].short}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="review-tab-bar">
-        <div className="review-tabs" role="tablist" aria-label="Analyseansichten">
-          {(
-            [
-              { id: 'findings', label: 'Befunde', count: analysis.findings.length },
-              { id: 'suggestions', label: 'Formulierungen', count: suggestions.length },
-              ...(hasTimeline
-                ? [{ id: 'timeline', label: 'Chronologie', count: analysis.timeline.length }]
-                : []),
-            ] as { id: Tab; label: string; count: number }[]
-          ).map((item) => (
-            <button
-              key={item.id}
-              id={`tab-${item.id}`}
-              role="tab"
-              aria-selected={tab === item.id}
-              aria-controls={`panel-${item.id}`}
-              tabIndex={tab === item.id ? 0 : -1}
-              onKeyDown={(event) => {
-                const tabs = Array.from(
-                  event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>(
-                    '[role="tab"]',
-                  ),
-                );
-                const index = tabs.indexOf(event.currentTarget);
-                if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
-                  event.preventDefault();
-                  const next =
-                    event.key === 'Home'
-                      ? tabs[0]
-                      : event.key === 'End'
-                        ? tabs[tabs.length - 1]
-                        : tabs[
-                            (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) %
-                              tabs.length
-                          ];
-                  next.click();
-                  next.focus({ preventScroll: true });
-                }
-              }}
-              className={tab === item.id ? 'active' : ''}
-              onClick={() => {
-                setSuggestionRequest(null);
-                consumedSuggestionRequest.current = 0;
-                setTab(item.id);
-              }}
-            >
-              {item.label}
-              <span>{item.count}</span>
-              {tab === item.id && <i className="review-tab-indicator" aria-hidden="true" />}
-            </button>
-          ))}
-        </div>
+        {views.length === 1 ? (
+          <h2 className="review-section-heading" id={`tab-${views[0].id}`}>
+            {views[0].label}
+            <span>{views[0].count}</span>
+          </h2>
+        ) : (
+          <div className="review-tabs" role="tablist" aria-label="Analyseansichten">
+            {views.map((item) => (
+              <button
+                key={item.id}
+                id={`tab-${item.id}`}
+                role="tab"
+                aria-selected={tab === item.id}
+                aria-controls={`panel-${item.id}`}
+                tabIndex={tab === item.id ? 0 : -1}
+                onKeyDown={(event) => {
+                  const tabs = Array.from(
+                    event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>(
+                      '[role="tab"]',
+                    ),
+                  );
+                  const index = tabs.indexOf(event.currentTarget);
+                  if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
+                    event.preventDefault();
+                    const next =
+                      event.key === 'Home'
+                        ? tabs[0]
+                        : event.key === 'End'
+                          ? tabs[tabs.length - 1]
+                          : tabs[
+                              (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) %
+                                tabs.length
+                            ];
+                    next.click();
+                    next.focus({ preventScroll: true });
+                  }
+                }}
+                className={tab === item.id ? 'active' : ''}
+                onClick={() => {
+                  setSuggestionRequest(null);
+                  consumedSuggestionRequest.current = 0;
+                  setTab(item.id);
+                }}
+              >
+                {item.label}
+                <span>{item.count}</span>
+                {tab === item.id && <i className="review-tab-indicator" aria-hidden="true" />}
+              </button>
+            ))}
+          </div>
+        )}
         {tab !== 'timeline' && (
           <button
             ref={sourceTrigger}
@@ -387,7 +430,7 @@ export default function Review({
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={transition('fade')}
-          role="tabpanel"
+          role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-findings"
           aria-labelledby="tab-findings"
           className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
@@ -498,6 +541,7 @@ export default function Review({
               document={sourceDocument}
               documentRole={sourceDocumentRole}
               onClose={closeSource}
+              onDocumentUpdated={onDocumentUpdated}
             />
           )}
         </motion.div>
@@ -507,7 +551,7 @@ export default function Review({
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={transition('fade')}
-          role="tabpanel"
+          role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-suggestions"
           aria-labelledby="tab-suggestions"
           className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
@@ -586,6 +630,7 @@ export default function Review({
               document={sourceDocument}
               documentRole={sourceDocumentRole}
               onClose={closeSource}
+              onDocumentUpdated={onDocumentUpdated}
             />
           )}
         </motion.div>
@@ -595,7 +640,7 @@ export default function Review({
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={transition('fade')}
-          role="tabpanel"
+          role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-timeline"
           aria-labelledby="tab-timeline"
           className="timeline-panel"
@@ -637,11 +682,8 @@ export default function Review({
                         {event.source_document_id && (
                           <button
                             className="text-button timeline-source-action"
-                            onClick={(eventButton) => {
-                              timelineSourceTrigger.current = eventButton.currentTarget;
+                            onClick={() => {
                               setTimelineSourceIndex(index);
-                              setSourceVisible(true);
-                              setSourceRequest((request) => request + 1);
                             }}
                           >
                             <Quote size={13} /> Fundstelle ansehen
@@ -661,15 +703,17 @@ export default function Review({
             </div>
           )}
           {timelineSource && (
-            <div className="timeline-source-view">
+            <Modal title="Fundstelle" onClose={closeSource} wide className="source-dialog">
               <SourcePanel
                 finding={timelineSource}
                 document={documents.find(
                   (document) => document.id === timelineSource.source_document_id,
                 )}
                 onClose={closeSource}
+                onDocumentUpdated={onDocumentUpdated}
+                embedded
               />
-            </div>
+            </Modal>
           )}
           {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
         </motion.section>
@@ -755,7 +799,13 @@ function ReviewToggleLabel({ active, on, off }: { active: boolean; on: string; o
   );
 }
 
-function ExportPopover({ onExport }: { onExport: (format: 'docx' | 'md') => void }) {
+function ExportPopover({
+  onExport,
+  chronology,
+}: {
+  onExport: (format: 'docx' | 'md') => void;
+  chronology: boolean;
+}) {
   const present = useIsPresent();
   const firstOption = useRef<HTMLButtonElement>(null);
   const { reduced, transition } = useMotionPreferences();
@@ -776,13 +826,13 @@ function ExportPopover({ onExport }: { onExport: (format: 'docx' | 'md') => void
       <MotionButton ref={firstOption} onClick={() => onExport('docx')}>
         <FileText size={16} />
         <span>
-          Word-Dokument<small>Prüfbericht mit Änderungsvorschlägen</small>
+          Word-Dokument<small>{chronology ? 'Chronologie mit Belegen' : 'Prüfbericht'}</small>
         </span>
       </MotionButton>
       <MotionButton onClick={() => onExport('md')}>
         <FileText size={16} />
         <span>
-          Markdown<small>Prüfbericht als Textdatei</small>
+          Markdown<small>Bericht als Textdatei</small>
         </span>
       </MotionButton>
     </motion.div>
@@ -874,11 +924,15 @@ function SourcePanel({
   document,
   documentRole,
   onClose,
+  onDocumentUpdated,
+  embedded = false,
 }: {
   finding?: SourceEvidence;
   document?: DocumentRecord;
   documentRole?: string;
   onClose: () => void;
+  onDocumentUpdated: (document: DocumentRecord) => void;
+  embedded?: boolean;
 }) {
   const [expandedFor, setExpandedFor] = useState('');
   const [contextExpandedFor, setContextExpandedFor] = useState('');
@@ -940,6 +994,16 @@ function SourcePanel({
               )}
             </div>
           </div>
+          {document && (
+            <SourceFile
+              key={document.id}
+              document={document}
+              quote={finding.source_quote}
+              location={finding.verified ? finding.source_location : ''}
+              embedded={embedded}
+              onUpdated={onDocumentUpdated}
+            />
+          )}
           <div className="source-paper">
             {finding.source_quote ? (
               <>
@@ -1007,7 +1071,7 @@ function SourcePanel({
           )}
           {!document && (
             <p className="document-unavailable">
-              Der Dokumenttext ist nicht mehr gespeichert.
+              Die Quelle ist nicht verfügbar oder konnte diesem Beleg nicht zugeordnet werden.
               {finding.source_quote && ' Das Zitat bleibt Teil dieses Berichts.'}
             </p>
           )}

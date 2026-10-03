@@ -209,6 +209,9 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     assert analysis["timeline"][0]["source_quote"] == quote
     assert analysis["findings"][0]["verified"] and analysis["timeline"][0]["verified"]
     assert pasted["text"] == text and pasted["char_count"] == len(text)
+    downloaded = client.get(f"/api/documents/{pasted_id}/text")
+    assert downloaded.content == text.encode("utf-8")
+    assert downloaded.headers["content-disposition"].startswith("attachment;")
     request, versions, passed_source = service.calls[0]
     assert request.context == body["context"] and request.source_text == text
     assert [doc.id for doc in versions] == document_ids

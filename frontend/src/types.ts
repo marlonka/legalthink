@@ -10,6 +10,7 @@ export interface DocumentRecord {
   text: string;
   page_count: number;
   char_count: number;
+  original_available?: boolean;
 }
 export interface Model {
   id: string;

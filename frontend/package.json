@@ -13,10 +13,12 @@
     "@fontsource/inter": "^5.2.8",
     "lucide-react": "^0.545.0",
     "motion": "^12.23.24",
+    "pdfjs-dist": "6.3.289",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@types/node": "26.6.4",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",

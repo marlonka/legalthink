@@ -96,19 +96,6 @@
   font-size: 12px;
 }
 
-.timeline-source-view {
-  max-width: 768px;
-  margin-top: 24px;
-}
-
-.review-motion .timeline-source-view .source-panel {
-  position: static;
-  min-height: 0;
-  padding: 24px 0;
-  border-left: 0;
-  border-top: 1px solid var(--border-subtle);
-}
-
 @media (max-width: 700px) {
   .review-motion .export-popover {
     width: min(300px, calc(100vw - 40px));

@@ -8,6 +8,7 @@ import unicodedata
 from time import perf_counter
 from typing import Any
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from openai import (
     APIConnectionError,
@@ -55,13 +56,63 @@ def _page_location(document: Document, quote: str) -> str | None:
     return None
 
 
+def resolve_source(document_id: str, quote: str, documents: list[Document]) -> Document | None:
+    """Recover a malformed model ID only from one unambiguous verbatim source match."""
+    source = next((doc for doc in documents if doc.id == document_id), None)
+    if source:
+        return source
+    quote = normalized(quote)
+    if len(quote) < 12:
+        return None
+    matches = [doc for doc in documents if quote in normalized(doc.text)]
+    if len(matches) == 1:
+        return matches[0]
+
+    # Correspondence may repeat across case files. Require both a verbatim match
+    # and one unambiguous UUID with a single changed or transposed digit.
+    def simple_uuid_typo(candidate: str) -> bool:
+        try:
+            wanted, actual = UUID(document_id).hex, UUID(candidate).hex
+        except ValueError:
+            return False
+        changed = [i for i, (a, b) in enumerate(zip(wanted, actual, strict=True)) if a != b]
+        if len(changed) <= 1:
+            return True
+        if len(changed) != 2:
+            return False
+        a, b = changed
+        return b == a + 1 and wanted[a] == actual[b] and wanted[b] == actual[a]
+
+    nearby = [doc for doc in matches if simple_uuid_typo(doc.id)]
+    return nearby[0] if len(nearby) == 1 else None
+
+
+def recover_source_references(analysis: Analysis, documents: list[Document]) -> None:
+    """Repair response references in memory; never rewrite saved reports or deleted sources."""
+    ids = {doc.id for doc in documents}
+    known_ids = {*analysis.document_ids, analysis.source_text_document_id}
+    for item in [*analysis.findings, *analysis.timeline]:
+        if item.source_document_id in ids or item.source_document_id in known_ids:
+            continue
+        source = resolve_source(item.source_document_id, item.source_quote, documents)
+        if source is None:
+            continue
+        item.source_document_id = source.id
+        item.verified = True
+        location = _page_location(source, normalized(item.source_quote))
+        if isinstance(item, Finding):
+            item.source_document_name = source.name
+            item.source_location = location or "Textfundstelle"
+        else:
+            item.source = source.name + (f" · {location}" if location else "")
+
+
 def verify_findings(
     result: ModelAnalysis, documents: list[Document], allowed_urls: set[str] | None = None
 ) -> list[Finding]:
-    sources = {d.id: d for d in documents}
     findings = []
     for item in result.findings:
-        doc = sources.get(item.source_document_id)
+        doc = resolve_source(item.source_document_id, item.source_quote, documents)
         quote = normalized(item.source_quote)
         # Case-sensitive, whitespace-tolerant containment. Verification means text match only.
         verified = bool(doc and len(quote) >= 12 and quote in normalized(doc.text))
@@ -71,6 +122,7 @@ def verify_findings(
         elif not verified:
             location = "Beleg nicht bestätigt"
         fields = item.model_dump()
+        fields["source_document_id"] = doc.id if doc else item.source_document_id
         fields["source_location"] = location
         fields["source_urls"] = [url for url in item.source_urls if url in (allowed_urls or set())]
         findings.append(
@@ -85,13 +137,13 @@ def verify_findings(
 
 
 def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[TimelineEntry]:
-    documents_by_id = {d.id: d for d in documents}
     events = []
     for item in result.timeline:
-        document = documents_by_id.get(item.source_document_id)
+        document = resolve_source(item.source_document_id, item.source_quote, documents)
         quote = normalized(item.source_quote)
         verified = bool(document and len(quote) >= 12 and quote in normalized(document.text))
         fields = item.model_dump()
+        fields["source_document_id"] = document.id if document else item.source_document_id
         fields["source"] = "Beleg nicht bestätigt"
         if verified and document:
             location = _page_location(document, quote)

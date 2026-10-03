@@ -51,6 +51,7 @@ class Document(StrictModel):
     text: str
     page_count: int
     char_count: int
+    original_available: bool = False
 
 
 class DocumentDeleteRequest(StrictModel):

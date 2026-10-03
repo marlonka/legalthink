@@ -127,11 +127,13 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  className?: string;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -204,7 +206,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`modal ${wide ? 'modal-wide' : ''}`}
+        className={`modal ${wide ? 'modal-wide' : ''} ${className}`}
         initial={reduced ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
