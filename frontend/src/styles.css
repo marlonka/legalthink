@@ -516,22 +516,6 @@ code {
   font-weight: 400;
   color: var(--text-muted);
 }
-.context-input {
-  display: block;
-  width: 100%;
-  min-height: 144px;
-  max-height: 400px;
-  padding: 12px 23px;
-  border: 0;
-  border-radius: 0;
-  outline: none;
-  background: transparent;
-  font-size: 16px;
-  line-height: 1.75;
-}
-.context-input:focus-visible {
-  outline: none;
-}
 .analysis-data-note {
   padding: 0 23px 17px;
   font-size: 12px;
@@ -1046,11 +1030,6 @@ code {
   }
   .context-label {
     margin: 0 19px;
-  }
-  .context-input {
-    padding: 12px 19px;
-    font-size: 16px;
-    min-height: 145px;
   }
   .uploaded-documents {
     padding: 0 19px 20px;

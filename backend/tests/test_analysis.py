@@ -96,7 +96,7 @@ async def test_serialized_openai_request_and_verified_evidence():
     service, client = service_with_handler(handler)
     try:
         result = await service.run(
-            AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC]
+            AnalysisRequest(workflow="contract", document_ids=[DOC.id], research=False), [DOC]
         )
     finally:
         await client.close()
@@ -133,7 +133,7 @@ def test_repeated_pdf_quote_has_no_unique_page_location(repetition):
     assert finding.source_location == "Textfundstelle"
 
 
-async def test_research_retains_only_provider_attributed_urls():
+async def test_default_research_retains_only_provider_attributed_urls():
     url = "https://gesetze-im-internet.de/bgb/__276.html"
     captured = []
 
@@ -157,7 +157,7 @@ async def test_research_retains_only_provider_attributed_urls():
     service, client = service_with_handler(handler)
     try:
         result = await service.run(
-            AnalysisRequest(workflow="contract", document_ids=[DOC.id], research=True), [DOC]
+            AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC]
         )
     finally:
         await client.close()
@@ -247,7 +247,9 @@ async def test_pasted_text_is_a_separate_verified_source_and_never_a_mandate():
     service, client = service_with_handler(handler)
     try:
         result = await service.run(
-            AnalysisRequest(workflow="chronology", source_text=text, context="Zugang prüfen."),
+            AnalysisRequest(
+                workflow="chronology", source_text=text, context="Zugang prüfen.", research=False
+            ),
             [],
             pasted_document=pasted,
         )
