@@ -1,4 +1,6 @@
 export type Workflow = 'contract' | 'compare' | 'chronology' | 'compliance' | 'advertising';
+export type ComplianceTask = 'general' | 'avv' | 'dsfa';
+export type DemoScenario = Workflow | 'avv' | 'dsfa';
 export type Severity = 'high' | 'medium' | 'low' | 'info';
 export interface DocumentRecord {
   id: string;
@@ -32,6 +34,9 @@ export interface Analysis {
   id: string;
   title: string;
   workflow: Workflow;
+  document_ids?: string[];
+  compliance_task?: ComplianceTask;
+  demo_scenario?: DemoScenario | null;
   summary: string;
   findings: Finding[];
   timeline: {

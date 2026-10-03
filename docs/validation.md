@@ -7,8 +7,8 @@ Stand: 3. Oktober 2026. Synthetische Unterlagen; keine echten OpenAI-Anfragen.
 | Prüfung | Ergebnis |
 | --- | --- |
 | TypeScript und Vite-Produktionsbuild | Erfolgreich |
-| Python-Tests | 43 bestanden |
-| Browserabläufe mit Chromium | 9 bestanden |
+| Python-Tests | 56 bestanden |
+| Browserabläufe mit Chromium | 31 bestanden |
 | Gebaute Oberfläche direkt über FastAPI | Bestanden; lokale Assets, CSP, Verlauf und Markdown-Export |
 | Ruff und Prettier | Erfolgreich |
 | Automatisierte WCAG-A/AA-Prüfungen mit axe | Keine gemeldeten Verstöße auf den geprüften Ansichten |
@@ -18,6 +18,8 @@ Stand: 3. Oktober 2026. Synthetische Unterlagen; keine echten OpenAI-Anfragen.
 Die Browserabläufe prüfen Modellwechsel mit unzulässigem Denkaufwand, lokalen Dokumentimport, Fehler ohne API-Schlüssel, mobile Darstellung, Fundstellen, Word-Download, Verlauf nach Neuladen, Playbook-Erstellung und -Bearbeitung, bestätigtes Löschen, wiederverwendbare Dokumente, Reihenfolge beim Versionsvergleich, Ladefehler mit Wiederholung und Tastaturfokus im mobilen Menü. Eine separate Prüfung lädt den Produktionsbuild ohne Vite direkt aus Python und erkennt Verstöße gegen die Content Security Policy.
 
 Die Python-Suite deckt API-Validierung, Persistenz, Host/Origin/Loopback-Zugriff, Dokumentlimits, Parsergrenzen, simulierte Providerfehler, Zitatverifikation, Chronologiebelege, Quellenzuordnung, Request-Serialisierung und Export ab. Lange Berichtstitel lösten zunächst einen Word-Exportfehler aus; der Regressionstest scheiterte vor der Korrektur und besteht danach. OOXML-Revisionen, Hyperlinks und erhaltene Überschriften werden strukturell geprüft.
+
+Die Aufgabenprüfung ergänzt sieben passende Offline-Beispiele, getrennte Entwürfe für die fünf Prüfungsarten und AVV/DSFA, unveränderten optionalen Prüfauftrag, feste Vergleichsrollen beim Ersetzen einer Datei, Fokus beim Öffnen und Schließen von Chronologiebelegen sowie gezielte Formulierungsnavigation. Luna/Hoch wird in einem frischen Browserprofil geprüft; eine ausdrücklich gewählte Sol-Einstellung bleibt nach dem Neuladen erhalten. Quellenlabel und Zitat bleiben auch beim Export älterer Chronologien getrennt, ohne die gespeicherten Originaldaten umzuschreiben. Sichtbefunde und Umfang: [Prüfung der Arbeitsabläufe](workflow-review.md).
 
 Die Oberfläche verwendet lokal ausgelieferte Inter-Schriften. Dateigrößen und Komprimierung werden im Vite-Build ausgegeben; sie sind keine gemessenen Ladezeiten.
 

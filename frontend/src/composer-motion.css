@@ -1,7 +1,43 @@
 /* Selection changes color without changing control geometry. */
-.workflow-selector button,
-.compliance-presets > button {
+.workflow-selector button {
   font-weight: 400;
+}
+
+/* Every workflow reserves the same row before its input. */
+.composer-context-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 156px;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  margin: 0 23px;
+}
+
+.composer-context-header .context-label {
+  min-width: 0;
+  margin: 0;
+}
+
+.composer-task-field {
+  min-width: 0;
+}
+
+.composer-task-field[aria-hidden='true'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.composer-task-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  background: var(--surface-input);
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .composer-disclosure-icon,
@@ -170,6 +206,23 @@
 }
 
 @media (max-width: 700px) {
+  .composer-context-header {
+    grid-template-columns: minmax(0, 1fr) 128px;
+    gap: 8px;
+    min-height: 44px;
+    margin-inline: 19px;
+  }
+
+  .composer-context-header .context-label span {
+    display: block;
+    margin-left: 0;
+  }
+
+  .composer-task-select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
   .composer-playbook-select {
     min-height: 44px;
     font-size: 16px;

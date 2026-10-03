@@ -15,7 +15,7 @@ uv sync --project backend --extra dev
 npm run dev
 ```
 
-Öffnen: [localhost:5175](http://localhost:5175). **Beispiel öffnen** zeigt eine fiktive Vertragsprüfung ohne API-Aufruf.
+Öffnen: [localhost:5175](http://localhost:5175). **Beispiel öffnen** zeigt einen fiktiven Fall zur gewählten Prüfungsart ohne API-Aufruf. Datenschutz bietet eigene Beispiele für Allgemein, AVV und DSFA.
 
 ## Eigene Dokumente analysieren
 
@@ -46,7 +46,7 @@ Für den Vergleich zuerst den eigenen Entwurf, dann den Gegenentwurf wählen. Ge
 | `gpt-6.1-sol` | `low`, `medium`, `high`, `xhigh`, `max` |
 | `gpt-6-luna` | `none`, `low`, `medium`, `high`, `xhigh`, `max` |
 
-Standard: `gpt-6-luna` mit Denktiefe `high`. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
+Standard für neue Browserprofile und API-Anfragen ohne Modellauswahl: `gpt-6-luna` mit Denktiefe `high`, auch bei eigener Installation. Eine ausdrücklich gewählte Alternative wird im jeweiligen Browser gespeichert. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
 
 ## Daten und Betrieb
 

@@ -255,6 +255,16 @@ Die Beispiele sind Muster für vorhandene Funktionen, keine zusätzlichen Textel
 
 ## Prüfung aus drei Perspektiven
 
+### Aufgaben und Eingaben
+
+- Vertrag, Vergleich, Chronologie, Datenschutz und Werbung verwenden ein gemeinsames Eingaberaster. Datenschutz hat eine kompakte Auswahl für Allgemein, AVV und DSFA in der reservierten Zeile neben dem Prüfauftrag.
+- Jede der sieben Aufgaben hat einen eigenen Entwurf: Dokumentauswahl, Prüfauftrag, Playbook und Webrecherche bleiben beim Wechsel erhalten. Diese Entwürfe bestehen für die geöffnete Sitzung; ein Neuladen setzt sie zurück.
+- Platzhalter zeigen kurze Beispiele mit „z. B.“. Sie werden niemals als tatsächlicher Prüfauftrag übermittelt. Die fachlichen Prüfanweisungen stammen aus den ausgewählten Aufgaben im Backend; das Textfeld ergänzt Mandantenrolle und konkreten Schwerpunkt.
+- „Beispiel öffnen“ öffnet passende synthetische Unterlagen mit vorgegebenem Ergebnis. Es ersetzt weder Dokumentauswahl noch Prüfauftrag des Nutzers.
+- Im Vergleich bleiben Original und Gegenentwurf festen Plätzen zugeordnet. Entfernen einer Fassung benennt die andere nicht um. Mehr als zwei Dateien werden vor dem Upload abgewiesen. Gespeicherte Ergebnisse nennen beide Eingabedokumente in ihrer ursprünglichen Reihenfolge.
+- Chronologie öffnet die Zeittafel zuerst. „Fundstelle ansehen“ zeigt den Beleg zum gewählten Ereignis; Schließen führt den Tastaturfokus zurück. „Formulierung“ führt zum zugehörigen Vorschlag.
+- Neue Profile starten mit Luna/Hoch. Modell und Denkaufwand werden als browserbezogene Präferenzen gespeichert; ein Beispielszenario ändert diese Auswahl nicht.
+
 ### Textredaktion
 
 Ist die Oberfläche nach Entfernung eines Satzes genauso verständlich und bedienbar? Dann entfällt der Satz. Beschriftungen bleiben über Navigation, Dialoge und Aktionen hinweg konsistent. Ein sichtbarer Zustand darf nicht an drei Stellen erklärt werden.

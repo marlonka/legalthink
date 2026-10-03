@@ -17,7 +17,16 @@ import { History, Playbooks, Settings } from './WorkspacePages';
 import { api } from './types';
 import { useThemePreference } from './theme';
 import { MotionButton, useMotionPreferences } from './motion';
-import type { Analysis, DocumentRecord, Health, Model, Playbook, Workflow } from './types';
+import type {
+  Analysis,
+  ComplianceTask,
+  DemoScenario,
+  DocumentRecord,
+  Health,
+  Model,
+  Playbook,
+  Workflow,
+} from './types';
 import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
 import './polish.css';
 import './navigation-motion.css';
@@ -46,6 +55,16 @@ type DeleteTarget =
   | { type: 'analysis'; item: Analysis }
   | { type: 'playbook'; item: Playbook }
   | { type: 'document'; item: DocumentRecord };
+
+type Draft = { context: string; selectedIds: string[]; playbookId: string; research: boolean };
+function emptyDraft(scenario: DemoScenario): Draft {
+  return {
+    context: '',
+    selectedIds: scenario === 'compare' ? ['', ''] : [],
+    playbookId: '',
+    research: false,
+  };
+}
 
 function Notification({ message, onClose }: { message: string; onClose: () => void }) {
   const present = useIsPresent();
@@ -87,14 +106,38 @@ export default function App() {
   const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6-luna'));
   const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'high'));
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [workflow, setWorkflow] = useState<Workflow>('contract');
-  const [context, setContext] = useState('');
-  const [playbookId, setPlaybookId] = useState('');
-  const [research, setResearch] = useState(false);
+  const [complianceTask, setComplianceTask] = useState<ComplianceTask>('general');
+  const scenario: DemoScenario =
+    workflow === 'compliance' && complianceTask !== 'general' ? complianceTask : workflow;
+  const [drafts, setDrafts] = useState<Partial<Record<DemoScenario, Draft>>>({});
+  const { context, selectedIds, playbookId, research } = drafts[scenario] ?? emptyDraft(scenario);
+  const selectedDocumentIds = selectedIds.filter(Boolean);
+  function updateDraft(patch: Partial<Draft> | ((previous: Draft) => Partial<Draft>)) {
+    setDrafts((previous) => {
+      const current = previous[scenario] ?? emptyDraft(scenario);
+      return {
+        ...previous,
+        [scenario]: { ...current, ...(typeof patch === 'function' ? patch(current) : patch) },
+      };
+    });
+  }
+  function setSelectedIds(value: string[] | ((previous: string[]) => string[])) {
+    updateDraft((previous) => ({
+      selectedIds: typeof value === 'function' ? value(previous.selectedIds) : value,
+    }));
+  }
+  function changeWorkflow(value: Workflow) {
+    setWorkflow(value);
+    setError('');
+  }
+  function changeComplianceTask(value: ComplianceTask) {
+    setComplianceTask(value);
+    setError('');
+  }
   const [loading, setLoading] = useState(true);
   const [loadFailures, setLoadFailures] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -175,16 +218,37 @@ export default function App() {
     else failures.push('Modelle');
     if (documentsResult.status === 'fulfilled') {
       setDocuments(documentsResult.value);
-      setSelectedIds((previous) =>
-        previous.filter((id) => documentsResult.value.some((document) => document.id === id)),
+      const available = new Set(documentsResult.value.map((document) => document.id));
+      setDrafts((previous) =>
+        Object.fromEntries(
+          Object.entries(previous).map(([key, draft]) => [
+            key,
+            {
+              ...draft,
+              selectedIds:
+                key === 'compare'
+                  ? draft.selectedIds.map((id) => (available.has(id) ? id : ''))
+                  : draft.selectedIds.filter((id) => available.has(id)),
+            },
+          ]),
+        ),
       );
     } else failures.push('Dokumente');
     if (analysesResult.status === 'fulfilled') setAnalyses(analysesResult.value);
     else failures.push('Analysen');
     if (playbookResult.status === 'fulfilled') {
       setPlaybooks(playbookResult.value);
-      setPlaybookId((previous) =>
-        playbookResult.value.some((playbook) => playbook.id === previous) ? previous : '',
+      const available = new Set(playbookResult.value.map((playbook) => playbook.id));
+      setDrafts((previous) =>
+        Object.fromEntries(
+          Object.entries(previous).map(([key, draft]) => [
+            key,
+            {
+              ...draft,
+              playbookId: available.has(draft.playbookId) ? draft.playbookId : '',
+            },
+          ]),
+        ),
       );
     } else failures.push('Playbooks');
     setLoadFailures(failures);
@@ -289,6 +353,17 @@ export default function App() {
 
   async function upload(files: FileList | File[]) {
     if (!files.length || uploading || running) return;
+    const limit = workflow === 'compare' ? 2 : 12;
+    if (selectedDocumentIds.length + files.length > limit) {
+      setError(
+        workflow === 'compare'
+          ? selectedDocumentIds.length === 2
+            ? 'Beide Fassungen sind ausgewählt. Entfernen Sie zuerst die zu ersetzende Fassung.'
+            : 'Wählen Sie genau zwei Fassungen aus: Original und Gegenentwurf.'
+          : 'Wählen Sie höchstens 12 Dokumente pro Analyse aus.',
+      );
+      return;
+    }
     setUploading(true);
     setError('');
     const uploaded: DocumentRecord[] = [];
@@ -314,7 +389,16 @@ export default function App() {
       ...uploaded,
       ...previous.filter((item) => !uploaded.some((newItem) => newItem.id === item.id)),
     ]);
-    setSelectedIds((previous) => [...new Set([...previous, ...uploaded.map((item) => item.id)])]);
+    setSelectedIds((previous) => {
+      if (workflow !== 'compare')
+        return [...new Set([...previous, ...uploaded.map((item) => item.id)])];
+      const slots = [...previous];
+      for (const document of uploaded) {
+        const free = slots.indexOf('');
+        if (free !== -1) slots[free] = document.id;
+      }
+      return slots;
+    });
     setUploading(false);
     setError(errors.join(' '));
   }
@@ -322,15 +406,15 @@ export default function App() {
   async function runAnalysis() {
     if (running) return;
     setError('');
-    if (!selectedIds.length) {
+    if (!selectedDocumentIds.length) {
       setError('Fügen Sie mindestens ein Dokument hinzu, um die Prüfung zu beginnen.');
       return;
     }
-    if (selectedIds.length > 12) {
+    if (selectedDocumentIds.length > 12) {
       setError('Wählen Sie höchstens 12 Dokumente pro Analyse aus.');
       return;
     }
-    if (workflow === 'compare' && selectedIds.length !== 2) {
+    if (workflow === 'compare' && selectedDocumentIds.length !== 2) {
       setError(
         'Für den Versionsvergleich benötigen Sie genau zwei Dokumente: zuerst das Original, dann den Gegenentwurf.',
       );
@@ -351,7 +435,8 @@ export default function App() {
         signal: controller.signal,
         body: JSON.stringify({
           workflow,
-          document_ids: selectedIds,
+          document_ids: selectedDocumentIds,
+          compliance_task: workflow === 'compliance' ? complianceTask : 'general',
           context,
           model,
           effort,
@@ -379,11 +464,12 @@ export default function App() {
     const existing = analyses.find(
       (item) =>
         item.is_demo &&
-        item.findings.every(
-          (finding) =>
-            !finding.source_document_id ||
-            documents.some((document) => document.id === finding.source_document_id),
-        ),
+        (item.demo_scenario ?? (item.workflow === 'contract' ? 'contract' : undefined)) ===
+          scenario &&
+        (item.document_ids?.length
+          ? item.document_ids
+          : item.findings.map((finding) => finding.source_document_id)
+        ).every((id) => !id || documents.some((document) => document.id === id)),
     );
     if (existing) {
       setAnalysis(existing);
@@ -394,7 +480,10 @@ export default function App() {
     setDemoLoading(true);
     setError('');
     try {
-      const result = await api<Analysis>('/demo', { method: 'POST' });
+      const result = await api<Analysis>('/demo', {
+        method: 'POST',
+        body: JSON.stringify({ scenario }),
+      });
       setAnalysis(result);
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
       const docs = await api<DocumentRecord[]>('/documents');
@@ -456,10 +545,33 @@ export default function App() {
         setAnalyses((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
       else if (deleteTarget.type === 'playbook') {
         setPlaybooks((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
-        if (playbookId === deleteTarget.item.id) setPlaybookId('');
+        setDrafts((previous) =>
+          Object.fromEntries(
+            Object.entries(previous).map(([key, draft]) => [
+              key,
+              {
+                ...draft,
+                playbookId: draft.playbookId === deleteTarget.item.id ? '' : draft.playbookId,
+              },
+            ]),
+          ),
+        );
       } else {
         setDocuments((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
-        setSelectedIds((previous) => previous.filter((id) => id !== deleteTarget.item.id));
+        setDrafts((previous) =>
+          Object.fromEntries(
+            Object.entries(previous).map(([key, draft]) => [
+              key,
+              {
+                ...draft,
+                selectedIds:
+                  key === 'compare'
+                    ? draft.selectedIds.map((id) => (id === deleteTarget.item.id ? '' : id))
+                    : draft.selectedIds.filter((id) => id !== deleteTarget.item.id),
+              },
+            ]),
+          ),
+        );
       }
       setDeleteTarget(null);
       setToast('Gelöscht.');
@@ -760,17 +872,27 @@ export default function App() {
               ) : (
                 <Start
                   workflow={workflow}
-                  onWorkflow={setWorkflow}
+                  onWorkflow={changeWorkflow}
+                  complianceTask={complianceTask}
+                  onComplianceTask={changeComplianceTask}
+                  comparisonIds={drafts.compare?.selectedIds ?? ['', '']}
                   documents={selectedDocuments}
                   libraryDocuments={documents}
-                  onSelectDocuments={setSelectedIds}
+                  onSelectDocuments={(ids) => {
+                    setSelectedIds(ids);
+                    setError('');
+                  }}
                   onUpload={(files) => void upload(files)}
                   onRemove={(id) =>
-                    setSelectedIds((previous) => previous.filter((item) => item !== id))
+                    setSelectedIds((previous) =>
+                      workflow === 'compare'
+                        ? previous.map((item) => (item === id ? '' : item))
+                        : previous.filter((item) => item !== id),
+                    )
                   }
                   onReorder={() => setSelectedIds((previous) => [...previous].reverse())}
                   context={context}
-                  onContext={setContext}
+                  onContext={(value) => updateDraft({ context: value })}
                   model={model}
                   effort={effort}
                   models={models}
@@ -778,9 +900,9 @@ export default function App() {
                   onEffort={setEffort}
                   playbooks={playbooks}
                   playbookId={playbookId}
-                  onPlaybook={setPlaybookId}
+                  onPlaybook={(value) => updateDraft({ playbookId: value })}
                   research={research}
-                  onResearch={setResearch}
+                  onResearch={(value) => updateDraft({ research: value })}
                   onRun={() => void runAnalysis()}
                   onCancel={() => requestController.current?.abort()}
                   onDemo={() => void openDemo()}

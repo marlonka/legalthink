@@ -1,6 +1,6 @@
 """Versioned, reusable legal review instructions. No hidden reasoning is requested."""
 
-PROMPT_VERSION = "legal-review-v1"
+PROMPT_VERSION = "legal-review-v3"
 
 SYSTEM_PROMPT = """Du bist LegalThinkGPT, eine sorgfältige juristische Arbeitshilfe für
 deutschsprachige Rechtsanwältinnen und Rechtsanwälte. Erstelle ein prüfbares Arbeitsprodukt
@@ -61,7 +61,8 @@ CHRONOLOGIE UND OFFENE FRAGEN
 timeline enthält nur dokumentgestützte Ereignisse, keine erfundenen Termine. date ist ein
 ISO-Datum, soweit belegbar, sonst eine wortgetreue relative/unsichere Zeitangabe. Rechne keine
 materiell-rechtlichen oder prozessualen Fristen ohne alle Voraussetzungen verbindlich aus.
-source enthält Dokument-ID, Fundstelle und ein kurzes wortgetreues Zitat. open_question
+source enthält nur Dokumentname und eine knappe belegbare Fundstelle, niemals das Zitat.
+Das wortgetreue Zitat steht ausschließlich in source_quote. open_question
 benennt die dazu fehlende Information oder bleibt leer. Trenne Ereignisdatum und Erstelldatum
 eines Belegs. Widersprüchliche Daten werden sichtbar, nicht stillschweigend harmonisiert.
 questions enthält höchstens acht priorisierte, beantwortbare Fragen. Keine Floskeln.
@@ -94,12 +95,33 @@ WORKFLOW_PROMPTS = {
     "chronology": "Rekonstruiere eine zeitlich geordnete Chronologie aus sämtlichen Dokumenten. "
     "Unterscheide Behauptung und Beleg. Markiere Widersprüche, fehlende "
     "Beweismittel und offene Kausalität; keine erfundenen Verfahrensfristen.",
-    "compliance": "Prüfe datenschutzrechtliche Rollen, Pflichten, technische Angaben und "
-    "Lücken. Bei AVV: prüfe die Anwendbarkeit und Anforderungen des Art. 28 DSGVO. "
-    "Bei DSFA: strukturiere einen Arbeitsentwurf mit offenen Risikoparametern. "
+    "compliance": "Prüfe datenschutzrechtliche Rollen, Zwecke, Pflichten, technische Angaben und "
+    "Lücken anhand der ausgewählten Unterlagen und des Prüfauftrags. Bestimme die tatsächlichen "
+    "Verarbeitungstätigkeiten und ordne Verantwortlichkeit nur zu, soweit die Angaben dies tragen. "
     "Bestätige niemals pauschal Compliance oder die Zulässigkeit einer Verarbeitung.",
     "advertising": "Prüfe Werbeaussagen auf mögliche Irreführung, fehlende Nachweise und "
     "Informationspflichten nach einschlägigem Wettbewerbsrecht. Beachte Zielgruppe, "
     "Medium und Kontext. Umwelt-/Gesundheitsversprechen benötigen konkrete Belege. "
     "Ohne Tatsachennachweise ist eine Werbeaussage ungeklärt, nicht automatisch falsch.",
+}
+
+COMPLIANCE_TASK_PROMPTS = {
+    "general": "Prüfe die einschlägigen Datenschutzfragen ohne einen AVV oder eine DSFA "
+    "vorauszusetzen. Benenne offene Rollen, Rechtsgrundlagen, Nachweise und Maßnahmen.",
+    "avv": "Prüfe die Auftragsverarbeitungsvereinbarung nach den einschlägigen Anforderungen "
+    "des Art. 28 DSGVO, sofern Auftragsverarbeitung vorliegt. Berücksichtige die im Prüfauftrag "
+    "genannte Mandantenrolle; setze weder Verantwortlicher noch Auftragsverarbeiter als "
+    "Mandantenrolle voraus. Fehlt die Rolle, formuliere die Bewertung rollenoffen und stelle "
+    "eine entsprechende Rückfrage. Prüfe Weisungen, Gegenstand und Dauer, Datenarten, "
+    "Betroffenenkategorien, technische und organisatorische Maßnahmen, Unterauftragsverarbeitung, "
+    "Unterstützungspflichten, Kontrollen sowie Rückgabe und Löschung. Liefere belegte Befunde "
+    "und konkrete Änderungsvorschläge; kennzeichne fehlende Anlagen und Nachweise.",
+    "dsfa": "Sichte die Unterlagen zur Vorbereitung einer Datenschutz-Folgenabschätzung. "
+    "Prüfe zunächst, ob Angaben für die Einschätzung einer DSFA-Pflicht vorliegen. Ordne die "
+    "vorhandenen Angaben nach Verarbeitung und Zwecken, Erforderlichkeit und Verhältnismäßigkeit, "
+    "Risiken für Rechte und Freiheiten sowie vorgesehenen Abhilfemaßnahmen. Trenne dokumentierte "
+    "Maßnahmen, Vorschläge und offene Bewertungen. Fehlende Daten, Bewertungen und Zuständigkeiten "
+    "werden als konkrete Fragen und nächste Arbeitsschritte sichtbar. Liefere eine Sichtung "
+    "und Vorbereitung im Ergebnisschema, keinen als vollständig oder abgeschlossen bezeichneten "
+    "DSFA-Bericht und keine pauschale Zulässigkeitsbestätigung.",
 }
