@@ -824,16 +824,12 @@ export default function App() {
               </MotionButton>
               <span className="mobile-page-name">LegalThinkGPT</span>
             </div>
-            <button className="topbar-status" onClick={() => navigate('settings')}>
-              <span className={`status-dot ${health?.api_configured ? 'connected' : ''}`} />
-              {health?.api_configured
-                ? 'API-Schlüssel hinterlegt'
-                : health
-                  ? 'API einrichten'
-                  : loading
-                    ? 'Server wird geprüft …'
-                    : 'Server nicht erreichbar'}
-            </button>
+            {health?.api_configured === false && (
+              <button className="topbar-status" onClick={() => navigate('settings')}>
+                <span className="status-dot" />
+                API einrichten
+              </button>
+            )}
           </header>
           <main ref={contentRef} id="main-content" className="main-content" tabIndex={-1}>
             {loadFailures.length > 0 && (
