@@ -66,7 +66,7 @@ class AnalysisRequest(StrictModel):
     model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
     effort: Effort = "high"
     playbook_id: str | None = None
-    research: bool = False
+    research: bool = True
     compliance_task: ComplianceTask = "general"
 
     @model_validator(mode="after")

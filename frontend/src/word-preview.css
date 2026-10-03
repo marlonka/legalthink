@@ -18,10 +18,47 @@
   font-size: 13px;
 }
 .word-preview-toolbar button {
-  min-width: 116px;
   min-height: 36px;
   padding: 6px 0;
   font-size: 13px;
+}
+.word-preview-toolbar .text-button {
+  min-width: 116px;
+}
+.word-preview-toolbar .icon-button {
+  width: 36px;
+  min-width: 36px;
+  flex-shrink: 0;
+}
+.word-preview-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.word-preview-pages input {
+  width: 44px;
+  min-height: 36px;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  text-align: center;
+  appearance: textfield;
+}
+.word-preview-pages input::-webkit-inner-spin-button,
+.word-preview-pages input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.word-preview-pages > span {
+  min-width: 4ch;
+}
+.word-colors[aria-pressed='true'] {
+  background: var(--surface-selected);
+  color: var(--text-primary);
 }
 .word-preview-toolbar label {
   display: flex;
@@ -29,7 +66,7 @@
   gap: 8px;
 }
 .word-preview-toolbar select {
-  width: 138px;
+  width: 90px;
   min-height: 36px;
   padding: 4px 8px;
   border: 1px solid var(--border-subtle);
@@ -42,7 +79,7 @@
   flex: 1;
   min-height: 320px;
   overflow: hidden;
-  background: var(--surface-raised);
+  background: var(--document-canvas);
 }
 .word-preview-frame {
   position: absolute;
@@ -81,15 +118,27 @@
 }
 @media (max-width: 600px) {
   .word-preview-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
     padding: 4px 12px;
     gap: 8px;
-    flex-basis: 52px;
+    flex-basis: 104px;
+  }
+  .word-preview-pages {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0 auto;
   }
   .word-preview-toolbar button,
-  .word-preview-toolbar select {
+  .word-preview-toolbar select,
+  .word-preview-pages input {
     min-height: 44px;
   }
   .word-preview-toolbar select {
-    width: 122px;
+    width: 80px;
+  }
+  .word-preview-toolbar .icon-button {
+    min-width: 44px;
+    width: 44px;
   }
 }

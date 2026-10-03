@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, LoaderCircle, Quote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, Palette, Quote } from 'lucide-react';
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -20,6 +20,7 @@ type Citation = {
 };
 type Position = { item: number; start: number; end: number };
 const segmenter = new Intl.Segmenter('de', { granularity: 'grapheme' });
+const PDF_TO_CSS_UNITS = 96 / 72;
 const normalize = (value: string) => value.normalize('NFC').replace(/\s+/g, ' ').trim();
 
 // Preserve word boundaries, including spaces implied by PDF text geometry. Using the same
@@ -218,7 +219,8 @@ export default function PdfPreview({
   const [sizes, setSizes] = useState<Size[]>([]);
   const [page, setPage] = useState(initialPage);
   const [pageInput, setPageInput] = useState(String(initialPage));
-  const [zoom, setZoom] = useState('fit');
+  const [zoom, setZoom] = useState('1');
+  const [originalColors, setOriginalColors] = useState(false);
   const [width, setWidth] = useState(0);
   const [error, setError] = useState('');
   const [markedPage, setMarkedPage] = useState<number | null>(null);
@@ -228,6 +230,7 @@ export default function PdfPreview({
   });
   const [visible, setVisible] = useState({ start: 0, end: 2 });
   const viewport = useRef<HTMLDivElement>(null);
+  const readViewportRef = useRef(() => {});
   const scrollAnchor = useRef({ page: initialPage, fraction: 0 });
   const pendingCitation = useRef(false);
   const userNavigated = useRef(false);
@@ -285,7 +288,10 @@ export default function PdfPreview({
   useEffect(() => {
     const node = viewport.current;
     if (!node) return;
-    const observer = new ResizeObserver(() => setWidth(node.clientWidth));
+    const observer = new ResizeObserver(() => {
+      setWidth(node.clientWidth);
+      readViewportRef.current();
+    });
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
@@ -293,12 +299,12 @@ export default function PdfPreview({
   const layouts = useMemo(() => {
     let top = 12;
     return sizes.map((size) => {
-      const scale = zoom === 'fit' ? Math.max(0.1, (width - 24) / size.width) : Number(zoom);
+      const scale = Number(zoom) * PDF_TO_CSS_UNITS;
       const result = { width: size.width * scale, height: size.height * scale, top };
       top += result.height + 32;
       return result;
     });
-  }, [sizes, zoom, width]);
+  }, [sizes, zoom]);
 
   function readViewport() {
     const node = viewport.current;
@@ -345,6 +351,7 @@ export default function PdfPreview({
     node.scrollLeft = 0;
     readViewport();
   }
+  readViewportRef.current = readViewport;
 
   useLayoutEffect(() => {
     const node = viewport.current;
@@ -477,7 +484,11 @@ export default function PdfPreview({
                 : `Seite ${page} von ${pdf.numPages}`;
 
   return (
-    <section className="pdf-preview pdf-continuous-preview" aria-label="PDF-Vorschau">
+    <section
+      className="pdf-preview pdf-continuous-preview"
+      aria-label="PDF-Vorschau"
+      data-original-colors={originalColors || undefined}
+    >
       <div className="pdf-toolbar">
         <div className="pdf-pagination">
           <button
@@ -513,6 +524,15 @@ export default function PdfPreview({
           </button>
         </div>
         <div className="pdf-view-actions">
+          <button
+            className="icon-button pdf-colors-toggle"
+            aria-label="Originalfarben"
+            aria-pressed={originalColors}
+            title={originalColors ? 'Originalfarben ausblenden' : 'Originalfarben anzeigen'}
+            onClick={() => setOriginalColors(!originalColors)}
+          >
+            <Palette size={17} />
+          </button>
           {quote && (
             <button
               className="icon-button"
@@ -529,8 +549,11 @@ export default function PdfPreview({
             value={zoom}
             onChange={(event) => setZoom(event.target.value)}
           >
-            <option value="fit">Seitenbreite</option>
+            <option value="0.25">25 %</option>
+            <option value="0.5">50 %</option>
+            <option value="0.75">75 %</option>
             <option value="1">100 %</option>
+            <option value="1.25">125 %</option>
             <option value="1.5">150 %</option>
             <option value="2">200 %</option>
           </select>

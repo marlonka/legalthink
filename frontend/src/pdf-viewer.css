@@ -39,7 +39,7 @@
   justify-content: center;
   align-items: center;
   padding: 24px;
-  color: #535353;
+  color: var(--document-ink);
   font-size: 14px;
   pointer-events: none;
 }
@@ -51,6 +51,9 @@
   color: var(--text-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+.pdf-preview[data-original-colors] .pdf-page-state {
+  color: #535353;
 }
 .pdf-continuous-preview .pdf-pagination input {
   font-variant-numeric: tabular-nums;
@@ -81,7 +84,7 @@
     min-height: 40px;
   }
   .pdf-continuous-preview .pdf-toolbar select {
-    width: 112px;
+    width: 78px;
     font-size: 12px;
   }
   .pdf-view-actions {

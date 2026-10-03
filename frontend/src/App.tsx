@@ -72,7 +72,7 @@ function emptyDraft(scenario: DemoScenario): Draft {
     sourceText: '',
     selectedIds: scenario === 'compare' ? ['', ''] : [],
     playbookId: '',
-    research: false,
+    research: true,
   };
 }
 

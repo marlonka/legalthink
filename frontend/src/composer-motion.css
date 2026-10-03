@@ -4,7 +4,8 @@
 }
 
 /* Pasted material scrolls within the field; typing never resizes the composer. */
-.composer-source-text {
+.composer-source-text,
+.composer-instruction-text {
   margin: 0 23px 16px;
   min-width: 0;
 }
@@ -13,14 +14,11 @@
   margin: 0 0 10px;
 }
 
-.source-text-input {
+.composer-text-input {
   display: block;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  height: 216px;
-  min-height: 176px;
-  max-height: 600px;
   padding: 12px 14px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control);
@@ -33,6 +31,18 @@
   overflow-wrap: anywhere;
   scrollbar-gutter: stable;
   resize: vertical;
+}
+
+.source-text-input {
+  height: 216px;
+  min-height: 176px;
+  max-height: 600px;
+}
+
+.context-input {
+  height: 144px;
+  min-height: 144px;
+  max-height: 400px;
 }
 
 .source-text-meta {
@@ -260,7 +270,8 @@
 }
 
 @media (max-width: 700px) {
-  .composer-source-text {
+  .composer-source-text,
+  .composer-instruction-text {
     margin-left: 19px;
     margin-right: 19px;
   }

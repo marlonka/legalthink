@@ -135,9 +135,13 @@ Der Composer darf höher werden, wenn Dokumente oder Optionen hinzukommen. Einge
 
 „Text oder E-Mail-Verlauf“ nimmt Quellenmaterial auf; „Prüfauftrag“ enthält die Arbeitsanweisung. Text allein genügt außer beim Versionsvergleich: Dort bleiben zwei Dokumente erforderlich, eingefügte Korrespondenz ergänzt sie. Ein gemeinsamer Zähler zeigt die Grenze von 1.000.000 Zeichen für Text und Dokumente. Zu lange Eingaben bleiben vollständig erhalten; der Start nennt die Überschreitung, statt Text still abzuschneiden.
 
+Beide Texteingaben verwenden denselben sichtbaren Rahmen, Innenabstand, Radius und Fokuszustand. Ihre unterschiedlichen Anfangshöhen richten sich nach dem erwarteten Inhalt.
+
 Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
 
 Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im geschlossenen Zustand knapp erkennbar. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
+
+Webrecherche ist bei neuen Entwürfen und API-Anfragen standardmäßig aktiv. Sie nutzt das OpenAI-Suchwerkzeug. Bewusstes Abschalten bleibt für den jeweiligen Entwurf erhalten; ein Aufgabenwechsel überschreibt diese Wahl nicht.
 
 ### Befunde und Dokumente
 
@@ -301,6 +305,9 @@ Sind Original, Gegenentwurf, Zitat, Modellbewertung und Formulierungsvorschlag k
 - Auf ausdrücklichen Nutzerwunsch fährt nur die Dokumentoberfläche beim Öffnen mit dem vorhandenen `panel`-Spring von rechts ein. Mit Reduced Motion entfällt diese Bewegung. Quellenwechsel animieren weder Rahmen noch Controls; die geschlossene Zitatzeile behält ihre Höhe.
 - PDF: fortlaufende Seiten, sichtbare Nachbarseiten rendern, Seitenwahl, Zoom und Sprung zur Fundstelle. Nur eindeutige Texttreffer markieren; mehrdeutige Treffer benennen. Word: lokal gerenderte DOCX-Datei mit Tabellen, Bildern und sichtbaren Änderungen; keine behauptete Übereinstimmung mit Word-Seitenumbrüchen. TXT und Markdown: vollständiger Text; Markdown zusätzlich als Leseansicht ohne eingebettetes HTML oder externe Bilder. Zitate führen zum unveränderten Quelltext.
 - Originaldateien bleiben als Download verfügbar. Alte PDF-/Word-Quellen ohne Original zeigen ihren ausgelesenen Text; eine passende Datei kann ergänzt werden. Der Textabgleich bestätigt den Wortlaut, keine Dateiauthentizität. Gespeicherte Originalbytes werden nicht ersetzt.
+- PDF und Word starten bei 100 %; weitere Zoomstufen sind 25, 50, 75, 125, 150 und 200 %. Keine automatische Seitenbreite. Bei 100 % entsprechen Seitenmaße CSS-Druckmaßen (96 px pro Zoll); breite Seiten scrollen innerhalb der Vorschau.
+- Word übernimmt gespeicherte Umbrüche und ergänzt Vorschauseiten anhand der DOCX-Seitenmaße. Lange Absätze und einfache Tabellen werden ohne Textverlust aufgeteilt; Seitenwahl und Zitatsprung beziehen sich auf diese Vorschauseiten. Die Seitenzahlen sind keine garantierten Word-Fundstellen. Mehrspaltige Abschnitte, übergroße unteilbare Objekte und Fußnoten bleiben vollständig sichtbar und können längere Seiten benötigen.
+- Im dunklen Modus erscheinen Dokumentseiten in neutralen Graustufen: Papier `#242424`, schwarze Originalschrift als `#DBDBDB`, Umgebung `#171717`. Die Aktion „Originalfarben“ schaltet diese reine Anzeigeanpassung ab. Im hellen Modus bleiben Originalfarben erhalten. Downloads ändern sich dadurch nicht. Gemeinsame Tokens `--document-canvas`, `--document-paper`, `--document-ink` und `--document-filter` steuern beide Viewer.
 - Mobil stehen Vergleichsfassungen untereinander: Original, Gegenentwurf, Bewertung. Keine horizontale Seitenverschiebung. Leere Nebenansichten entfallen.
 
 ### Interface-Design

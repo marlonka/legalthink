@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { LoaderCircle, LocateFixed } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, LocateFixed, Palette } from 'lucide-react';
 import { renderAsync } from 'docx-preview';
 import JSZip from 'jszip';
 import type { DocumentRecord } from './types';
+import { paginateWord } from './wordPagination';
 import './word-preview.css';
 
 const FRAME_DOCUMENT = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; base-uri 'none'; form-action 'none'"><style>
-html { color-scheme: light; background: #eeeeee; scrollbar-gutter: stable; }
+html { background: var(--document-canvas); scrollbar-gutter: stable; }
 body { margin: 0; color: #111111; }
 .docx-wrapper { padding: 24px !important; background: transparent !important; min-width: min-content; }
-.docx-wrapper > section.docx { box-shadow: 0 1px 6px #0002 !important; margin-bottom: 24px !important; }
+.docx-wrapper > section.docx { box-shadow: 0 1px 6px #0002 !important; margin-bottom: 24px !important; flex-shrink: 0; overflow: visible; filter: var(--document-filter); }
+.docx-wrapper > section.docx > article { flex-shrink: 0; }
 .docx-wrapper > section.docx:last-child { margin-bottom: 0 !important; }
+html[data-neutral='true'] .docx-wrapper > section.docx { box-shadow: none !important; }
+[data-word-continuation]::before { content: none !important; }
 mark.source-word-quote { background: #ffdd75; color: inherit; padding: 0; }
+html[data-neutral='true'] mark.source-word-quote { background: #555555; color: #ffffff !important; }
 ins { background: #e4f0e1; text-decoration: underline; }
 del { background: #f8e1df; text-decoration: line-through; }
 a { color: inherit; pointer-events: none; text-decoration: underline; }
@@ -161,7 +166,7 @@ function sanitiseRenderedContent(container: HTMLElement) {
 
 type Position = { node: Text; offset: number };
 
-function markQuote(container: HTMLElement, quote: string) {
+function markQuote(container: HTMLElement, quote: string, bodyOnly = true): HTMLElement | null {
   const needle = quote.normalize('NFC').replace(/\s+/g, ' ').trim();
   if (needle.length < 12) return null;
   const walker = document.createTreeWalker(
@@ -174,6 +179,13 @@ function markQuote(container: HTMLElement, quote: string) {
   let previousBlock: Element | null = null;
   let lineBreak = false;
   while (walker.nextNode()) {
+    const element =
+      walker.currentNode.nodeType === Node.ELEMENT_NODE
+        ? (walker.currentNode as Element)
+        : walker.currentNode.parentElement;
+    // Repeated page headers/footers must not interrupt a body citation across
+    // an automatic page break. Search those regions only as a fallback.
+    if (bodyOnly && !element?.closest('article')) continue;
     if (walker.currentNode.nodeType === Node.ELEMENT_NODE) {
       if ((walker.currentNode as Element).localName === 'br') lineBreak = true;
       continue;
@@ -211,7 +223,8 @@ function markQuote(container: HTMLElement, quote: string) {
     }
   }
   const index = text.indexOf(needle);
-  if (index < 0 || text.indexOf(needle, index + 1) !== -1) return null;
+  if (index < 0 || text.indexOf(needle, index + 1) !== -1)
+    return bodyOnly ? markQuote(container, quote, false) : null;
   const first = starts[index],
     last = ends[index + needle.length - 1];
   let active = false;
@@ -249,10 +262,45 @@ export default function WordPreview({
   const [frameReady, setFrameReady] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [zoom, setZoom] = useState('fit');
+  const [zoom, setZoom] = useState('1');
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
+  const [pageCount, setPageCount] = useState(0);
+  const [originalColors, setOriginalColors] = useState(false);
+  const [dark, setDark] = useState(document.documentElement.dataset.theme !== 'light');
   const [highlighted, setHighlighted] = useState(false);
   const [omitted, setOmitted] = useState(false);
   const [changes, setChanges] = useState(false);
+
+  useEffect(() => setPageInput(String(page)), [page]);
+
+  useEffect(() => {
+    const update = () => {
+      const root = document.documentElement;
+      const frameRoot = frame.current?.contentDocument?.documentElement;
+      if (!frameRoot) return;
+      const styles = getComputedStyle(root);
+      const isDark = root.dataset.theme !== 'light';
+      setDark(isDark);
+      frameRoot.style.colorScheme = isDark ? 'dark' : 'light';
+      frameRoot.style.setProperty(
+        '--document-canvas',
+        styles.getPropertyValue('--document-canvas'),
+      );
+      frameRoot.style.setProperty(
+        '--document-filter',
+        originalColors ? 'none' : styles.getPropertyValue('--document-filter'),
+      );
+      frameRoot.dataset.neutral = String(isDark && !originalColors);
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, [frameReady, originalColors]);
 
   useEffect(() => {
     const target = frame.current?.contentDocument;
@@ -277,6 +325,23 @@ export default function WordPreview({
       });
   }
 
+  function jumpToPage(value: number) {
+    const next = Math.max(1, Math.min(value, pageCount));
+    const target =
+      frame.current?.contentDocument?.querySelectorAll<HTMLElement>('section.docx')[next - 1];
+    const win = frame.current?.contentWindow;
+    if (target && win) {
+      win.scrollTo({ top: target.getBoundingClientRect().top + win.scrollY - 24 });
+      setPage(next);
+    }
+  }
+
+  function submitPage() {
+    const value = Number(pageInput);
+    if (Number.isInteger(value) && value >= 1 && value <= pageCount) jumpToPage(value);
+    else setPageInput(String(page));
+  }
+
   useEffect(() => {
     if (!frameReady) return;
     let active = true;
@@ -289,6 +354,8 @@ export default function WordPreview({
     setHighlighted(false);
     setOmitted(false);
     setChanges(false);
+    setPageCount(0);
+    setPage(1);
     void (async () => {
       const response = await fetch(`/api/documents/${encodeURIComponent(source.id)}/original`, {
         signal: controller.signal,
@@ -308,6 +375,7 @@ export default function WordPreview({
         useBase64URL: true,
         experimental: false,
         breakPages: true,
+        ignoreLastRenderedPageBreak: false,
       });
       if (!active) return;
       const excluded = sanitiseRenderedContent(inert.body);
@@ -317,6 +385,13 @@ export default function WordPreview({
         target.head.appendChild(style);
       }
       target.body.replaceChildren(...Array.from(inert.body.childNodes));
+      await Promise.all(
+        Array.from(target.images).map((image) => image.decode().catch(() => undefined)),
+      );
+      if (!active) return;
+      await paginateWord(target, () => active);
+      if (!active) return;
+      setPageCount(target.querySelectorAll('section.docx').length);
       setOmitted(prepared.omitted || excluded);
       setChanges(prepared.changes);
       setLoading(false);
@@ -342,11 +417,7 @@ export default function WordPreview({
       const win = frame.current?.contentWindow;
       const previousScale = Number(wrapper.style.zoom) || 1;
       const anchor = (win?.scrollY || 0) / previousScale;
-      const width = Math.max(...pages.map((page) => page.offsetWidth)) + 48;
-      wrapper.style.zoom =
-        zoom === 'fit'
-          ? String(Math.min(1, (frame.current!.clientWidth - 18) / width))
-          : String(Number(zoom));
+      wrapper.style.zoom = zoom;
       win?.scrollTo({ top: anchor * (Number(wrapper.style.zoom) || 1) });
     };
     update();
@@ -356,6 +427,29 @@ export default function WordPreview({
       observer.disconnect();
     };
   }, [loading, error, zoom]);
+
+  useEffect(() => {
+    if (loading || error) return;
+    const win = frame.current?.contentWindow;
+    if (!win) return;
+    let pending = 0;
+    const update = () => {
+      cancelAnimationFrame(pending);
+      pending = requestAnimationFrame(() => {
+        const pages = Array.from(win.document.querySelectorAll<HTMLElement>('section.docx'));
+        const index = pages.findIndex(
+          (item) => item.getBoundingClientRect().bottom > win.innerHeight * 0.3,
+        );
+        if (index >= 0) setPage(index + 1);
+      });
+    };
+    win.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => {
+      win.removeEventListener('scroll', update);
+      cancelAnimationFrame(pending);
+    };
+  }, [loading, error]);
 
   useEffect(() => {
     const container = frame.current?.contentDocument?.body;
@@ -379,6 +473,49 @@ export default function WordPreview({
         <button className="text-button" onClick={jumpToQuote} disabled={!highlighted || loading}>
           <LocateFixed size={14} /> Zur Fundstelle
         </button>
+        <div className="word-preview-pages">
+          <button
+            className="icon-button"
+            aria-label="Vorherige Word-Seite"
+            disabled={loading || page <= 1}
+            onClick={() => jumpToPage(page - 1)}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <label>
+            <span className="sr-only">Word-Seite</span>
+            <input
+              inputMode="numeric"
+              value={pageInput}
+              disabled={loading || !pageCount}
+              onChange={(event) => setPageInput(event.target.value)}
+              onBlur={submitPage}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') submitPage();
+              }}
+            />
+          </label>
+          <span>/ {pageCount || '–'}</span>
+          <button
+            className="icon-button"
+            aria-label="Nächste Word-Seite"
+            disabled={loading || page >= pageCount}
+            onClick={() => jumpToPage(page + 1)}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        {dark && (
+          <button
+            className="icon-button word-colors"
+            title="Originalfarben"
+            aria-label="Originalfarben"
+            aria-pressed={originalColors}
+            onClick={() => setOriginalColors((value) => !value)}
+          >
+            <Palette size={16} />
+          </button>
+        )}
         <label>
           Zoom{' '}
           <select
@@ -386,7 +523,9 @@ export default function WordPreview({
             onChange={(event) => setZoom(event.target.value)}
             aria-label="Word-Zoom"
           >
-            <option value="fit">Seitenbreite</option>
+            <option value="0.25">25 %</option>
+            <option value="0.5">50 %</option>
+            <option value="0.75">75 %</option>
             <option value="1">100 %</option>
             <option value="1.25">125 %</option>
             <option value="1.5">150 %</option>

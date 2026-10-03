@@ -72,7 +72,7 @@
   font-variant-numeric: tabular-nums;
 }
 .pdf-toolbar select {
-  width: 135px;
+  width: 92px;
   height: 36px;
   padding: 4px 8px;
   border: 1px solid var(--border-strong);
@@ -90,7 +90,7 @@
   overflow-anchor: none;
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  background: var(--surface-page);
+  background: var(--document-canvas);
 }
 .pdf-paper-container {
   width: max-content;
@@ -100,12 +100,25 @@
 .pdf-page {
   position: relative;
   margin: 0 auto;
-  background: white;
-  color-scheme: light;
+  background: var(--document-paper);
   box-shadow: 0 1px 6px #0002;
 }
 .pdf-page canvas {
   display: block;
+  filter: var(--document-filter);
+}
+.pdf-preview[data-original-colors] .pdf-page {
+  background: #fff;
+}
+.pdf-preview[data-original-colors] .pdf-page canvas {
+  filter: none;
+}
+.pdf-colors-toggle[aria-pressed='true'] {
+  background: var(--surface-selected);
+  color: var(--text-primary);
+}
+[data-theme='light'] .pdf-colors-toggle {
+  display: none;
 }
 .pdf-state {
   position: absolute;

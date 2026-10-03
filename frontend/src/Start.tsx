@@ -246,7 +246,7 @@ export default function Start(props: Props) {
           </label>
           <textarea
             id="analysis-source-text"
-            className="source-text-input"
+            className="composer-text-input source-text-input"
             value={sourceText}
             onChange={(event) => onSourceText(event.target.value)}
             placeholder={
@@ -293,17 +293,19 @@ export default function Start(props: Props) {
             </select>
           </div>
         </div>
-        <textarea
-          ref={textInput}
-          id="analysis-context"
-          className="context-input"
-          value={context}
-          onChange={(event) => onContext(event.target.value)}
-          placeholder={workflow === 'compliance' ? currentCompliance.prompt : current.prompt}
-          disabled={running}
-          maxLength={20000}
-          rows={4}
-        />
+        <div className="composer-instruction-text">
+          <textarea
+            ref={textInput}
+            id="analysis-context"
+            className="composer-text-input context-input"
+            value={context}
+            onChange={(event) => onContext(event.target.value)}
+            placeholder={workflow === 'compliance' ? currentCompliance.prompt : current.prompt}
+            disabled={running}
+            maxLength={20000}
+            rows={4}
+          />
+        </div>
         <p className="analysis-data-note" id="analysis-data-note">
           Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
         </p>
