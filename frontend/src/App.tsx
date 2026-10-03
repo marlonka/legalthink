@@ -27,6 +27,8 @@ import type {
   Health,
   Model,
   Playbook,
+  ProcessingRegion,
+  ServiceTier,
   Workflow,
 } from './types';
 import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
@@ -115,7 +117,19 @@ export default function App() {
   const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
   const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6-luna'));
   const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'xhigh'));
+  const [processingRegion, setProcessingRegionState] = useState<ProcessingRegion | null>(() => {
+    const value = stored('legalthink-processing-region', 'server');
+    return value === 'eu' || value === 'global' ? value : null;
+  });
+  const [serviceTier, setServiceTierState] = useState<ServiceTier>(() =>
+    stored('legalthink-service-tier', 'default') === 'flex' ? 'flex' : 'default',
+  );
+  const effectiveProcessingRegion = processingRegion ?? health?.default_processing_region ?? null;
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const userDocuments = useMemo(
+    () => documents.filter((document) => !document.is_demo),
+    [documents],
+  );
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
@@ -198,6 +212,14 @@ export default function App() {
   function setEffort(value: string) {
     setEffortState(value);
     savePreference('legalthink-effort', value);
+  }
+  function setProcessingRegion(value: ProcessingRegion | null) {
+    setProcessingRegionState(value);
+    savePreference('legalthink-processing-region', value ?? 'server');
+  }
+  function setServiceTier(value: ServiceTier) {
+    setServiceTierState(value);
+    savePreference('legalthink-service-tier', value);
   }
   const navigate = useCallback((next: string) => {
     window.location.hash = next;
@@ -469,6 +491,8 @@ export default function App() {
           effort,
           playbook_id: playbookId || null,
           research,
+          processing_region: processingRegion,
+          service_tier: serviceTier,
         }),
       });
       setAnalysis(result);
@@ -902,10 +926,14 @@ export default function App() {
                   effort={effort}
                   onModel={setModel}
                   onEffort={setEffort}
-                  documents={documents}
+                  processingRegion={processingRegion}
+                  onProcessingRegion={setProcessingRegion}
+                  serviceTier={serviceTier}
+                  onServiceTier={setServiceTier}
+                  documents={userDocuments}
                   onDeleteDocument={(item) => askDelete({ type: 'document', item })}
                   onDeleteAllDocuments={() =>
-                    askDelete({ type: 'documents', items: [...documents] })
+                    askDelete({ type: 'documents', items: [...userDocuments] })
                   }
                   onRefresh={() => void refresh()}
                   refreshing={refreshing || loading}
@@ -934,7 +962,7 @@ export default function App() {
                   onComplianceTask={changeComplianceTask}
                   comparisonIds={drafts.compare?.selectedIds ?? ['', '']}
                   documents={selectedDocuments}
-                  libraryDocuments={documents}
+                  libraryDocuments={userDocuments}
                   onSelectDocuments={(ids) => {
                     setSelectedIds(ids);
                     setError('');
@@ -958,6 +986,9 @@ export default function App() {
                   models={models}
                   onModel={setModel}
                   onEffort={setEffort}
+                  processingRegion={effectiveProcessingRegion}
+                  serviceTier={serviceTier}
+                  onServiceTier={setServiceTier}
                   playbooks={playbooks}
                   playbookId={playbookId}
                   onPlaybook={(value) => updateDraft({ playbookId: value })}

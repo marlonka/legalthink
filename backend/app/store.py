@@ -11,6 +11,10 @@ from typing import Any
 TABLES = {"documents", "analyses", "playbooks"}
 
 
+class ProtectedDocumentError(ValueError):
+    pass
+
+
 class Store:
     def __init__(self, data_dir: Path):
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -132,10 +136,18 @@ class Store:
     def delete_documents(self, document_ids: list[str]) -> None:
         # Delete the confirmed selection atomically; newer uploads stay untouched.
         with self.connection() as db:
-            db.executemany("DELETE FROM documents WHERE id=?", [(item,) for item in document_ids])
+            db.executemany(
+                "DELETE FROM documents WHERE id=? AND COALESCE(json_extract(body,'$.is_demo'),0)=0",
+                [(item,) for item in document_ids],
+            )
 
     def delete(self, table: str, item_id: str) -> bool:
         assert table in TABLES
         with self.connection() as db:
+            if table == "documents":
+                db.execute("BEGIN IMMEDIATE")
+                row = db.execute("SELECT body FROM documents WHERE id=?", (item_id,)).fetchone()
+                if row and json.loads(row[0]).get("is_demo"):
+                    raise ProtectedDocumentError("Systembeispiele können nicht gelöscht werden.")
             deleted = db.execute(f"DELETE FROM {table} WHERE id=?", (item_id,)).rowcount > 0
         return deleted

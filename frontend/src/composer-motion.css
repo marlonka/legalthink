@@ -202,21 +202,20 @@
 
 .composer-options.aligned-composer-options {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    'playbook-label'
-    'playbook-control';
-  align-items: center;
-  gap: 9px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 24px;
 }
 
-.aligned-composer-options > .composer-playbook-label {
-  grid-area: playbook-label;
+.composer-playbook-field {
   min-width: 0;
 }
 
+.composer-playbook-field > .field-label {
+  margin: 0 0 9px;
+}
+
 .composer-playbook-select {
-  grid-area: playbook-control;
   width: 100%;
   min-width: 0;
   min-height: 42px;
@@ -271,6 +270,9 @@
 }
 
 @media (max-width: 700px) {
+  .composer-options.aligned-composer-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .composer-source-text,
   .composer-instruction-text {
     margin-left: 19px;

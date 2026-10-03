@@ -14,9 +14,18 @@ import {
 } from 'lucide-react';
 import { ErrorMessage, ModelPicker } from './ui';
 import DocumentPicker from './DocumentPicker';
+import ServiceTierField from './ServiceTierField';
 import { useDocumentPreview } from './DocumentPreview';
 import { COMPLIANCE_TASKS, WORKFLOWS } from './workflows';
-import type { ComplianceTask, DocumentRecord, Model, Playbook, Workflow } from './types';
+import type {
+  ComplianceTask,
+  DocumentRecord,
+  Model,
+  Playbook,
+  ProcessingRegion,
+  ServiceTier,
+  Workflow,
+} from './types';
 import { MAX_MATERIAL_CHARS } from './types';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './composer-motion.css';
@@ -43,6 +52,9 @@ interface Props {
   models: Model[];
   onModel: (value: string) => void;
   onEffort: (value: string) => void;
+  processingRegion: ProcessingRegion | null;
+  serviceTier: ServiceTier;
+  onServiceTier: (value: ServiceTier) => void;
   playbooks: Playbook[];
   playbookId: string;
   onPlaybook: (value: string) => void;
@@ -80,6 +92,9 @@ export default function Start(props: Props) {
     models,
     onModel,
     onEffort,
+    processingRegion,
+    serviceTier,
+    onServiceTier,
     playbooks,
     playbookId,
     onPlaybook,
@@ -310,6 +325,8 @@ export default function Start(props: Props) {
         </div>
         <p className="analysis-data-note" id="analysis-data-note">
           Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
+          {processingRegion &&
+            ` API-Region: ${processingRegion === 'eu' ? 'Europa (EWR + Schweiz)' : 'Global'}.`}
         </p>
         <div className="composer-toolbar">
           <MotionButton
@@ -373,30 +390,41 @@ export default function Start(props: Props) {
             </MotionButton>
           </div>
         </div>
-        {!options && playbookId && (
+        {!options && (playbookId || serviceTier === 'flex') && (
           <p className="active-options" aria-live="polite">
-            Playbook: {playbooks.find((item) => item.id === playbookId)?.name ?? 'Ausgewählt'}
+            {playbookId &&
+              `Playbook: ${playbooks.find((item) => item.id === playbookId)?.name ?? 'Ausgewählt'}`}
+            {playbookId && serviceTier === 'flex' && ' · '}
+            {serviceTier === 'flex' && 'Flex: längere Wartezeit möglich'}
           </p>
         )}
         <Collapse open={options} id="analysis-options" className="composer-options-collapse">
           <div className="composer-options aligned-composer-options">
-            <label className="field-label composer-playbook-label" htmlFor="analysis-playbook">
-              Kanzlei-Playbook
-            </label>
-            <select
-              id="analysis-playbook"
-              className="composer-playbook-select"
-              value={playbookId}
-              onChange={(event) => onPlaybook(event.target.value)}
+            <div className="composer-playbook-field">
+              <label className="field-label" htmlFor="analysis-playbook">
+                Kanzlei-Playbook
+              </label>
+              <select
+                id="analysis-playbook"
+                className="composer-playbook-select"
+                value={playbookId}
+                onChange={(event) => onPlaybook(event.target.value)}
+                disabled={running}
+              >
+                <option value="">Ohne Playbook</option>
+                {playbooks.map((playbook) => (
+                  <option key={playbook.id} value={playbook.id}>
+                    {playbook.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <ServiceTierField
+              id="analysis-service-tier"
+              value={serviceTier}
+              onChange={onServiceTier}
               disabled={running}
-            >
-              <option value="">Ohne Playbook</option>
-              {playbooks.map((playbook) => (
-                <option key={playbook.id} value={playbook.id}>
-                  {playbook.name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </Collapse>
         {workflow === 'compare' && (
@@ -422,7 +450,9 @@ export default function Start(props: Props) {
           <div className="analysis-progress" role="status">
             <span />
             <div>
-              <strong>Analyse läuft …</strong>
+              <strong>
+                {serviceTier === 'flex' ? 'Analyse mit Flex läuft …' : 'Analyse läuft …'}
+              </strong>
             </div>
             <MotionButton className="text-button" onClick={onCancel}>
               Warten abbrechen

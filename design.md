@@ -176,14 +176,20 @@ Verwandte Werte in Gruppen zusammenfassen. Pro Zeile eine Einstellung mit Bezeic
 
 Technische Informationen nur dort, wo sie zur Einrichtung oder Diagnose nötig sind. Hostdetails und API-Anfrage-IDs gehören nicht in die Hauptnavigation. Kein Konto-, Abrechnungs- oder Berechtigungsbereich ohne entsprechende Funktion.
 
+Die API-Region lässt sich als Servervorgabe, Global oder Europa wählen. Der effektive Endpoint steht in den Einstellungen; Projektvoraussetzungen und Regionalaufschlag bleiben aufklappbar. Eine Endpoint-Auswahl bestätigt keine Freigabe durch OpenAI. Die Servervorgabe wird erst nach geladener Konfiguration als bekannte Region angezeigt.
+
+Standard oder Flex ist in Einstellungen und Prüfoptionen wählbar. Flex nennt die niedrigeren Tokenpreise, mögliche Wartezeit und zeitweise fehlende Kapazität. Der Hinweis reserviert seine Höhe, damit die Auswahl keine benachbarten Controls verschiebt. Angefragte und vom Anbieter gemeldete Verarbeitung bleiben in den Berichtsdetails getrennt.
+
+Gespeicherte Dokumente zeigen nur eigene Quellen. Mitgelieferte Beispiele bleiben über Beispielberichte und Fundstellen erreichbar; sie erscheinen weder als löschbare Dateien noch in der Auswahl eigener Dokumente. Einzel- und Sammellöschung schützen sie auch serverseitig. Beispielberichte selbst dürfen aus dem Verlauf entfernt werden.
+
 ## Menüs, Popover und Dialoge
 
 - Menüs öffnen am auslösenden Element und bleiben innerhalb des sichtbaren Bereichs.
 - Hintergrundfläche hebt sich von Composer oder Seite ab; eine dünne Kontur reicht neben einem zurückhaltenden Schatten.
 - Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
 - Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
-- Standardauswahl: GPT-6 Luna mit Denkaufwand Hoch. Explizite Nutzerauswahl bleibt gespeichert.
-- Webrecherche sitzt als Globus-Schalter direkt vor der Modellwahl: feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip und ist am Schalter für Screenreader zugänglich. Unter den Prüfoptionen steht nur die Playbook-Auswahl; keine doppelte Webrecherche-Beschriftung. Unter 420 px stehen Prüfoptionen und Globus gemeinsam über Modellwahl und Startaktion.
+- Standardauswahl: GPT-6 Luna mit Denkaufwand Sehr hoch (`xhigh`). Explizite Nutzerauswahl bleibt gespeichert.
+- Webrecherche sitzt als Globus-Schalter direkt vor der Modellwahl: feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip und ist am Schalter für Screenreader zugänglich. Unter den Prüfoptionen stehen Playbook und Verarbeitung; keine doppelte Webrecherche-Beschriftung. Unter 420 px stehen Prüfoptionen und Globus gemeinsam über Modellwahl und Startaktion.
 - Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
 - Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
 - Der Slider hat eine zugängliche Beschriftung, `aria-valuetext` für den benannten Wert und native Tastaturbedienung mit Pfeiltasten, Home und End. Ein knapper Kosten-/Zeithinweis bleibt dem Slider zugeordnet.
@@ -237,6 +243,7 @@ Layoutstabilität hat Vorrang. Die mobile Navigation blendet an ihrer endgültig
 - Aufklappen ändert die benötigte Fläche einmal direkt unter dem Auslöser, ohne federnde Höhenänderung. Eine Befundauswahl klappt nicht gleichzeitig einen anderen Befund oberhalb zu. Quellenwahl und geöffnete Befunde sind getrennte Zustände.
 - Der native Denkaufwand-Slider aktualisiert Wert, Beschriftung und Übermittlung unmittelbar. Sein Auslöser bleibt bei allen Werten gleich breit.
 - Auf ausdrücklichen Nutzerwunsch fließen kleine Sternpartikel innerhalb der gefüllten Reglerfläche. Höhere Stufen erhöhen Geschwindigkeit und Dichte; „Ohne“ zeigt keinen Fluss. Die Partikel sind rein dekorativ, liegen hinter dem nativen Griff und reagieren nicht auf Zeigerereignisse. Sie animieren nur im geöffneten Popover; bei Reduced Motion bleiben sie statisch. Regler, Stufenmarkierungen, Beschriftung und umgebende Bedienflächen bewegen sich nicht.
+- Die Laufzeit über die gesamte Spur beträgt bei Niedrig 2,4 s, Mittel 1,33 s, Hoch 0,86 s, Sehr hoch 0,6 s und Maximum 0,4 s. Geschwindigkeitswechsel behalten die laufende Animationsphase; keine blinkende Deckkraftanimation.
 - Modellmenüs fokussieren die aktuelle Auswahl. Pfeiltasten sowie Home/End bewegen den Fokus; Escape schließt und fokussiert den Auslöser. Ein Tabwechsel aus dem Picker schließt das Menü.
 
 #### Unterbrechung und Barrierefreiheit
@@ -283,7 +290,7 @@ Die Beispiele sind Muster für vorhandene Funktionen, keine zusätzlichen Textel
 - „Beispiel öffnen“ öffnet passende synthetische Unterlagen mit vorgegebenem Ergebnis. Es ersetzt weder Dokumentauswahl noch Prüfauftrag des Nutzers.
 - Im Vergleich bleiben Original und Gegenentwurf festen Plätzen zugeordnet. Entfernen einer Fassung benennt die andere nicht um. Mehr als zwei Dateien werden vor dem Upload abgewiesen. Gespeicherte Ergebnisse nennen beide Eingabedokumente in ihrer ursprünglichen Reihenfolge.
 - Chronologie öffnet die Zeittafel zuerst. „Fundstelle ansehen“ zeigt den Beleg zum gewählten Ereignis; Schließen führt den Tastaturfokus zurück. „Formulierung“ führt zum zugehörigen Vorschlag.
-- Neue Profile starten mit Luna/Hoch. Modell und Denkaufwand werden als browserbezogene Präferenzen gespeichert; ein Beispielszenario ändert diese Auswahl nicht.
+- Neue Profile starten mit Luna/Sehr hoch. Modell und Denkaufwand werden als browserbezogene Präferenzen gespeichert; ein Beispielszenario ändert diese Auswahl nicht.
 
 ### Textredaktion
 
@@ -334,7 +341,7 @@ Hat jedes Element einen sinnvollen Platz und eine erkennbare Gewichtung? Tragen 
 - `frontend/src/styles.css`: Navigation, Eingabe, gemeinsame Controls und Popover.
 - `frontend/src/workspace.css`: Befunde, Quellen, Listen, Playbooks und Einstellungen.
 - `frontend/src/polish.css`: Dokumentauswahl und Fehler beim Laden.
-- `tests/built.spec.ts`: Start des Produktionsbuilds, Luna/Hoch als Standard, Quellenansicht, Export und Verlauf. Layout und Bedienung bei betroffenen UI-Änderungen gezielt prüfen; keine automatisierte Theme-/Viewport-Matrix.
+- `tests/built.spec.ts`: Start des Produktionsbuilds, Luna/Sehr hoch als Standard, Quellenansicht, Export und Verlauf. Layout und Bedienung bei betroffenen UI-Änderungen gezielt prüfen; keine automatisierte Theme-/Viewport-Matrix.
 
 ### Prüfpunkte
 

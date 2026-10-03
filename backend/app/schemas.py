@@ -12,6 +12,8 @@ DemoScenario = Literal[
     "contract", "compare", "chronology", "compliance", "avv", "dsfa", "advertising"
 ]
 Effort = Literal["none", "low", "medium", "high", "xhigh", "max"]
+ProcessingRegion = Literal["global", "eu"]
+ServiceTier = Literal["default", "flex"]
 Severity = Literal["high", "medium", "low", "info"]
 MAX_MATERIAL_CHARS = 1_000_000
 
@@ -52,6 +54,7 @@ class Document(StrictModel):
     page_count: int
     char_count: int
     original_available: bool = False
+    is_demo: bool = False
 
 
 class DocumentDeleteRequest(StrictModel):
@@ -67,6 +70,8 @@ class AnalysisRequest(StrictModel):
     effort: Effort = "xhigh"
     playbook_id: str | None = None
     research: bool = True
+    processing_region: ProcessingRegion | None = None
+    service_tier: ServiceTier = "default"
     compliance_task: ComplianceTask = "general"
 
     @model_validator(mode="after")
@@ -203,6 +208,9 @@ class Analysis(StrictModel):
     sources: list[Source] = Field(default_factory=list)
     provider_request_id: str | None = None
     provider_duration_ms: int | None = None
+    processing_region: ProcessingRegion | None = None
+    requested_service_tier: ServiceTier | None = None
+    service_tier: str | None = None
     prompt_version: str | None = None
     document_ids: list[str] = Field(default_factory=list)
     source_text_document_id: str | None = None

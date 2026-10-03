@@ -630,11 +630,6 @@ code {
   border-radius: 0 0 var(--radius-composer) var(--radius-composer);
   background: var(--surface-raised);
 }
-.composer-options > .field-label {
-  flex: 1;
-  min-width: 185px;
-  margin: 0;
-}
 .uploaded-documents {
   display: flex;
   align-items: center;
@@ -831,6 +826,23 @@ code {
   font-size: 12px;
   line-height: 1.75;
 }
+.service-tier-field {
+  min-width: 0;
+}
+.service-tier-field > .field-label {
+  margin: 0 0 9px;
+}
+.service-tier-field > select,
+.settings-processing-row > select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  font-size: 14px;
+}
 .toast {
   position: fixed;
   z-index: 100;
@@ -908,9 +920,6 @@ code {
   .composer-options {
     flex-direction: column;
     align-items: stretch;
-  }
-  .composer-options > .field-label {
-    min-width: 0;
   }
 }
 @media (max-width: 900px) {
@@ -1050,11 +1059,10 @@ code {
     gap: 19px;
     padding: 20px 19px;
   }
-  .composer-options > .field-label {
-    min-width: 0;
-  }
   .field-label input,
-  .field-label select {
+  .field-label select,
+  .service-tier-field > select,
+  .settings-processing-row > select {
     min-height: 44px;
     font-size: 16px;
   }

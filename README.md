@@ -52,6 +52,14 @@ Ergebnisansichten und Vorschlagsbezeichnungen richten sich nach der Aufgabe. Lee
 
 Standard für neue Browserprofile und API-Anfragen ohne Modellauswahl: `gpt-6-luna` mit Denktiefe `xhigh`, auch bei eigener Installation. Eine ausdrücklich gewählte Alternative wird im jeweiligen Browser gespeichert. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
 
+## API-Region und Flex
+
+Die Einstellungen zeigen die gewählte API-Region. Ohne eigene Browserauswahl gilt die Servervorgabe: `OPENAI_PROCESSING_REGION=global` verwendet `api.openai.com`; `eu` verwendet `eu.api.openai.com`. Für eine geeignete EU-Konfiguration setzen Sie `OPENAI_PROCESSING_REGION=eu` in `backend/.env` und starten den Server neu. Neue Browserprofile und API-Anfragen ohne Regionsauswahl übernehmen diese Vorgabe. Global bleibt der Standard ohne diese Konfiguration.
+
+EU-Verarbeitung setzt die Freigaben und Aufbewahrungsvereinbarungen des OpenAI-Projekts voraus. Die App kann diese Berechtigung nicht automatisch ermitteln; die Auswahl eines Endpoints bestätigt sie nicht. Die Region umfasst EWR und Schweiz. OpenAI nennt für die hier verwendeten Modelle 10 % Regionalaufschlag; Systemdaten fallen nicht unter dieselbe Residenzzusage. Bei Fehlern erfolgt kein automatischer Wechsel auf Global. [OpenAI: Data controls](https://developers.openai.com/api/docs/guides/your-data).
+
+**Flex** ist optional in den Einstellungen und Prüfoptionen wählbar. Für Luna und Sol liegen die Tokenpreise derzeit 50 % unter Standard; Werkzeugkosten sind davon getrennt. Antworten können länger dauern, Kapazität kann zeitweise fehlen. Flex-Anfragen dürfen bis zu 15 Minuten laufen. Es gibt keinen automatischen erneuten Aufruf zum Standardpreis. Der OpenAI-Leitfaden dokumentiert keinen separaten Flex-Aktivierungsschalter; Modell- und Projektzugriff müssen passen. [Flex processing](https://developers.openai.com/api/docs/guides/flex-processing), [Preise](https://developers.openai.com/api/docs/pricing).
+
 ## Daten und Betrieb
 
 Dies ist ein lokal betriebener Einzelbenutzer-Arbeitsraum. Dokumenttexte, Originaldateien (PDF, DOCX, TXT und Markdown), Playbooks und Analysen werden in einer lokalen SQLite-Datenbank gespeichert. Keine integrierte Anmeldung, Mandantentrennung oder Verschlüsselung der Datenbank. Der Entwicklungsserver bindet standardmäßig an die Loopback-Adresse.
@@ -63,6 +71,8 @@ Eingefügter Text wird mit der abgeschlossenen Analyse als TXT-Quelle gespeicher
 - TXT und Markdown: vollständiger Text mit Zitatmarkierung. Markdown bietet zusätzlich eine Leseansicht; externe Bilder und eingebettetes HTML werden nicht geladen.
 
 Alle neuen Uploads behalten ihre ursprünglichen Bytes für den Download. Alte PDF-/Word-Quellen ohne Original zeigen den ausgelesenen Text. Eine Datei lässt sich nachträglich zuordnen, wenn ihr ausgelesener Text übereinstimmt; ein vorhandenes Original wird nicht überschrieben. Das Löschen eines Dokuments entfernt auch die gespeicherten Originalbytes.
+
+Mitgelieferte Beispielquellen gehören nicht zur Liste eigener Dokumente und sind gegen Einzel- und Sammellöschung geschützt. Beispielberichte dürfen aus dem Verlauf entfernt und über „Beispiel öffnen“ erneut aufgerufen werden. Fehlende Quellen noch gespeicherter Beispielberichte werden beim Serverstart wiederhergestellt; eigene Uploads bleiben löschbar, auch bei gleichem Dateinamen.
 
 Bei einer gestarteten KI-Analyse werden die ausgewählten Dokumenttexte, der Prüfauftrag und das ausgewählte Playbook an OpenAI übertragen. `store=false` verhindert die Speicherung der Response als abrufbares API-Objekt. Es ist **keine** Zusage zu Zero Data Retention oder EU-Verarbeitung. Projektverträge, Aufbewahrungsregeln und freigegebene Verarbeitung müssen zur Kanzlei passen. Details: [OpenAI-Integration](docs/openai-integration.md).
 

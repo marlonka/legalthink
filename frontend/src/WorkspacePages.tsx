@@ -20,7 +20,15 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import type { Analysis, DocumentRecord, Health, Model, Playbook } from './types';
+import type {
+  Analysis,
+  DocumentRecord,
+  Health,
+  Model,
+  Playbook,
+  ProcessingRegion,
+  ServiceTier,
+} from './types';
 import type { ThemePreference } from './theme';
 import { api } from './types';
 import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui';
@@ -28,6 +36,7 @@ import { workflowName } from './workflows';
 import { reviewCount } from './review-workflows';
 import { MotionButton } from './motion';
 import { useDocumentPreview } from './DocumentPreview';
+import ServiceTierField from './ServiceTierField';
 
 export function History({
   analyses,
@@ -417,6 +426,10 @@ export function Settings({
   effort,
   onModel,
   onEffort,
+  processingRegion,
+  onProcessingRegion,
+  serviceTier,
+  onServiceTier,
   documents,
   onDeleteDocument,
   onDeleteAllDocuments,
@@ -431,6 +444,10 @@ export function Settings({
   effort: string;
   onModel: (value: string) => void;
   onEffort: (value: string) => void;
+  processingRegion: ProcessingRegion | null;
+  onProcessingRegion: (value: ProcessingRegion | null) => void;
+  serviceTier: ServiceTier;
+  onServiceTier: (value: ServiceTier) => void;
   documents: DocumentRecord[];
   onDeleteDocument: (document: DocumentRecord) => void;
   onDeleteAllDocuments: () => void;
@@ -438,6 +455,13 @@ export function Settings({
   refreshing: boolean;
 }) {
   const { openPreview } = useDocumentPreview();
+  const effectiveRegion = processingRegion ?? health?.default_processing_region;
+  const regionLabel =
+    effectiveRegion === 'eu'
+      ? 'Europa (EWR + Schweiz)'
+      : effectiveRegion === 'global'
+        ? 'Global'
+        : 'Nicht verfügbar';
   return (
     <div className="standard-page settings-page">
       <header className="standard-page-header">
@@ -547,7 +571,48 @@ export function Settings({
           <ShieldCheck size={20} strokeWidth={1.4} />
           <div>
             <h2>Datenverarbeitung</h2>
+            <p>Voreinstellungen für neue Analysen. In diesem Browser gespeichert.</p>
           </div>
+        </div>
+        <div className="settings-processing">
+          <div className="settings-processing-row">
+            <label htmlFor="processing-region">API-Region</label>
+            <select
+              id="processing-region"
+              value={processingRegion ?? 'server'}
+              onChange={(event) =>
+                onProcessingRegion(
+                  event.target.value === 'server' ? null : (event.target.value as ProcessingRegion),
+                )
+              }
+              aria-describedby="processing-region-help"
+            >
+              <option value="server">
+                Servervorgabe
+                {health?.default_processing_region
+                  ? ` · ${health.default_processing_region === 'eu' ? 'Europa' : 'Global'}`
+                  : ''}
+              </option>
+              <option value="global">Global</option>
+              <option value="eu">Europa (EWR + Schweiz)</option>
+            </select>
+          </div>
+          <p className="field-help" id="processing-region-help">
+            Ziel für neue Anfragen: {regionLabel}.
+          </p>
+          <details className="processing-region-details">
+            <summary>Voraussetzungen für Europa</summary>
+            <p>
+              Das OpenAI-Projekt benötigt die Freigabe für regionale Verarbeitung und passende
+              Aufbewahrungskontrollen. OpenAI berechnet 10 % Regionsaufschlag für diese Modelle. Die
+              Auswahl prüft die Freigabe nicht; bei einem Fehler bleibt Europa ausgewählt.
+            </p>
+          </details>
+          <ServiceTierField
+            id="settings-service-tier"
+            value={serviceTier}
+            onChange={onServiceTier}
+          />
         </div>
         <div className="privacy-facts">
           <div>
@@ -567,7 +632,7 @@ export function Settings({
             </p>
           </div>
         </div>
-        <ExternalLink url="https://platform.openai.com/docs/guides/your-data">
+        <ExternalLink url="https://developers.openai.com/api/docs/guides/your-data">
           Datenverarbeitung bei OpenAI
         </ExternalLink>
       </section>

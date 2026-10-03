@@ -16,6 +16,7 @@ from .schemas import (
     new_id,
     now,
 )
+from .store import Store
 
 DEMO_ID = "demo-saas-vertrag"
 DEMO_TEXT = """SYNTHETISCHES BEISPIEL · Kein echter Mandatsinhalt
@@ -50,6 +51,7 @@ def demo_document() -> Document:
         text=DEMO_TEXT,
         page_count=1,
         char_count=len(DEMO_TEXT),
+        is_demo=True,
     )
 
 
@@ -150,6 +152,7 @@ def _document(scenario: str, slug: str, name: str, text: str) -> Document:
         text=text,
         page_count=1,
         char_count=len(text),
+        is_demo=True,
     )
 
 
@@ -310,6 +313,24 @@ def demo_documents(scenario: DemoScenario = "contract") -> list[Document]:
     if scenario == "contract":
         return [demo_document()]
     return [document.model_copy() for document in SCENARIO_DOCUMENTS[scenario]]
+
+
+def restore_demo_sources(store: Store) -> None:
+    """Identify shipped sources by ID and content, and repair previously deleted examples."""
+    referenced_ids = set()
+    for analysis in store.list("analyses"):
+        if analysis.get("is_demo"):
+            referenced_ids.update(analysis.get("document_ids", []))
+            for item in analysis.get("findings", []) + analysis.get("timeline", []):
+                referenced_ids.add(item.get("source_document_id"))
+    sources = [demo_document(), *(doc for docs in SCENARIO_DOCUMENTS.values() for doc in docs)]
+    for document in sources:
+        stored = store.get("documents", document.id)
+        if stored is not None:
+            if stored["text"] == document.text and not stored.get("is_demo"):
+                store.put("documents", {**stored, "is_demo": True})
+        elif document.id in referenced_ids:
+            store.save_document(document.model_dump())
 
 
 def _finding(

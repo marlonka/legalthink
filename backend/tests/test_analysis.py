@@ -92,6 +92,7 @@ async def test_serialized_openai_request_and_verified_evidence():
     captured = []
 
     def handler(request):
+        assert str(request.url) == "https://api.openai.com/v1/responses"
         captured.append(json.loads(request.content))
         return httpx2.Response(
             200, json=provider_response(), headers={"x-request-id": "req_offline"}
@@ -116,6 +117,7 @@ async def test_serialized_openai_request_and_verified_evidence():
     assert body["model"] == "gpt-6-luna"
     assert body["reasoning"] == {"effort": "xhigh"}
     assert body["store"] is False
+    assert body["service_tier"] == "default"
     developer, user = body["input"]
     assert developer["role"] == "developer" and user["role"] == "user"
     assert "PRIVATE" not in json.dumps(developer) and QUOTE not in json.dumps(developer)
@@ -136,6 +138,9 @@ async def test_serialized_openai_request_and_verified_evidence():
     assert result.usage.cached_tokens == 1000
     assert result.usage.cache_write_tokens == 512
     assert result.document_ids == [DOC.id]
+    assert result.processing_region == "global"
+    assert result.requested_service_tier == "default"
+    assert result.service_tier is None
 
 
 @pytest.mark.parametrize(
@@ -204,6 +209,8 @@ async def test_default_research_retains_only_provider_attributed_urls():
     captured = []
 
     def handler(request):
+        assert str(request.url) == "https://eu.api.openai.com/v1/responses"
+        assert request.extensions["timeout"]["read"] == 900
         captured.append(json.loads(request.content))
         response = provider_response(
             annotations=[
@@ -229,17 +236,27 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 },
             }
         )
+        response["service_tier"] = "flex"
         return httpx2.Response(200, json=response)
 
     service, client = service_with_handler(handler)
     try:
         result = await service.run(
-            AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC]
+            AnalysisRequest(
+                workflow="contract",
+                document_ids=[DOC.id],
+                processing_region="eu",
+                service_tier="flex",
+            ),
+            [DOC],
         )
     finally:
         await client.close()
     assert captured[0]["tools"][0]["type"] == "web_search"
     assert captured[0]["include"] == ["web_search_call.action.sources"]
+    assert captured[0]["service_tier"] == "flex"
+    assert result.processing_region == "eu"
+    assert result.requested_service_tier == result.service_tier == "flex"
     assert result.findings[0].source_urls == [url]
     assert [source.url for source in result.sources] == [url]
 
@@ -435,14 +452,16 @@ async def test_provider_non_results_fail_closed(payload, expected):
 
 
 @pytest.mark.parametrize(
-    "status,code,expected_status,detail",
+    "status,code,region,tier,expected_status,detail",
     [
-        (429, "rate_limit_exceeded", 429, "Kontingent"),
-        (403, "model_not_found", 503, "Modellzugriff"),
+        (429, "rate_limit_exceeded", "global", "default", 429, "Kontingent"),
+        (403, "model_not_found", "global", "default", 503, "Modellzugriff"),
+        (429, "resource_unavailable", "eu", "flex", 429, "Flex-Kapazität"),
+        (403, "permission_denied", "eu", "default", 503, "nicht global wiederholt"),
     ],
 )
 async def test_provider_access_errors_are_actionable_without_retry_or_private_details(
-    status, code, expected_status, detail
+    status, code, region, tier, expected_status, detail
 ):
     calls = []
 
@@ -458,13 +477,23 @@ async def test_provider_access_errors_are_actionable_without_retry_or_private_de
     service, client = service_with_handler(handler)
     try:
         with pytest.raises(AnalysisError) as error:
-            await service.run(AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC])
+            await service.run(
+                AnalysisRequest(
+                    workflow="contract",
+                    document_ids=[DOC.id],
+                    processing_region=region,
+                    service_tier=tier,
+                ),
+                [DOC],
+            )
     finally:
         await client.close()
     assert error.value.status_code == expected_status
     assert detail in error.value.detail
     assert "PRIVATE" not in error.value.detail
     assert len(calls) == 1
+    assert calls[0].url.host == ("eu.api.openai.com" if region == "eu" else "api.openai.com")
+    assert json.loads(calls[0].content)["service_tier"] == tier
 
 
 async def test_timeout_and_cancellation_stop_provider_work(monkeypatch):
