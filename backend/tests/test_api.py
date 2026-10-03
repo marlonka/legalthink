@@ -12,6 +12,7 @@ from docx.oxml.ns import qn
 from fastapi import Request
 from fastapi.testclient import TestClient
 from lxml import etree
+from openai import AsyncOpenAI
 from pypdf import PdfWriter
 
 from app.analysis import AnalysisError
@@ -512,11 +513,26 @@ def test_failed_upstream_analysis_is_not_persisted(client):
     assert client.get("/api/documents").json() == [document]
 
 
-def test_unexpected_exception_never_escapes_to_asgi_server_logging(client):
+def test_unexpected_exception_never_escapes_to_asgi_server_logging(client, monkeypatch):
+    monitoring = threading.Event()
+    stopped = threading.Event()
+
+    async def pending_disconnect(request):
+        if monitoring.is_set():
+            return False
+        monitoring.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            stopped.set()
+
     class UnexpectedFailure:
         async def run(self, *args, **kwargs):
+            while not monitoring.is_set():
+                await asyncio.sleep(0)
             raise ValueError("SYNTHETIC PRIVATE DOCUMENT AND KEY")
 
+    monkeypatch.setattr(Request, "is_disconnected", pending_disconnect)
     client.app.state.analysis_service = UnexpectedFailure()
     document = client.post("/api/documents", files={"file": ("x.txt", b"Contract text.")}).json()
     # TestClient raises escaped server errors by default, even after a 500 handler.
@@ -525,7 +541,21 @@ def test_unexpected_exception_never_escapes_to_asgi_server_logging(client):
     )
     assert response.status_code == 500
     assert "PRIVATE" not in response.text
+    assert stopped.is_set()
     assert client.get("/api/analyses").json() == []
+
+
+async def test_lifespan_closes_provider_after_application_error(tmp_path, monkeypatch):
+    provider = AsyncOpenAI(api_key="offline-test-key", max_retries=0)
+    monkeypatch.setattr("app.main.AsyncOpenAI", lambda **kwargs: provider)
+    app = create_app(Settings(data_dir=tmp_path, api_key="offline-test-key"))
+    try:
+        with pytest.raises(RuntimeError, match="Application exit"):
+            async with app.router.lifespan_context(app):
+                raise RuntimeError("Application exit")
+        assert provider.is_closed()
+    finally:
+        await provider.close()
 
 
 def test_streamed_body_limit_without_content_length(tmp_path):

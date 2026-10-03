@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import quote
@@ -59,9 +59,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 api_key=config.api_key, max_retries=0, timeout=config.request_timeout
             )
             app.state.analysis_service = AnalysisService(client, config.request_timeout)
-        yield
-        if client:
-            await client.close()
+        try:
+            yield
+        finally:
+            if client:
+                await client.close()
 
     app = FastAPI(
         title="LegalThinkGPT",
@@ -356,8 +358,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for pending in (task, disconnect):
                     if not pending.done():
                         pending.cancel()
-                    with suppress(asyncio.CancelledError, AnalysisError):
-                        await pending
+                # A failed provider task must not prevent the disconnect watcher
+                # from stopping. The original error still propagates from above.
+                await asyncio.gather(task, disconnect, return_exceptions=True)
 
     @app.post("/api/demo", response_model=Analysis, status_code=201)
     def demo(body: DemoRequest | None = None):

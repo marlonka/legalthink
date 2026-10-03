@@ -8,7 +8,7 @@ Stand: 3. Oktober 2026. Auf Wunsch auf wesentliche Schutzmechanismen reduziert.
 - `backend/tests/test_analysis.py`: OpenAI-Anfrage mit Luna/Hoch, getrennte Anweisungen und Quelldaten, Cachepräfix, Quellenprüfung, Vergleichsrollen, Providerfehler und Abbruch. Providerantworten werden simuliert.
 - `backend/tests/test_security_review.py`: Host-/Origin-/Token-Zugriff, PDF-Ressourcengrenzen, Dokumentherkunft sowie bekannte Import- und Exportfehler.
 - `backend/tests/test_export.py`: Unbestätigte Zitate dürfen keine nachverfolgten Word-Änderungen erzeugen.
-- `tests/built.spec.ts`: Ein Browserablauf gegen den Produktionsbuild: Start mit Luna/Hoch, lokales Beispiel, Quellenansicht, Markdown-Export und erneutes Öffnen. Prüft außerdem lokale Assets und Content Security Policy.
+- `tests/built.spec.ts`: Ein Browserablauf gegen den Produktionsbuild: Start mit Luna/Hoch, lokales Beispiel, Quellenansicht, Markdown-Export, erneutes Öffnen und Löschen mit anschließendem Browser-Zurück. Prüft außerdem lokale Assets und Content Security Policy.
 
 Entfernt: 43 Browserfälle für Layout, Motion, Themes, Bildschirmgrößen, Detailbedienung und große Texteingaben; doppelte Backendfälle, Demo-Matrizen und reine Formatierungsprüfungen. Die separate Vite-Testinstanz, zweite Playwright-Konfiguration und axe-Abhängigkeit entfallen. Keine automatischen Testwiederholungen.
 
@@ -70,3 +70,14 @@ Migrationen anhand der Primärquellen geprüft: [Vite 8](https://vite.dev/guide/
 - npm meldet für Root und Frontend keine veralteten direkten Pakete und keine bekannten Schwachstellen. `pip-audit` prüfte alle 42 festgeschriebenen Python-Drittanbieterpakete einschließlich plattformspezifischer Einträge: keine bekannten Schwachstellen, nichts übersprungen.
 - Vorschau mit synthetischen Daten geprüft: Word-Paginierung über 11 Seiten, Zoom und Zitatmarkierung; PDF-Originalfarben und Zitatmarkierung; Menüfokus und unveränderte Positionen unter Motion 14; kein horizontaler Seitenüberlauf bei 390 px. Keine Konsolenfehler in diesen Abläufen.
 - Abschließend: 69 Offline-Backendfälle und der einzelne Build-Smoke-Test bestanden. Produktionsbuild mit TypeScript 7/Vite 8, Ruff, Prettier und `git diff --check` bestanden. Keine echten OpenAI-Anfragen.
+
+## Weiteres Code-Review – 3. Oktober 2026
+
+Drei unabhängige Reviews: Frontend-Zustand, Backend-Lifecycle und Dokumentvorschau/Quellenverarbeitung.
+
+- Gelöschte Analysen werden aus dem Frontend-Cache entfernt. Browser-Zurück zeigt den Fehlerzustand; ein Bericht einer anderen Route wird nicht vorübergehend eingeblendet.
+- Routenwechsel brechen laufende Detailabrufe ab. Datenänderungen lösen keinen Scroll-Reset mehr aus. Redundanter Dokumentabruf und ungenutzter Playbook-Fehler-Prop entfernt.
+- Unerwartete Analysefehler beenden auch den Disconnect-Watcher. Ein fehlerhaftes Lifespan-Ende schließt den OpenAI-Client.
+- Ungültige Provider-Quellenlinks werden verworfen, statt einen fertigen Bericht abzubrechen. Annotationen und Suchquellen verwenden dieselbe Prüfung.
+- Die beiden Backend-Lifecycle-Fehler und der Fehler bei kaputten URLs wurden vor der Korrektur reproduziert. Bestehende Tests erweitert, einen Lifecycle-Fall ergänzt; weiterhin nur ein Browser-Smoke-Test.
+- 70 Offline-Backendfälle, Browser-Smoke-Test, Produktionsbuild, Ruff, Prettier und `git diff --check` bestanden. Keine echten OpenAI-Anfragen.

@@ -144,14 +144,12 @@ export function Playbooks({
   onUpdate,
   onDelete,
   onDocumentImported,
-  error,
 }: {
   playbooks: Playbook[];
   onCreate: (name: string, content: string) => Promise<void>;
   onUpdate?: (id: string, name: string, content: string) => Promise<void>;
   onDelete: (playbook: Playbook) => void;
   onDocumentImported?: (document: DocumentRecord) => void;
-  error: string;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Playbook | null>(null);
@@ -237,7 +235,6 @@ export function Playbooks({
           </MotionButton>
         </div>
       </header>
-      {error && <ErrorMessage>{error}</ErrorMessage>}
       {playbooks.length ? (
         <div className="playbooks-grid">
           {playbooks.map((playbook) => (

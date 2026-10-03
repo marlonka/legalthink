@@ -285,26 +285,27 @@ export default function App() {
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
     document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Neue Analyse'} · LegalThinkGPT`;
+  }, [route]);
+  useEffect(() => {
     if (!route.startsWith('analysis/')) return;
     const id = route.split('/')[1];
     if (analysis?.id === id) return;
     const existing = analyses.find((item) => item.id === id);
     if (existing) {
+      setPageError('');
       setAnalysis(existing);
       return;
     }
-    let active = true;
-    setAnalysis(null);
-    void api<Analysis>(`/analyses/${encodeURIComponent(id)}`)
+    const controller = new AbortController();
+    setPageError('');
+    void api<Analysis>(`/analyses/${encodeURIComponent(id)}`, { signal: controller.signal })
       .then((value) => {
-        if (active) setAnalysis(value);
+        if (!controller.signal.aborted) setAnalysis(value);
       })
       .catch((error) => {
-        if (active) setPageError(message(error));
+        if (!controller.signal.aborted) setPageError(message(error));
       });
-    return () => {
-      active = false;
-    };
+    return () => controller.abort();
   }, [route, analyses, analysis?.id]);
   useEffect(() => {
     if (!toast) return;
@@ -554,9 +555,6 @@ export default function App() {
     });
     setPlaybooks((previous) => [result, ...previous]);
     setToast('Playbook gespeichert.');
-    void api<DocumentRecord[]>('/documents')
-      .then(setDocuments)
-      .catch(() => {});
   }
 
   async function updatePlaybook(id: string, name: string, content: string) {
@@ -589,9 +587,10 @@ export default function App() {
       } else {
         await api(`/${path}/${encodeURIComponent(deleteTarget.item.id)}`, { method: 'DELETE' });
       }
-      if (deleteTarget.type === 'analysis')
+      if (deleteTarget.type === 'analysis') {
         setAnalyses((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
-      else if (deleteTarget.type === 'playbook') {
+        setAnalysis((previous) => (previous?.id === deleteTarget.item.id ? null : previous));
+      } else if (deleteTarget.type === 'playbook') {
         setPlaybooks((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
         setDrafts((previous) =>
           Object.fromEntries(
@@ -783,8 +782,8 @@ export default function App() {
               <div className="nav-section-label">Letzte Analysen</div>
               {analyses.slice(0, 4).map((item) => (
                 <MotionButton
-                  className={`recent-item nav-motion-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
-                  aria-current={analysis?.id === item.id && isReview ? 'page' : undefined}
+                  className={`recent-item nav-motion-item ${route === `analysis/${item.id}` ? 'active' : ''}`}
+                  aria-current={route === `analysis/${item.id}` ? 'page' : undefined}
                   title={item.title}
                   key={item.id}
                   onClick={() => {
@@ -896,7 +895,6 @@ export default function App() {
                     ])
                   }
                   onDelete={(item) => askDelete({ type: 'playbook', item })}
-                  error=""
                 />
               ) : route === 'settings' ? (
                 <Settings
@@ -917,7 +915,7 @@ export default function App() {
                   refreshing={refreshing || loading}
                 />
               ) : isReview ? (
-                analysis ? (
+                analysis?.id === route.split('/')[1] ? (
                   <Review
                     analysis={analysis}
                     documents={documents}
