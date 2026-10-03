@@ -1,0 +1,47 @@
+.review-motion .review-tabs > button.active::after {
+  display: none;
+}
+
+.review-motion .review-tab-indicator {
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--text-primary);
+  pointer-events: none;
+}
+
+.review-motion .filter-pills > button {
+  position: relative;
+  isolation: isolate;
+}
+
+.review-motion .filter-pills > button.active {
+  background: transparent;
+}
+
+.review-motion .review-filter-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--surface-hover);
+  pointer-events: none;
+}
+
+.review-motion .review-chevron,
+.review-motion .review-check {
+  display: inline-flex;
+  flex-shrink: 0;
+  transition: none;
+}
+
+.review-motion .export-popover[aria-hidden='true'] {
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .review-motion .export-popover {
+    width: min(300px, calc(100vw - 40px));
+    min-width: 0;
+  }
+}

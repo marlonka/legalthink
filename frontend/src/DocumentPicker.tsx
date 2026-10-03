@@ -1,7 +1,9 @@
 import { useId, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { ArrowDownUp, Check, FileText, Search, X } from 'lucide-react';
 import type { DocumentRecord } from './types';
 import { Modal } from './ui';
+import { Collapse, MotionButton, useMotionPreferences } from './motion';
 
 interface Props {
   documents: DocumentRecord[];
@@ -21,6 +23,8 @@ export default function DocumentPicker({
   const [selection, setSelection] = useState(selectedIds);
   const [search, setSearch] = useState('');
   const hintId = useId();
+  const orderMotionId = useId();
+  const { reduced, transition } = useMotionPreferences();
   const limit = compare ? 2 : 12;
   const filtered = documents.filter((document) =>
     document.name.toLocaleLowerCase('de-DE').includes(search.trim().toLocaleLowerCase('de-DE')),
@@ -58,42 +62,49 @@ export default function DocumentPicker({
             aria-label="Gespeicherte Dokumente durchsuchen"
           />
           {search && (
-            <button
+            <MotionButton
               className="icon-button small"
               onClick={() => setSearch('')}
               aria-label="Dokumentsuche zurücksetzen"
             >
               <X size={14} />
-            </button>
+            </MotionButton>
           )}
         </label>
-        {compare && selected.length > 0 && (
+        <Collapse open={compare && selected.length > 0} className="document-order-collapse">
           <div className="document-order" aria-label="Vergleichsreihenfolge">
-            <div>
-              {selected.map((document, index) => (
-                <div key={document.id}>
-                  <span>
-                    {index === 0
-                      ? '01 · Original'
-                      : index === 1
-                        ? '02 · Gegenentwurf'
-                        : 'Zusätzlich'}
-                  </span>
-                  <strong>{document.name}</strong>
-                </div>
-              ))}
-            </div>
+            <LayoutGroup id={orderMotionId}>
+              <div>
+                {selected.map((document, index) => (
+                  <motion.div
+                    key={document.id}
+                    layout={reduced ? false : 'position'}
+                    initial={false}
+                    transition={transition('layout')}
+                  >
+                    <span>
+                      {index === 0
+                        ? '01 · Original'
+                        : index === 1
+                          ? '02 · Gegenentwurf'
+                          : 'Zusätzlich'}
+                    </span>
+                    <strong>{document.name}</strong>
+                  </motion.div>
+                ))}
+              </div>
+            </LayoutGroup>
             {selected.length === 2 && (
-              <button
+              <MotionButton
                 className="text-button"
                 onClick={() => setSelection((previous) => [...previous].reverse())}
               >
                 <ArrowDownUp size={14} />
                 Reihenfolge tauschen
-              </button>
+              </MotionButton>
             )}
           </div>
-        )}
+        </Collapse>
         <div
           className="document-picker-list"
           role="group"
@@ -127,11 +138,22 @@ export default function DocumentPicker({
                       {document.char_count.toLocaleString('de-DE')} Zeichen
                     </small>
                   </span>
-                  {checked && (
-                    <span className="document-picker-number" aria-hidden="true">
-                      {compare ? String(index + 1).padStart(2, '0') : <Check size={14} />}
-                    </span>
-                  )}
+                  <span className="document-picker-status-slot" aria-hidden="true">
+                    <AnimatePresence initial={false}>
+                      {checked && (
+                        <motion.span
+                          key={compare ? index : 'selected'}
+                          className="document-picker-number"
+                          initial={reduced ? false : { opacity: 0, scale: 0.78 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: reduced ? 1 : 0.9 }}
+                          transition={{ scale: transition('control'), opacity: transition('fade') }}
+                        >
+                          {compare ? String(index + 1).padStart(2, '0') : <Check size={14} />}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </span>
                 </label>
               );
             })
@@ -155,12 +177,16 @@ export default function DocumentPicker({
         </p>
       </div>
       <div className="modal-footer">
-        <button className="button secondary" onClick={onClose}>
+        <MotionButton className="button secondary" onClick={onClose}>
           Abbrechen
-        </button>
-        <button className="button primary" disabled={!valid} onClick={() => onApply(selection)}>
+        </MotionButton>
+        <MotionButton
+          className="button primary"
+          disabled={!valid}
+          onClick={() => onApply(selection)}
+        >
           {selected.length} {selected.length === 1 ? 'Dokument' : 'Dokumente'} übernehmen
-        </button>
+        </MotionButton>
       </div>
     </Modal>
   );

@@ -47,7 +47,7 @@ Zwischenstände mit diesen Befunden waren nicht freigegeben. Nach den Korrekture
 ## Technische Prüfung
 
 - Produktionsbuild und TypeScript erfolgreich.
-- 13 Browser-Testfälle erfolgreich, einschließlich Theme-Persistenz, Systemwechsel, gesperrtem Browser-Speicher und schmalen Menüs. Die betroffenen Fälle wurden nach Korrekturen gezielt erneut ausgeführt.
+- 16 Browser-Testfälle erfolgreich, einschließlich Theme-Persistenz, Systemwechsel, gesperrtem Browser-Speicher, schmalen Menüs und unterbrochenen Übergängen.
 - Produktions-Smoke-Test über FastAPI erfolgreich: lokale Assets, CSP und Export.
 - 43 API-Tests erfolgreich. Keine echten OpenAI-Anfragen; Testschlüssel leer.
 - Keine Konsolenfehler in der geprüften Produktionsansicht des eingebetteten Browsers.
@@ -58,7 +58,7 @@ Zwischenstände mit diesen Befunden waren nicht freigegeben. Nach den Korrekture
 - Die juristische Eingabe bleibt mehrzeilig; eine Chatzeile würde Dokumente und Prüfauftrag verdecken.
 - Ein zentraler Theme-Schalter mit Beschriftungen ersetzt die kleinen Vorschaubilder. Keine Akzentpalette oder erfundene ChatGPT-Funktion ergänzt.
 - Hinweise zur Einrichtung und Datenübermittlung gehören zu diesem Produkt und unterscheiden den Seiteninhalt von ChatGPT.
-- Statische Vorlagen belegen keine originalen Animationszeiten. Die vorhandenen kurzen Übergänge und Reduced-Motion-Unterstützung wurden verwendet.
+- Statische Vorlagen belegen keine originalen Animationszeiten. Die eigenen Federparameter sind in `design.md` dokumentiert; sie werden nicht als ausgelesene ChatGPT-Physik ausgegeben.
 - Firefox, Safari, reale mobile Geräte und echte Modellantworten wurden nicht in diesem Durchgang geprüft.
 
 ## Abschluss
@@ -67,3 +67,21 @@ Zwischenstände mit diesen Befunden waren nicht freigegeben. Nach den Korrekture
 - [x] Helle und dunkle Darstellung sowie relevante Breiten geprüft.
 - [x] Gestaltungsregeln in `design.md` dokumentiert und in `AGENTS.md` verankert.
 - [x] Referenzbilder und private Inhalte außerhalb des Repositories belassen.
+
+## Motion-Überarbeitung · 3. Oktober 2026
+
+Fünf Subagents bearbeiteten die gemeinsame Physik, Navigation, Composer, Befunde und Overlays. Die Integration verwendet eine gemeinsame Motion-Basis und die vorhandene `motion/react`-Abhängigkeit.
+
+| Prüfung | Nachweis |
+| --- | --- |
+| Auswahl und Positionswechsel | Navigation, Prüfungsarten, Tabs und Darstellung bewegen ihre Auswahlfläche; Dokumentchips animieren die Position. Beschriftungen und Texteingabe behalten ihre Größe. |
+| Schnelle Unterbrechung | Neuer Browsertest öffnet und schließt Prüfoptionen mehrfach, kehrt eine Menüschließung um und wechselt direkt zum Regler. Nur aktuelle Bedienelemente bleiben erreichbar. |
+| Dialoge | Neuer Browsertest schließt und öffnet denselben Dialog dreimal während des Nachlaufs, prüft Fokuswiederherstellung und zwölf Tab-Schritte. Bestehender Ablauf prüft Playbook-Vorschau → Bearbeiten → Speichern. |
+| Reduzierte Bewegung | Neuer Browsertest wechselt die OS-Präferenz bei bereits geöffneter App und prüft acht aufeinanderfolgende Frames des Drawers. Keine Verschiebung oder Einblendung; Dialog und Fokus bleiben bedienbar. |
+| Entfernte Dokumente | Bestehender Vergleichstest prüft zusätzlich Fokusübergabe an das verbleibende Dokument und danach an den Prüfauftrag. |
+| Visuelle Kontrolle | Eingebetteter Browser: Regler und Playbook-Dialog auf Desktop, Drawer-Eintritt und Endzustand bei 390 × 844 px. Aktuelle Browserbilder für helle Einstellungen und dunkle Befunde geprüft. |
+| Regressionen | Build, 43 API-Tests, 16 Browser-Tests und Produktions-Smoke-Test erfolgreich. Keine echten OpenAI-Anfragen. |
+
+Dialoge werden außerhalb des App-Inhalts gerendert, damit Seitenbewegung ihre Position nicht verschiebt. Offene Dialoge sperren den Hintergrund. Ausblendende Dialoge, Chips, Menüs und Befunddetails werden sofort inert; die sichtbare Ausblendung verlängert ihre Bedienbarkeit nicht.
+
+Die Prüfung bestätigt Verhalten und sichtbare Zustände in Chromium. Ein geräteübergreifender Framerate-Benchmark wurde nicht durchgeführt.

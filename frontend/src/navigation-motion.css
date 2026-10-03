@@ -1,0 +1,43 @@
+/* Animate selection surfaces only; labels keep their measured position. */
+.sidebar[data-motion-navigation] .nav-motion-item {
+  position: relative;
+  isolation: isolate;
+}
+
+.sidebar[data-motion-navigation] .nav-motion-item.active {
+  background: transparent;
+}
+
+.sidebar[data-motion-navigation] .nav-selection {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+  pointer-events: none;
+}
+
+/* Motion owns drawer transforms. CSS retains layout and settled visibility. */
+.sidebar[data-motion-navigation] {
+  transition: none;
+}
+
+.app-shell .navigation-backdrop {
+  transition: none;
+}
+
+.app-shell .toast.motion-toast {
+  transform: none;
+  translate: -50% 0;
+}
+
+@media (max-width: 700px) {
+  .sidebar[data-motion-navigation][data-presented='true'] {
+    visibility: visible;
+    box-shadow: var(--shadow-modal);
+  }
+
+  .sidebar[data-motion-navigation][data-presented='false'] {
+    visibility: hidden;
+  }
+}

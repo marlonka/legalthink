@@ -196,14 +196,36 @@ Tastaturfokus erhält eine sichtbare, kontrastreiche Kontur mit Abstand zur Elem
 
 ### Bewegung
 
-Die Screenshots belegen keine Dauer oder Physik. Für die Implementierung gelten diese Grenzen:
+Die Screenshots belegen keine Dauer oder Physik von ChatGPT. Die folgenden Werte sind die abgestimmte Implementierung von LegalThinkGPT. Sie stehen zentral in `frontend/src/motion.tsx`. Verwendet wird `motion/react` (Motion, vormals Framer Motion).
 
-- Kleine Menüs und Zustandswechsel: etwa 120–180 ms.
-- Seitenwechsel: höchstens 200–250 ms, geringe Verschiebung von maximal 4–6 px.
-- Dialoge und Drawer dürfen die vorhandene Federanimation verwenden, ohne Überschwingen oder sichtbares Nachfedern beim Lesen.
-- Keine Animation von Breite oder Höhe, die große Textflächen unruhig verschiebt, wenn eine einfache Einblendung ausreicht.
-- `prefers-reduced-motion` entfernt räumliche Bewegung und unnötige Übergänge. Status bleibt auch ohne Animation erkennbar.
-- Screenshots und Kontrastprüfung erst nach abgeschlossenem Übergang erstellen. Während einer Einblendung gemessene Transparenz ist kein verlässlicher Endzustand.
+| Preset | Steifigkeit | Dämpfung | Masse | Verwendung |
+| --- | --- | --- | --- | --- |
+| `control` | 500 | 38 | 0,8 | Druckfeedback, kleine Auswahlflächen und Icons |
+| `layout` | 420 | 36 | 0,85 | Auswahlposition und kompakte aufklappbare Bereiche |
+| `panel` | 400 | 38 | 0,9 | Dialoge, Popover und mobile Navigation |
+| `fade` | — | — | — | Deckkraft: 120 ms, `easeOut` |
+
+Federn steuern räumliche Bewegung. Die Dämpfung verhindert dekoratives Überschwingen. Neue Eingaben dürfen laufende Bewegungen umkehren; niemals Animationen abwarten, bevor sich der Zustand ändert. [Motion: physikalische Übergänge](https://motion.dev/docs/react-transitions)
+
+#### Interaktionen
+
+- Schaltflächen geben beim Drücken nach, standardmäßig auf Faktor `0.985`. Breite Textzeilen erhalten höchstens sehr kleines oder kein Skalieren. Kein Schweben bei Hover. Deaktivierte Aktionen reagieren nicht mit Druckbewegung.
+- Navigation, Prüfungsart, Tabs und Darstellung bewegen die Auswahlfläche. Die Beschriftung bleibt an ihrem Platz. Getrennte Auswahlgruppen verwenden getrennte Layout-IDs.
+- Dokumentchips animieren ihre Position beim Tauschen und Entfernen. Text und Eingabefelder werden nicht bei jedem Tastendruck vermessen oder skaliert.
+- Prüfoptionen und einzelne Befunde dürfen ihre kompakte Höhe mit einer Feder ändern. Lange Dokumenttexte, Tabellen und Berichte wechseln ohne animierte Gesamthöhe.
+- Menüs öffnen an ihrem Auslöser mit wenigen Pixeln Verschiebung und einer kurzen Einblendung. Dialoge verwenden eine geringe Skalierung. Der mobile Drawer folgt einer Feder; die Desktop-Navigation erscheint direkt.
+- Ein Seitenwechsel ersetzt den Inhalt sofort und blendet ihn kurz ein. Keine Warteschlange, keine lange Ausblendung der alten Seite, kein fliegender Lesetext.
+- Neue Statusmeldungen dürfen einmal kurz eintreten. Keine dekorativen Dauerschleifen, gestaffelten Listenauftritte oder wiederholten Erfolgseffekte.
+- Der native Denkaufwand-Slider aktualisiert Wert, Beschriftung und Übermittlung unmittelbar. Bewegung darf keinen anderen Wert vortäuschen oder die Tastaturbedienung verzögern.
+
+#### Unterbrechung und Barrierefreiheit
+
+- `useMotionPreferences()` beobachtet die Betriebssystempräferenz auch während einer geöffneten Sitzung. Bei `prefers-reduced-motion: reduce` sind Übergänge sofort; räumliche Bewegung und Ladespinner entfallen. Status bleibt als Text erkennbar.
+- Mit `AnimatePresence` ausblendende Inhalte werden sofort `inert` und `aria-hidden`. Sie dürfen während des sichtbaren Nachlaufs keine Klicks, Tabstopps oder doppelten Screenreader-Inhalte behalten. [Motion: Anwesenheit während des Entfernens](https://motion.dev/docs/react-animate-presence)
+- Beim Schließen eines Dialogs wird die Fokusführung sofort freigegeben und der Auslöser fokussiert. Der Hintergrund ist während des offenen Dialogs gesperrt. Erneutes Öffnen darf keinen zweiten Dialog oder veralteten Fokus erzeugen.
+- Fundstellen scrollen nur auf ausdrückliche Auswahl und nur, wenn der Bereich außerhalb der sichtbaren Fläche liegt. Bei reduzierter Bewegung erfolgt der Sprung direkt.
+- Shared Layout nur für Auswahlflächen und kurze bewegte Elemente; `layout="position"` schützt Texte vor Verzerrung. Keine permanente `will-change`-Belegung aller Elemente. [Motion: Layout-Animationen](https://motion.dev/docs/react-layout-animations)
+- Schnelles Öffnen, Schließen, erneutes Öffnen, Tastaturbedienung und ein Präferenzwechsel während der Sitzung gehören zur Prüfung. Screenshots und Kontrastprüfung erst nach abgeschlossenem Übergang erstellen.
 
 ## Textregeln
 

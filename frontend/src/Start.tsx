@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { forwardRef, useId, useRef, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion, useIsPresent } from 'motion/react';
 import {
   ArrowDown,
   ArrowRight,
@@ -13,6 +14,8 @@ import { ErrorMessage, ModelPicker } from './ui';
 import DocumentPicker from './DocumentPicker';
 import { WORKFLOWS } from './workflows';
 import type { DocumentRecord, Model, Playbook, Workflow } from './types';
+import { Collapse, MotionButton, useMotionPreferences } from './motion';
+import './composer-motion.css';
 
 const COMPLIANCE_TASKS = [
   {
@@ -94,6 +97,9 @@ export default function Start(props: Props) {
   const [dragging, setDragging] = useState(false);
   const [options, setOptions] = useState(false);
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
+  const workflowMotionId = useId();
+  const documentMotionId = useId();
+  const { reduced, transition } = useMotionPreferences();
   const contextWithoutPreset = COMPLIANCE_TASKS.reduce(
     (value, task) =>
       value === task.prompt || value.startsWith(`${task.prompt}\n\n`)
@@ -105,37 +111,49 @@ export default function Start(props: Props) {
     <div className="start-page">
       <header className="analysis-start-heading">
         <h1>Neue Analyse</h1>
-        <button className="text-button" onClick={onDemo} disabled={demoLoading || running}>
+        <MotionButton className="text-button" onClick={onDemo} disabled={demoLoading || running}>
           {demoLoading && <LoaderCircle className="spin" size={14} />}
           Beispiel öffnen
           <ArrowRight size={14} />
-        </button>
+        </MotionButton>
       </header>
-      <div className="workflow-selector" role="group" aria-label="Prüfungsart">
-        {WORKFLOWS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onWorkflow(item.id)}
-            aria-pressed={workflow === item.id}
-            title={item.short}
-            disabled={running || uploading}
-          >
-            <item.icon size={17} strokeWidth={1.6} />
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <LayoutGroup id={workflowMotionId}>
+        <div className="workflow-selector motion-workflows" role="group" aria-label="Prüfungsart">
+          {WORKFLOWS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onWorkflow(item.id)}
+              aria-pressed={workflow === item.id}
+              title={item.short}
+              disabled={running || uploading}
+            >
+              {workflow === item.id && (
+                <motion.span
+                  className="workflow-selection-surface"
+                  layoutId={reduced ? undefined : 'workflow-selection'}
+                  initial={false}
+                  transition={transition('control')}
+                  aria-hidden="true"
+                />
+              )}
+              <item.icon size={17} strokeWidth={1.6} />
+              <span className="workflow-option-label">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </LayoutGroup>
       <section
         className="analysis-composer"
         aria-label="Neue Analyse"
         onDragEnter={(event) => {
+          if (!event.dataTransfer.types.includes('Files') || running || uploading) return;
           event.preventDefault();
           dragCounter.current++;
           setDragging(true);
         }}
         onDragLeave={(event) => {
           event.preventDefault();
-          dragCounter.current--;
+          dragCounter.current = Math.max(0, dragCounter.current - 1);
           if (dragCounter.current === 0) setDragging(false);
         }}
         onDragOver={(event) => event.preventDefault()}
@@ -146,16 +164,39 @@ export default function Start(props: Props) {
           if (!running && !uploading) onUpload(event.dataTransfer.files);
         }}
       >
-        {dragging && (
-          <div className="drop-overlay">
-            <Paperclip size={28} />
-            <strong>Dokumente hier ablegen</strong>
-            <span>PDF, DOCX, TXT oder Markdown</span>
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {dragging && !running && !uploading && (
+            <motion.div
+              className="drop-overlay composer-drop-feedback"
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={transition('fade')}
+            >
+              <motion.div
+                className="composer-drop-perimeter"
+                initial={reduced ? false : { scale: 0.986 }}
+                animate={{ scale: 1 }}
+                transition={transition('control')}
+                aria-hidden="true"
+              />
+              <motion.div
+                className="composer-drop-icon"
+                initial={reduced ? false : { y: -4, rotate: -6 }}
+                animate={{ y: 0, rotate: 0 }}
+                transition={transition('control')}
+                aria-hidden="true"
+              >
+                <Paperclip size={28} />
+              </motion.div>
+              <strong>Dokumente hier ablegen</strong>
+              <span>PDF, DOCX, TXT oder Markdown</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="document-input-heading">
           <div className="composer-document-actions">
-            <button
+            <MotionButton
               className="button secondary"
               type="button"
               onClick={() => fileInput.current?.click()}
@@ -163,16 +204,16 @@ export default function Start(props: Props) {
             >
               {uploading ? <LoaderCircle className="spin" size={16} /> : <Plus size={17} />}
               {uploading ? 'Wird eingelesen …' : 'Dokumente hinzufügen'}
-            </button>
+            </MotionButton>
             {libraryDocuments.length > 0 && (
-              <button
+              <MotionButton
                 className="text-button library-button"
                 type="button"
                 onClick={() => setDocumentPickerOpen(true)}
                 disabled={uploading || running}
               >
                 Gespeicherte auswählen
-              </button>
+              </MotionButton>
             )}
           </div>
           <span>PDF, DOCX, TXT, MD · max. 12 MB pro Datei</span>
@@ -185,7 +226,7 @@ export default function Start(props: Props) {
         {workflow === 'compliance' && (
           <div className="compliance-presets" role="group" aria-label="Datenschutz-Prüffokus">
             {COMPLIANCE_TASKS.map((task) => (
-              <button
+              <MotionButton
                 key={task.label}
                 type="button"
                 aria-pressed={context.startsWith(task.prompt)}
@@ -199,7 +240,7 @@ export default function Start(props: Props) {
               >
                 {task.label}
                 <ArrowRight size={12} />
-              </button>
+              </MotionButton>
             ))}
           </div>
         )}
@@ -216,43 +257,33 @@ export default function Start(props: Props) {
           }}
           disabled={uploading || running}
         />
-        {documents.length > 0 && (
-          <div className="uploaded-documents">
-            {documents.map((doc, index) => (
-              <div className="document-chip" key={doc.id}>
-                <div className="document-chip-icon">
-                  <FileText size={18} />
-                </div>
-                <div>
-                  <span>{doc.name}</span>
-                  <small>
-                    {workflow === 'compare'
-                      ? index === 0
-                        ? '01 · Original'
-                        : index === 1
-                          ? '02 · Gegenentwurf'
-                          : 'Zusätzliches Dokument'
-                      : `${doc.page_count ? `${doc.page_count} ${doc.page_count === 1 ? 'Seite' : 'Seiten'}` : `${doc.char_count.toLocaleString('de-DE')} Zeichen`} · bereit`}
-                  </small>
-                </div>
-                <button
-                  type="button"
-                  className="icon-button small"
-                  onClick={() => onRemove(doc.id)}
+        <Collapse open={documents.length > 0} className="composer-documents-collapse">
+          <LayoutGroup id={documentMotionId}>
+            <div className="uploaded-documents motion-document-list">
+              <AnimatePresence initial={false} mode="popLayout">
+                {documents.map((doc, index) => (
+                  <ComposerDocument
+                    key={doc.id}
+                    document={doc}
+                    index={index}
+                    compare={workflow === 'compare'}
+                    running={running}
+                    onRemove={onRemove}
+                  />
+                ))}
+              </AnimatePresence>
+              {workflow === 'compare' && documents.length === 2 && (
+                <MotionButton
+                  className="text-button reorder-button"
+                  onClick={onReorder}
                   disabled={running}
-                  aria-label={`${doc.name} aus Auswahl entfernen`}
                 >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-            {workflow === 'compare' && documents.length === 2 && (
-              <button className="text-button reorder-button" onClick={onReorder} disabled={running}>
-                <ArrowDown size={13} /> Reihenfolge tauschen
-              </button>
-            )}
-          </div>
-        )}
+                  <ArrowDown size={13} /> Reihenfolge tauschen
+                </MotionButton>
+              )}
+            </div>
+          </LayoutGroup>
+        </Collapse>
         <label className="context-label" htmlFor="analysis-context">
           Prüfauftrag <span>(optional)</span>
         </label>
@@ -283,7 +314,7 @@ export default function Start(props: Props) {
           Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
         </p>
         <div className="composer-toolbar">
-          <button
+          <MotionButton
             className={`text-button options-toggle ${options ? 'active' : ''}`}
             onClick={() => setOptions(!options)}
             disabled={running}
@@ -291,8 +322,16 @@ export default function Start(props: Props) {
             aria-controls="analysis-options"
           >
             Prüfoptionen
-            <ChevronDown size={15} />
-          </button>
+            <motion.span
+              className="composer-disclosure-icon"
+              initial={false}
+              animate={{ rotate: options ? 180 : 0 }}
+              transition={transition('control')}
+              aria-hidden="true"
+            >
+              <ChevronDown size={15} />
+            </motion.span>
+          </MotionButton>
           <div className="composer-toolbar-right">
             <ModelPicker
               models={models}
@@ -302,7 +341,7 @@ export default function Start(props: Props) {
               onEffort={onEffort}
               disabled={running}
             />
-            <button
+            <MotionButton
               className="button primary run-analysis-button"
               type="button"
               aria-label="Analyse starten"
@@ -314,11 +353,11 @@ export default function Start(props: Props) {
               {running ? <LoaderCircle className="spin" size={16} /> : null}
               Analyse starten
               <ArrowRight size={15} />
-            </button>
+            </MotionButton>
           </div>
         </div>
-        {options && (
-          <div className="composer-options" id="analysis-options">
+        <Collapse open={options} id="analysis-options" className="composer-options-collapse">
+          <div className="composer-options">
             <label className="field-label">
               Kanzlei-Playbook
               <select
@@ -347,7 +386,7 @@ export default function Start(props: Props) {
               </span>
             </label>
           </div>
-        )}
+        </Collapse>
         {error && (
           <div className="composer-error">
             <ErrorMessage>{error}</ErrorMessage>
@@ -360,24 +399,97 @@ export default function Start(props: Props) {
               <strong>Analyse läuft …</strong>
               <small>Das Ergebnis wird nach Abschluss gespeichert.</small>
             </div>
-            <button className="text-button" onClick={onCancel}>
+            <MotionButton className="text-button" onClick={onCancel}>
               Warten abbrechen
-            </button>
+            </MotionButton>
           </div>
         )}
       </section>
-      {documentPickerOpen && (
-        <DocumentPicker
-          documents={libraryDocuments}
-          selectedIds={documents.map((document) => document.id)}
-          compare={workflow === 'compare'}
-          onApply={(ids) => {
-            onSelectDocuments(ids);
-            setDocumentPickerOpen(false);
-          }}
-          onClose={() => setDocumentPickerOpen(false)}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {documentPickerOpen && (
+          <DocumentPicker
+            key="document-picker"
+            documents={libraryDocuments}
+            selectedIds={documents.map((document) => document.id)}
+            compare={workflow === 'compare'}
+            onApply={(ids) => {
+              onSelectDocuments(ids);
+              setDocumentPickerOpen(false);
+            }}
+            onClose={() => setDocumentPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
+const ComposerDocument = forwardRef<
+  HTMLDivElement,
+  {
+    document: DocumentRecord;
+    index: number;
+    compare: boolean;
+    running: boolean;
+    onRemove: (id: string) => void;
+  }
+>(function ComposerDocument({ document, index, compare, running, onRemove }, ref) {
+  const present = useIsPresent();
+  const { reduced, transition } = useMotionPreferences();
+  return (
+    <motion.div
+      ref={ref}
+      className="document-chip"
+      layout={reduced ? false : 'position'}
+      initial={reduced ? false : { opacity: 0, y: 3 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: reduced ? 0 : -2 }}
+      transition={{
+        layout: transition('layout'),
+        y: transition('control'),
+        opacity: transition('fade'),
+      }}
+      inert={!present}
+      aria-hidden={!present || undefined}
+    >
+      <div className="document-chip-icon">
+        <FileText size={18} />
+      </div>
+      <div>
+        <span>{document.name}</span>
+        <small>
+          {compare
+            ? index === 0
+              ? '01 · Original'
+              : index === 1
+                ? '02 · Gegenentwurf'
+                : 'Zusätzliches Dokument'
+            : `${document.page_count ? `${document.page_count} ${document.page_count === 1 ? 'Seite' : 'Seiten'}` : `${document.char_count.toLocaleString('de-DE')} Zeichen`} · bereit`}
+        </small>
+      </div>
+      <MotionButton
+        className="icon-button small"
+        onClick={(event) => {
+          const button = event.currentTarget;
+          const buttons = Array.from(
+            button
+              .closest('.uploaded-documents')
+              ?.querySelectorAll<HTMLButtonElement>(
+                '.document-chip:not([inert]) button:not(:disabled)',
+              ) ?? [],
+          );
+          const position = buttons.indexOf(button);
+          const next = buttons[position + 1] ?? buttons[position - 1];
+          onRemove(document.id);
+          (next ?? button.ownerDocument.getElementById('analysis-context'))?.focus({
+            preventScroll: true,
+          });
+        }}
+        disabled={running || !present}
+        aria-label={`${document.name} aus Auswahl entfernen`}
+      >
+        <X size={14} />
+      </MotionButton>
+    </motion.div>
+  );
+});

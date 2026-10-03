@@ -1232,7 +1232,7 @@ code {
     transition-duration: 0.01ms !important;
   }
   .spin {
-    animation: spin 2s linear infinite !important;
+    animation: none !important;
   }
   .sidebar {
     transition: none;
