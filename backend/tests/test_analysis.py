@@ -173,24 +173,36 @@ def test_pdf_content_cannot_forge_page_attribution(marker):
 
 async def test_default_research_retains_only_provider_attributed_urls():
     url = "https://gesetze-im-internet.de/bgb/__276.html"
+    invalid_urls = ["https://[invalid", "https:///missing-host", "javascript:alert(1)"]
     captured = []
 
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx2.Response(
-            200,
-            json=provider_response(
-                annotations=[
-                    {
-                        "type": "url_citation",
-                        "url": url,
-                        "title": "§ 276 BGB",
-                        "start_index": 0,
-                        "end_index": 10,
-                    }
-                ]
-            ),
+        response = provider_response(
+            annotations=[
+                {
+                    "type": "url_citation",
+                    "url": cited_url,
+                    "title": "§ 276 BGB",
+                    "start_index": 0,
+                    "end_index": 10,
+                }
+                for cited_url in [*invalid_urls, url]
+            ]
         )
+        response["output"].append(
+            {
+                "id": "search_offline",
+                "type": "web_search_call",
+                "status": "completed",
+                "action": {
+                    "type": "search",
+                    "query": "§ 276 BGB",
+                    "sources": [{"type": "url", "url": value} for value in [*invalid_urls, url]],
+                },
+            }
+        )
+        return httpx2.Response(200, json=response)
 
     service, client = service_with_handler(handler)
     try:

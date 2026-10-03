@@ -44,6 +44,13 @@ test('Python serves the built workspace with local assets, CSP and working expor
   await expect(
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
   ).toBeVisible();
+  await page.getByRole('button', { name: /^Analysen/ }).click();
+  await page.getByRole('button', { name: 'Cloud-Vertrag · Beispielprüfung löschen' }).click();
+  await page.getByRole('button', { name: 'Endgültig löschen' }).click();
+  await expect(page.getByRole('dialog', { name: 'Analyse löschen?' })).toBeHidden();
+  await page.goBack();
+  await expect(page.getByRole('alert')).toHaveText('Analyse nicht gefunden.');
+  await expect(page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' })).toBeHidden();
   expect(errors).toEqual([]);
   expect(externalRequests).toEqual([]);
 });

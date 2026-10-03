@@ -211,13 +211,29 @@ def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[Ti
 
 def provider_sources(response: Any) -> list[Source]:
     found: dict[str, Source] = {}
+
+    def add_source(url: Any, title: str | None, *, replace: bool = False) -> None:
+        if not isinstance(url, str):
+            return
+        try:
+            parsed = urlsplit(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+                return
+        except ValueError:
+            # A malformed citation must not discard an otherwise completed report.
+            return
+        if replace or url not in found:
+            found[url] = Source(title=title or parsed.netloc, url=url)
+
     for item in response.output:
         if getattr(item, "type", "") == "message":
             for content in getattr(item, "content", []):
                 for annotation in getattr(content, "annotations", []):
-                    url = getattr(annotation, "url", "")
-                    if url and urlsplit(url).scheme in {"http", "https"}:
-                        found[url] = Source(title=getattr(annotation, "title", "Quelle"), url=url)
+                    add_source(
+                        getattr(annotation, "url", ""),
+                        getattr(annotation, "title", None),
+                        replace=True,
+                    )
         if getattr(item, "type", "") == "web_search_call":
             for source in getattr(getattr(item, "action", None), "sources", []) or []:
                 url = (
@@ -225,13 +241,12 @@ def provider_sources(response: Any) -> list[Source]:
                     if isinstance(source, dict)
                     else getattr(source, "url", "")
                 )
-                if url and urlsplit(url).scheme in {"http", "https"}:
-                    title = (
-                        source.get("title")
-                        if isinstance(source, dict)
-                        else getattr(source, "title", None)
-                    )
-                    found.setdefault(url, Source(title=title or urlsplit(url).netloc, url=url))
+                title = (
+                    source.get("title")
+                    if isinstance(source, dict)
+                    else getattr(source, "title", None)
+                )
+                add_source(url, title)
     return list(found.values())[:30]
 
 
