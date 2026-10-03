@@ -397,10 +397,6 @@ export default function Start(props: Props) {
                 </option>
               ))}
             </select>
-            <span className="field-label composer-research-label">Webrecherche</span>
-            <small className="composer-research-note">
-              Suchanfragen können Dokumentinhalte enthalten.
-            </small>
           </div>
         </Collapse>
         {workflow === 'compare' && (

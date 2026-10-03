@@ -6,6 +6,7 @@ import { ArrowUpRight, Check, ChevronDown, X } from 'lucide-react';
 import type { Model } from './types';
 import { MotionButton, useMotionPreferences } from './motion';
 import './overlay-motion.css';
+import './effort-slider.css';
 import BrandMark from './BrandMark';
 
 export const DEFAULT_MODELS: Model[] = [
@@ -281,6 +282,53 @@ function StablePickerLabel({ value, alternatives }: { value: string; alternative
   );
 }
 
+const EFFORT_FLOW: Record<string, { count: number; speed: number }> = {
+  none: { count: 0, speed: 1 },
+  low: { count: 4, speed: 1 },
+  medium: { count: 6, speed: 1.4 },
+  high: { count: 8, speed: 1.9 },
+  xhigh: { count: 10, speed: 2.5 },
+  max: { count: 12, speed: 3.2 },
+};
+
+function EffortParticles({ effort, disabled }: { effort: string; disabled: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const present = useIsPresent();
+  const { reduced } = useMotionPreferences();
+  const flow = EFFORT_FLOW[effort] ?? EFFORT_FLOW.none;
+
+  useEffect(() => {
+    // Keep each particle's position when changing speed; no render loop is needed.
+    ref.current?.getAnimations({ subtree: true }).forEach((animation) => {
+      animation.updatePlaybackRate(flow.speed);
+    });
+  }, [flow.speed, flow.count, reduced]);
+
+  return (
+    <div
+      ref={ref}
+      className="effort-particles"
+      aria-hidden="true"
+      data-flow-running={present && !disabled && !reduced}
+    >
+      {Array.from({ length: flow.count }, (_, index) => (
+        <span
+          key={index}
+          className={`effort-particle${index % 3 === 1 ? ' effort-particle-star' : ''}`}
+          style={
+            {
+              '--particle-delay': `${-((index * 0.618 + 0.12) % 1) * 6}s`,
+              '--particle-rest-x': `${((index * 0.618 + 0.12) % 1) * 100}%`,
+              '--particle-lane': `${3 + ((index * 7) % 15)}px`,
+              '--particle-opacity': 0.32 + (index % 3) * 0.12,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 export function ModelPicker({
   models,
   model,
@@ -408,7 +456,30 @@ export function ModelPicker({
                 <output className="effort-current" htmlFor={`${menuId}-range`}>
                   {EFFORT_NAMES[effort] ?? effort}
                 </output>
-                <div className="effort-track">
+                <div
+                  className="effort-track"
+                  style={
+                    {
+                      '--effort-fraction': effortIndex / Math.max(1, current.efforts.length - 1),
+                    } as CSSProperties
+                  }
+                >
+                  <div className="effort-rail" aria-hidden="true">
+                    <div className="effort-fill">
+                      <EffortParticles effort={effort} disabled={disabled} />
+                    </div>
+                    <div className="effort-ticks">
+                      {current.efforts.map((value, index) => (
+                        <span
+                          key={value}
+                          data-filled={index <= effortIndex}
+                          style={{
+                            left: `${(index / Math.max(1, current.efforts.length - 1)) * 100}%`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                   <input
                     id={`${menuId}-range`}
                     className="effort-range"
@@ -422,22 +493,7 @@ export function ModelPicker({
                     aria-valuetext={EFFORT_NAMES[effort] ?? effort}
                     aria-describedby={`${menuId}-cost`}
                     onChange={(event) => onEffort(current.efforts[Number(event.target.value)])}
-                    style={
-                      {
-                        '--effort-progress': `${(effortIndex / Math.max(1, current.efforts.length - 1)) * 100}%`,
-                      } as CSSProperties
-                    }
                   />
-                  <div className="effort-ticks" aria-hidden="true">
-                    {current.efforts.map((value, index) => (
-                      <span
-                        key={value}
-                        style={{
-                          left: `${(index / Math.max(1, current.efforts.length - 1)) * 100}%`,
-                        }}
-                      />
-                    ))}
-                  </div>
                 </div>
               </div>
             )}

@@ -183,7 +183,7 @@ Technische Informationen nur dort, wo sie zur Einrichtung oder Diagnose nötig s
 - Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
 - Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
 - Standardauswahl: GPT-6 Luna mit Denkaufwand Hoch. Explizite Nutzerauswahl bleibt gespeichert.
-- Webrecherche sitzt als Globus-Schalter direkt vor der Modellwahl: feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Kein alleinstehender Aktiv-Text unter der Werkzeugleiste. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip, zugänglich am Schalter und sichtbar in den Prüfoptionen. Dort bleibt die Playbook-Auswahl. Unter 420 px stehen Prüfoptionen und Globus gemeinsam über Modellwahl und Startaktion.
+- Webrecherche sitzt als Globus-Schalter direkt vor der Modellwahl: feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip und ist am Schalter für Screenreader zugänglich. Unter den Prüfoptionen steht nur die Playbook-Auswahl; keine doppelte Webrecherche-Beschriftung. Unter 420 px stehen Prüfoptionen und Globus gemeinsam über Modellwahl und Startaktion.
 - Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
 - Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
 - Der Slider hat eine zugängliche Beschriftung, `aria-valuetext` für den benannten Wert und native Tastaturbedienung mit Pfeiltasten, Home und End. Ein knapper Kosten-/Zeithinweis bleibt dem Slider zugeordnet.
@@ -236,6 +236,7 @@ Layoutstabilität hat Vorrang. Die mobile Navigation blendet an ihrer endgültig
 - In der Dokumentauswahl bleiben Zeile, Dialog und Fußzeile beim An- und Abwählen stabil. Vergleichsreihenfolge und wechselnde Zähler dürfen oberhalb der Zeilen keinen neuen Platz beanspruchen.
 - Aufklappen ändert die benötigte Fläche einmal direkt unter dem Auslöser, ohne federnde Höhenänderung. Eine Befundauswahl klappt nicht gleichzeitig einen anderen Befund oberhalb zu. Quellenwahl und geöffnete Befunde sind getrennte Zustände.
 - Der native Denkaufwand-Slider aktualisiert Wert, Beschriftung und Übermittlung unmittelbar. Sein Auslöser bleibt bei allen Werten gleich breit.
+- Auf ausdrücklichen Nutzerwunsch fließen kleine Sternpartikel innerhalb der gefüllten Reglerfläche. Höhere Stufen erhöhen Geschwindigkeit und Dichte; „Ohne“ zeigt keinen Fluss. Die Partikel sind rein dekorativ, liegen hinter dem nativen Griff und reagieren nicht auf Zeigerereignisse. Sie animieren nur im geöffneten Popover; bei Reduced Motion bleiben sie statisch. Regler, Stufenmarkierungen, Beschriftung und umgebende Bedienflächen bewegen sich nicht.
 - Modellmenüs fokussieren die aktuelle Auswahl. Pfeiltasten sowie Home/End bewegen den Fokus; Escape schließt und fokussiert den Auslöser. Ein Tabwechsel aus dem Picker schließt das Menü.
 
 #### Unterbrechung und Barrierefreiheit

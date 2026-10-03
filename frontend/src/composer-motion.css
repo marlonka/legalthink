@@ -202,10 +202,10 @@
 
 .composer-options.aligned-composer-options {
   display: grid;
-  grid-template-columns: minmax(185px, 1fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    'playbook-label research-label'
-    'playbook-control research-note';
+    'playbook-label'
+    'playbook-control';
   align-items: center;
   gap: 9px 24px;
 }
@@ -225,18 +225,6 @@
   border-radius: var(--radius-control);
   background: var(--surface-input);
   font-size: 14px;
-}
-
-.aligned-composer-options > .composer-research-label {
-  grid-area: research-label;
-  min-width: 0;
-}
-
-.composer-research-note {
-  grid-area: research-note;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 /* Workflow-specific controls extend below the common input and toolbar. */
@@ -280,21 +268,6 @@
   place-items: center;
   width: 26px;
   height: 26px;
-}
-
-@media (max-width: 900px) {
-  .composer-options.aligned-composer-options {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'playbook-label'
-      'playbook-control'
-      'research-label'
-      'research-note';
-  }
-
-  .aligned-composer-options > .composer-research-label {
-    margin-top: 10px;
-  }
 }
 
 @media (max-width: 700px) {
