@@ -112,7 +112,8 @@ def test_timeline_checks_quote_and_replaces_model_claimed_source():
     )
     verified, invented = verify_timeline(result, [document])
     assert verified.verified is True
-    assert verified.source == f"Empfang.txt: {text}"
+    assert verified.source == "Empfang.txt"
+    assert verified.source_quote == text
     assert invented.verified is False
     assert invented.source == "Beleg nicht bestätigt"
 

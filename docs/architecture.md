@@ -24,6 +24,8 @@ flowchart LR
 
 The browser owns interaction state and review decisions. Python owns credentials, request limits, document extraction, model/effort validation, prompt assembly, and provider error handling. SQLite persists extracted documents, playbooks, and results in local plaintext at `backend/data/workspace.sqlite3` by default; original uploads are not retained. `LEGALTHINK_DATA_DIR` changes the storage directory. Provider output is untrusted until it passes structural validation; legal assertions still require review afterward. File contents and playbooks never become higher-priority instructions.
 
+New browser profiles and API requests without explicit model settings default to `gpt-6-luna` / `high`. Model and effort preferences persist in that browser. Each of the five workflows and the AVV/DSFA subtasks keeps separate draft documents, context, playbook and research settings in the current browser session; drafts are not persisted across reload. `compliance_task` selects a backend instruction independently of the user's optional context. Results retain ordered `document_ids` and the chosen subtask; older records receive compatible defaults. `POST /api/demo` accepts an optional `scenario` and returns an `Analysis`; omission keeps the original contract example behavior.
+
 Keep model catalog data on the server so the UI and API agree on supported selections. Keep a stable result shape across workflows, while prompts and required inputs differ. Comparison needs two distinguishable versions; chronology needs traceable dates and evidence; compliance review must expose missing information.
 
 ## Evidence model

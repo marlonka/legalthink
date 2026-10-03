@@ -17,12 +17,13 @@ from starlette.staticfiles import StaticFiles
 from . import export
 from .analysis import AnalysisError, AnalysisService
 from .config import Settings
-from .demo import demo_analysis, demo_document
+from .demo import demo_analysis, demo_documents
 from .extraction import ExtractionError, extract_isolated, safe_filename
 from .schemas import (
     MODELS,
     Analysis,
     AnalysisRequest,
+    DemoRequest,
     Document,
     Playbook,
     PlaybookInput,
@@ -219,10 +220,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         await pending
 
     @app.post("/api/demo", response_model=Analysis, status_code=201)
-    def demo():
-        document = demo_document()
-        app.state.store.put("documents", document.model_dump())
-        analysis = demo_analysis()
+    def demo(body: DemoRequest | None = None):
+        scenario = body.scenario if body else "contract"
+        for document in demo_documents(scenario):
+            app.state.store.put("documents", document.model_dump())
+        analysis = demo_analysis(scenario)
         app.state.store.put("analyses", analysis.model_dump())
         return analysis
 

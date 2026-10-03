@@ -120,6 +120,8 @@ def test_playbook_edit_cors_preflight_allows_configured_origin(client):
         {"workflow": "contract", "document_ids": ["a"], "model": "gpt-6.1-sol", "effort": "none"},
         {"workflow": "contract", "document_ids": ["a"], "effort": "ultra"},
         {"workflow": "contract", "document_ids": ["a"], "context": "PRIVATE" * 4000},
+        {"workflow": "contract", "document_ids": ["a"], "compliance_task": "avv"},
+        {"workflow": "chronology", "document_ids": ["a"], "compliance_task": "dsfa"},
     ],
 )
 def test_invalid_analysis_inputs_never_echo_document_text(client, body):
@@ -145,7 +147,7 @@ def test_model_options_and_optional_luna_none(client):
     assert response.status_code == 503  # Valid settings reach credential boundary.
 
 
-def test_exports_have_actual_tracked_changes_and_demo_label(client):
+def test_exports_preserve_revisions_labels_and_separate_timeline_quotes(client):
     analysis = client.post("/api/demo").json()
     docx = client.get(f"/api/analyses/{analysis['id']}/export?format=docx")
     assert docx.status_code == 200
@@ -159,6 +161,95 @@ def test_exports_have_actual_tracked_changes_and_demo_label(client):
     markdown = client.get(f"/api/analyses/{analysis['id']}/export?format=md")
     assert "SYNTHETISCHES BEISPIEL" in markdown.text
     assert "Zitat im Dokument bestätigt: Ja" in markdown.text
+
+    chronology = client.post("/api/demo", json={"scenario": "chronology"}).json()
+    for event in chronology["timeline"]:
+        event["source"] += ": " + event["source_quote"]
+    # Existing records used the combined label. Read/export must normalize without rewriting it.
+    client.app.state.store.put("analyses", chronology)
+    loaded = client.get(f"/api/analyses/{chronology['id']}").json()
+    word = client.get(f"/api/analyses/{chronology['id']}/export?format=docx")
+    markdown = client.get(f"/api/analyses/{chronology['id']}/export?format=md")
+    assert word.status_code == markdown.status_code == 200
+    paragraphs = [paragraph.text for paragraph in WordDocument(io.BytesIO(word.content)).paragraphs]
+    for event in loaded["timeline"]:
+        assert event["source_quote"] not in event["source"]
+        assert f"Quelle: {event['source']}" in paragraphs
+        assert paragraphs.count(event["source_quote"]) == 1
+        blockquote = "> " + event["source_quote"].replace("\n", "\n> ")
+        assert markdown.text.count(blockquote) == 1
+        assert f"Quelle: {event['source']}" in markdown.text
+    assert (
+        client.app.state.store.get("analyses", chronology["id"])["timeline"]
+        == chronology["timeline"]
+    )
+
+
+@pytest.mark.parametrize(
+    "scenario,workflow,task,count",
+    [
+        ("contract", "contract", "general", 1),
+        ("compare", "compare", "general", 2),
+        ("chronology", "chronology", "general", 3),
+        ("compliance", "compliance", "general", 1),
+        ("avv", "compliance", "avv", 2),
+        ("dsfa", "compliance", "dsfa", 2),
+        ("advertising", "advertising", "general", 2),
+    ],
+)
+def test_demo_scenarios_persist_matching_documents_and_confirmed_evidence(
+    client, scenario, workflow, task, count
+):
+    class ForbiddenService:
+        async def run(self, *args):
+            pytest.fail("Demo scenarios must never invoke the model service.")
+
+    client.app.state.analysis_service = ForbiddenService()
+    response = client.post("/api/demo", json={"scenario": scenario})
+    assert response.status_code == 201, response.text
+    analysis = response.json()
+    assert analysis["workflow"] == workflow
+    assert analysis["compliance_task"] == task
+    assert analysis["demo_scenario"] == scenario
+    assert analysis["is_demo"] and analysis["model"] == "Synthetisches Beispiel"
+    assert analysis["usage"] is None and analysis["sources"] == []
+    documents = {document["id"]: document for document in client.get("/api/documents").json()}
+    assert len(analysis["document_ids"]) == count
+    for document_id in analysis["document_ids"]:
+        assert "Beispiel" in documents[document_id]["name"]
+        assert "SYNTHETISCHES BEISPIEL" in documents[document_id]["text"]
+    assert analysis["findings"]
+    for item in [*analysis["findings"], *analysis["timeline"]]:
+        assert item["verified"], item["source_quote"]
+        assert item["source_document_id"] in analysis["document_ids"]
+        quote = " ".join(item["source_quote"].split())
+        assert quote in " ".join(documents[item["source_document_id"]]["text"].split())
+    if scenario == "compare":
+        original, counter = [documents[document_id] for document_id in analysis["document_ids"]]
+        assert "Originalentwurf" in original["name"]
+        assert "Gegenentwurf" in counter["name"]
+        assert "Jahresvergütung" in original["text"]
+        assert "Monatsvergütung" in counter["text"]
+        assert all(item["source_document_id"] == counter["id"] for item in analysis["findings"])
+    if scenario == "chronology":
+        assert [item["date"] for item in analysis["timeline"]] == [
+            "2026-09-05",
+            "2026-09-15",
+            "2026-09-17",
+            "2026-09-23",
+        ]
+        assert any(item["open_question"] for item in analysis["timeline"])
+    assert client.get(f"/api/analyses/{analysis['id']}").json() == analysis
+
+
+def test_demo_default_stays_contract_and_invalid_scenario_does_not_create_data(client):
+    invalid = client.post("/api/demo", json={"scenario": "unrecognized"})
+    assert invalid.status_code == 422
+    assert client.get("/api/documents").json() == []
+    assert client.get("/api/analyses").json() == []
+    default = client.post("/api/demo").json()
+    assert default["demo_scenario"] == "contract"
+    assert default["workflow"] == "contract"
 
 
 def test_unverified_quotes_never_become_word_revisions(client):

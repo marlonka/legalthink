@@ -61,7 +61,10 @@ def markdown(analysis: Analysis) -> bytes:
         for event in analysis.timeline:
             lines += [
                 f"### {event.date} · {event.event}",
-                event.source,
+                f"Quelle: {event.source}",
+                "",
+                "> " + event.source_quote.replace("\n", "\n> "),
+                "",
                 f"Zitat im Dokument bestätigt: {'Ja' if event.verified else 'Nein'}",
                 f"Offen: {event.open_question}" if event.open_question else "",
                 "",
@@ -158,7 +161,9 @@ def docx(analysis: Analysis) -> bytes:
         document.add_heading("Chronologie", 1)
         for event in analysis.timeline:
             document.add_heading(f"{event.date} · {event.event}", 2)
-            document.add_paragraph(event.source)
+            document.add_paragraph(f"Quelle: {event.source}")
+            if event.source_quote:
+                document.add_paragraph(event.source_quote, "Quote")
             document.add_paragraph(
                 "Zitat im Dokument bestätigt: " + ("Ja" if event.verified else "Nein")
             )

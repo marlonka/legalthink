@@ -44,7 +44,10 @@ test('start page is usable, self-contained and accessible', async ({ page }) => 
   await page.screenshot({ path: 'artifacts/start-desktop.png', fullPage: true });
 });
 
-test('model selection resets an incompatible reasoning effort', async ({ page }) => {
+test('model selection persists explicitly while a fresh profile keeps Luna high', async ({
+  page,
+  browser,
+}) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Denkaufwand: Hoch' }).click();
   const slider = page.getByRole('slider', { name: 'Denkaufwand' });
@@ -65,6 +68,18 @@ test('model selection resets an incompatible reasoning effort', async ({ page })
   await assertAccessible(page);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Denkaufwand: Mittel' })).toBeFocused();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Denkaufwand: Mittel' })).toBeVisible();
+  const fresh = await browser.newContext();
+  try {
+    const newcomer = await fresh.newPage();
+    await newcomer.goto(page.url());
+    await expect(newcomer.getByRole('button', { name: 'GPT-6 Luna', exact: true })).toBeVisible();
+    await expect(newcomer.getByRole('button', { name: 'Denkaufwand: Hoch' })).toBeVisible();
+  } finally {
+    await fresh.close();
+  }
 });
 
 test('appearance persists and follows the OS only when System is selected', async ({ page }) => {
@@ -300,6 +315,11 @@ test('stored documents survive reload and comparison preserves the chosen order'
       mimeType: 'text/plain',
       buffer: Buffer.from('Fiktiver Gegenentwurf. Die Vertragslaufzeit beträgt sechs Monate.'),
     },
+    {
+      name: 'Fassung-C.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('Fiktive weitere Fassung. Die Vertragslaufzeit beträgt drei Monate.'),
+    },
   ]);
   await expect(page.getByText('Fassung-B.txt', { exact: true })).toBeVisible();
   await page.reload();
@@ -330,6 +350,24 @@ test('stored documents survive reload and comparison preserves the chosen order'
   ).toEqual(['Fassung-B.txt', 'Fassung-A.txt']);
   await page.getByRole('button', { name: 'Fassung-B.txt aus Auswahl entfernen' }).click();
   const remaining = page.getByRole('button', { name: 'Fassung-A.txt aus Auswahl entfernen' });
+  await expect(remaining).toBeFocused();
+  await expect(page.locator('.document-chip').last()).toContainText('02 · Gegenentwurf');
+  await expect(page.locator('.document-chip').first()).toContainText('Nicht ausgewählt');
+  await page.getByRole('button', { name: 'Gespeicherte auswählen' }).click();
+  await expect(picker.getByRole('checkbox', { name: 'Fassung-A.txt' })).toHaveAccessibleDescription(
+    '02 · Gegenentwurf',
+  );
+  await picker.getByRole('checkbox', { name: 'Fassung-C.txt' }).check();
+  await picker.getByRole('button', { name: '2 Dokumente übernehmen' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Analyse starten', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Offline-Test: Prüfauftrag erfasst.');
+  expect(
+    sent?.document_ids.map(
+      (id) => documents.find((document: { id: string }) => document.id === id).name,
+    ),
+  ).toEqual(['Fassung-C.txt', 'Fassung-A.txt']);
+  await page.getByRole('button', { name: 'Fassung-C.txt aus Auswahl entfernen' }).click();
   await expect(remaining).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByLabel(/^Prüfauftrag/)).toBeFocused();

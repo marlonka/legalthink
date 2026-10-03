@@ -57,6 +57,58 @@
   pointer-events: none;
 }
 
+.review-comparison-documents {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.review-comparison-documents > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.review-comparison-documents dt {
+  color: var(--text-secondary);
+}
+
+.review-comparison-documents dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-motion .suggestion-card,
+.review-motion .source-panel {
+  scroll-margin-top: 16px;
+}
+
+.review-motion .source-panel:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+
+.review-motion .timeline-source-action {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.timeline-source-view {
+  max-width: 768px;
+  margin-top: 24px;
+}
+
+.review-motion .timeline-source-view .source-panel {
+  position: static;
+  min-height: 0;
+  padding: 24px 0;
+  border-left: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
 @media (max-width: 700px) {
   .review-motion .export-popover {
     width: min(300px, calc(100vw - 40px));

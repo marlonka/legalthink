@@ -19,7 +19,14 @@ export default function DocumentPicker({
   onApply,
   onClose,
 }: Props) {
-  const [selection, setSelection] = useState(selectedIds);
+  const [selection, setSelection] = useState(() =>
+    compare
+      ? [0, 1].map((index) => {
+          const id = selectedIds[index];
+          return id && documents.some((document) => document.id === id) ? id : '';
+        })
+      : selectedIds,
+  );
   const [search, setSearch] = useState('');
   const [listHeight, setListHeight] = useState<number>();
   const listRef = useRef<HTMLDivElement>(null);
@@ -28,11 +35,14 @@ export default function DocumentPicker({
   const filtered = documents.filter((document) =>
     document.name.toLocaleLowerCase('de-DE').includes(search.trim().toLocaleLowerCase('de-DE')),
   );
-  const selected = selection
-    .map((id) => documents.find((document) => document.id === id))
-    .filter((document): document is DocumentRecord => Boolean(document));
+  const selectedSlots = selection.map((id) => documents.find((document) => document.id === id));
+  const selected = selectedSlots.filter((document): document is DocumentRecord =>
+    Boolean(document),
+  );
   const valid =
-    selected.length > 0 && selected.length <= limit && (!compare || selected.length === 2);
+    selected.length > 0 &&
+    selected.length <= limit &&
+    (!compare || (selected.length === 2 && selection[0] !== selection[1]));
 
   useLayoutEffect(() => {
     // Keep the opening list size while searching; CSS still caps it on short screens.
@@ -41,13 +51,20 @@ export default function DocumentPicker({
   }, []);
 
   function toggle(id: string) {
-    setSelection((previous) =>
-      previous.includes(id)
+    setSelection((previous) => {
+      if (compare) {
+        if (previous.includes(id)) return previous.map((item) => (item === id ? '' : item));
+        const emptySlot = previous.indexOf('');
+        return emptySlot === -1
+          ? previous
+          : previous.map((item, index) => (index === emptySlot ? id : item));
+      }
+      return previous.includes(id)
         ? previous.filter((item) => item !== id)
         : previous.length < limit
           ? [...previous, id]
-          : previous,
-    );
+          : previous;
+    });
   }
 
   return (
@@ -95,7 +112,7 @@ export default function DocumentPicker({
             filtered.map((document) => {
               const index = selection.indexOf(document.id);
               const checked = index !== -1;
-              const disabled = !checked && selection.length >= limit;
+              const disabled = !checked && selected.length >= limit;
               return (
                 <label
                   key={document.id}
@@ -107,6 +124,7 @@ export default function DocumentPicker({
                     disabled={disabled}
                     onChange={() => toggle(document.id)}
                     aria-label={document.name}
+                    aria-describedby={compare && checked ? `${hintId}-role-${index}` : undefined}
                   />
                   <FileText size={19} strokeWidth={1.5} />
                   <span className="document-picker-name">
@@ -145,9 +163,9 @@ export default function DocumentPicker({
             <div>
               {['01 · Original', '02 · Gegenentwurf'].map((label, index) => (
                 <div key={label}>
-                  <span>{label}</span>
-                  <strong title={selected[index]?.name}>
-                    {selected[index]?.name ?? 'Nicht ausgewählt'}
+                  <span id={`${hintId}-role-${index}`}>{label}</span>
+                  <strong title={selectedSlots[index]?.name}>
+                    {selectedSlots[index]?.name ?? 'Nicht ausgewählt'}
                   </strong>
                 </div>
               ))}

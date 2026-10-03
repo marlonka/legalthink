@@ -12,28 +12,18 @@ import {
 } from 'lucide-react';
 import { ErrorMessage, ModelPicker } from './ui';
 import DocumentPicker from './DocumentPicker';
-import { WORKFLOWS } from './workflows';
-import type { DocumentRecord, Model, Playbook, Workflow } from './types';
+import { COMPLIANCE_TASKS, WORKFLOWS } from './workflows';
+import type { ComplianceTask, DocumentRecord, Model, Playbook, Workflow } from './types';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './composer-motion.css';
-
-const COMPLIANCE_TASKS = [
-  {
-    label: 'AVV prüfen',
-    prompt:
-      'Prüfen Sie die Auftragsverarbeitungsvereinbarung aus Sicht des Verantwortlichen. Stellen Sie fehlende Regelungen, offene Nachweise und konkrete Formulierungsvorschläge zusammen.',
-  },
-  {
-    label: 'DSFA vorbereiten',
-    prompt:
-      'Bereiten Sie eine Datenschutz-Folgenabschätzung vor: Verarbeitung und Zwecke, Erforderlichkeit und Verhältnismäßigkeit, Risiken für betroffene Personen und geplante Abhilfemaßnahmen. Kennzeichnen Sie fehlende Angaben und offene Bewertungen ausdrücklich.',
-  },
-];
 
 interface Props {
   workflow: Workflow;
   onWorkflow: (value: Workflow) => void;
+  complianceTask: ComplianceTask;
+  onComplianceTask: (value: ComplianceTask) => void;
   documents: DocumentRecord[];
+  comparisonIds: string[];
   libraryDocuments: DocumentRecord[];
   onSelectDocuments: (ids: string[]) => void;
   onUpload: (files: FileList | File[]) => void;
@@ -64,7 +54,10 @@ export default function Start(props: Props) {
   const {
     workflow,
     onWorkflow,
+    complianceTask,
+    onComplianceTask,
     documents,
+    comparisonIds,
     libraryDocuments,
     onSelectDocuments,
     onUpload,
@@ -91,6 +84,7 @@ export default function Start(props: Props) {
     error,
   } = props;
   const current = WORKFLOWS.find((item) => item.id === workflow)!;
+  const currentCompliance = COMPLIANCE_TASKS.find((item) => item.id === complianceTask)!;
   const fileInput = useRef<HTMLInputElement>(null);
   const textInput = useRef<HTMLTextAreaElement>(null);
   const dragCounter = useRef(0);
@@ -98,13 +92,6 @@ export default function Start(props: Props) {
   const [options, setOptions] = useState(false);
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
   const { reduced, transition } = useMotionPreferences();
-  const contextWithoutPreset = COMPLIANCE_TASKS.reduce(
-    (value, task) =>
-      value === task.prompt || value.startsWith(`${task.prompt}\n\n`)
-        ? value.slice(task.prompt.length).trimStart()
-        : value,
-    context,
-  );
   return (
     <div className="start-page">
       <header className="analysis-start-heading">
@@ -214,28 +201,65 @@ export default function Start(props: Props) {
         />
         {documents.length > 0 && (
           <div className="uploaded-documents composer-document-list">
-            {documents.map((doc, index) => (
-              <ComposerDocument
-                key={doc.id}
-                document={doc}
-                index={index}
-                compare={workflow === 'compare'}
-                running={running}
-                onRemove={onRemove}
-              />
-            ))}
+            {(workflow === 'compare'
+              ? comparisonIds.map((id) => documents.find((doc) => doc.id === id))
+              : documents
+            ).map((doc, index) =>
+              doc ? (
+                <ComposerDocument
+                  key={doc.id}
+                  document={doc}
+                  index={index}
+                  compare={workflow === 'compare'}
+                  running={running}
+                  onRemove={onRemove}
+                />
+              ) : (
+                <div className="document-chip empty-comparison-slot" key={`empty-${index}`}>
+                  <div className="document-chip-icon">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <span>Nicht ausgewählt</span>
+                    <small>{index === 0 ? '01 · Original' : '02 · Gegenentwurf'}</small>
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         )}
-        <label className="context-label" htmlFor="analysis-context">
-          Prüfauftrag <span>(optional)</span>
-        </label>
+        <div className="composer-context-header">
+          <label className="context-label" htmlFor="analysis-context">
+            Prüfauftrag <span>(optional)</span>
+          </label>
+          <div
+            className="composer-task-field"
+            aria-hidden={workflow !== 'compliance'}
+            inert={workflow !== 'compliance'}
+          >
+            <select
+              className="composer-task-select"
+              value={complianceTask}
+              onChange={(event) => onComplianceTask(event.target.value as ComplianceTask)}
+              aria-label="Datenschutz-Aufgabe"
+              title={currentCompliance.label}
+              disabled={running || uploading || workflow !== 'compliance'}
+            >
+              {COMPLIANCE_TASKS.map((task) => (
+                <option key={task.id} value={task.id} aria-label={task.label}>
+                  {task.short}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <textarea
           ref={textInput}
           id="analysis-context"
           className="context-input"
           value={context}
           onChange={(event) => onContext(event.target.value)}
-          placeholder={current.prompt}
+          placeholder={workflow === 'compliance' ? currentCompliance.prompt : current.prompt}
           disabled={running}
           maxLength={20000}
           rows={4}
@@ -345,31 +369,6 @@ export default function Start(props: Props) {
             </MotionButton>
           </div>
         )}
-        {workflow === 'compliance' && (
-          <div
-            className="composer-workflow-details compliance-presets"
-            role="group"
-            aria-label="Datenschutz-Prüffokus"
-          >
-            {COMPLIANCE_TASKS.map((task) => (
-              <MotionButton
-                key={task.label}
-                type="button"
-                aria-pressed={context.startsWith(task.prompt)}
-                disabled={running || task.prompt.length + contextWithoutPreset.length + 2 > 20000}
-                onClick={() => {
-                  onContext(
-                    `${task.prompt}${contextWithoutPreset ? `\n\n${contextWithoutPreset}` : ''}`,
-                  );
-                  textInput.current?.focus({ preventScroll: true });
-                }}
-              >
-                {task.label}
-                <ArrowRight size={12} />
-              </MotionButton>
-            ))}
-          </div>
-        )}
         {error && (
           <div className="composer-error">
             <ErrorMessage>{error}</ErrorMessage>
@@ -393,7 +392,9 @@ export default function Start(props: Props) {
           <DocumentPicker
             key="document-picker"
             documents={libraryDocuments}
-            selectedIds={documents.map((document) => document.id)}
+            selectedIds={
+              workflow === 'compare' ? comparisonIds : documents.map((document) => document.id)
+            }
             compare={workflow === 'compare'}
             onApply={(ids) => {
               onSelectDocuments(ids);

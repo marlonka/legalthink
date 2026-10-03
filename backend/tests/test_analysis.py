@@ -115,6 +115,8 @@ async def test_serialized_openai_request_and_verified_evidence():
     assert result.findings[0].source_urls == []
     assert result.usage.cached_tokens == 1000
     assert result.provider_request_id == "req_offline"
+    assert result.document_ids == [DOC.id]
+    assert result.compliance_task == "general"
 
 
 async def test_research_retains_only_provider_attributed_urls():
@@ -149,6 +151,36 @@ async def test_research_retains_only_provider_attributed_urls():
     assert captured[0]["include"] == ["web_search_call.action.sources"]
     assert result.findings[0].source_urls == [url]
     assert [source.url for source in result.sources] == [url]
+
+
+@pytest.mark.parametrize("task", ["general", "avv", "dsfa"])
+async def test_compliance_scope_is_structured_and_preserves_mandate_context(task):
+    captured = []
+    context = "Wir vertreten den Auftragsverarbeiter. Schwerpunkt: Kontrollaufwand."
+
+    def handler(request):
+        captured.append(json.loads(request.content))
+        return httpx.Response(200, json=provider_response())
+
+    service, client = service_with_handler(handler)
+    request = AnalysisRequest(
+        workflow="compliance", compliance_task=task, document_ids=[DOC.id], context=context
+    )
+    try:
+        result = await service.run(request, [DOC])
+    finally:
+        await client.close()
+    payload = json.loads(captured[0]["input"][1]["content"])
+    assert payload["compliance_task"] == task
+    assert payload["kontext"] == context
+    assert request.context == context
+    assert result.compliance_task == task
+    assert result.document_ids == [DOC.id]
+    assert "aus Sicht des Verantwortlichen" not in payload["pruefumfang"]
+    if task == "avv":
+        assert "Mandantenrolle" in payload["pruefumfang"]
+    if task == "dsfa":
+        assert "Sichtung" in payload["pruefumfang"]
 
 
 @pytest.mark.parametrize(

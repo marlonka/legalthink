@@ -7,6 +7,10 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Workflow = Literal["contract", "compare", "chronology", "compliance", "advertising"]
+ComplianceTask = Literal["general", "avv", "dsfa"]
+DemoScenario = Literal[
+    "contract", "compare", "chronology", "compliance", "avv", "dsfa", "advertising"
+]
 Effort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 Severity = Literal["high", "medium", "low", "info"]
 
@@ -56,6 +60,7 @@ class AnalysisRequest(StrictModel):
     effort: Effort = "high"
     playbook_id: str | None = None
     research: bool = False
+    compliance_task: ComplianceTask = "general"
 
     @model_validator(mode="after")
     def validate_selection(self) -> AnalysisRequest:
@@ -66,7 +71,13 @@ class AnalysisRequest(StrictModel):
             raise ValueError("Dokumente dürfen nur einmal ausgewählt werden.")
         if self.workflow == "compare" and len(self.document_ids) != 2:
             raise ValueError("Die Synopse benötigt genau zwei Dokumente: Entwurf und Gegenentwurf.")
+        if self.workflow != "compliance" and self.compliance_task != "general":
+            raise ValueError("AVV und DSFA sind nur im Datenschutz-Workflow verfügbar.")
         return self
+
+
+class DemoRequest(StrictModel):
+    scenario: DemoScenario = "contract"
 
 
 class ModelFinding(StrictModel):
@@ -98,6 +109,15 @@ class ModelTimelineEntry(StrictModel):
 
 class TimelineEntry(ModelTimelineEntry):
     verified: bool
+
+    @model_validator(mode="after")
+    def separate_legacy_quote(self) -> TimelineEntry:
+        # Earlier records stored this exact suffix in source as well as source_quote.
+        # Normalize the response only; leave the original SQLite record unchanged.
+        suffix = ": " + self.source_quote
+        if self.source_quote and self.source.endswith(suffix):
+            self.source = self.source[: -len(suffix)]
+        return self
 
 
 class ModelAnalysis(StrictModel):
@@ -134,6 +154,9 @@ class Analysis(StrictModel):
     usage: Usage | None = None
     sources: list[Source] = Field(default_factory=list)
     provider_request_id: str | None = None
+    document_ids: list[str] = Field(default_factory=list)
+    compliance_task: ComplianceTask = "general"
+    demo_scenario: DemoScenario | None = None
 
 
 class PlaybookInput(StrictModel):

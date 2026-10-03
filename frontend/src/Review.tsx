@@ -31,6 +31,10 @@ const SEVERITIES: Record<Severity, { label: string; short: string }> = {
   info: { label: 'Hinweis', short: 'Hinweise' },
 };
 type Tab = 'findings' | 'suggestions' | 'timeline';
+type SourceEvidence = Pick<
+  Finding,
+  'id' | 'source_document_id' | 'source_quote' | 'source_location' | 'verified'
+>;
 
 export default function Review({
   analysis,
@@ -58,16 +62,29 @@ export default function Review({
   const [exportOpen, setExportOpen] = useState(false);
   const [marked, setMarked] = useState<Set<string>>(new Set());
   const [sourceRequest, setSourceRequest] = useState(0);
+  const [suggestionRequest, setSuggestionRequest] = useState<{
+    id: string;
+    sequence: number;
+  } | null>(null);
+  const [timelineSourceIndex, setTimelineSourceIndex] = useState<number | null>(null);
   const consumedSourceRequest = useRef(0);
+  const consumedSuggestionRequest = useRef(0);
   const exportRef = useRef<HTMLDivElement>(null);
   const exportTrigger = useRef<HTMLButtonElement>(null);
   const sourceTrigger = useRef<HTMLButtonElement>(null);
+  const timelineSourceTrigger = useRef<HTMLButtonElement | null>(null);
   const { reduced, transition } = useMotionPreferences();
   function closeExport(restoreFocus = false) {
     setExportOpen(false);
     if (restoreFocus) exportTrigger.current?.focus({ preventScroll: true });
   }
   function closeSource() {
+    if (tab === 'timeline') {
+      setTimelineSourceIndex(null);
+      timelineSourceTrigger.current?.focus({ preventScroll: true });
+      timelineSourceTrigger.current?.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+      return;
+    }
     setSourceVisible(false);
     sourceTrigger.current?.focus({ preventScroll: true });
   }
@@ -86,6 +103,7 @@ export default function Review({
       if (!panel) return;
       consumedSourceRequest.current = sourceRequest;
       const bounds = panel.getBoundingClientRect();
+      panel.focus({ preventScroll: true });
       // An explicit source action should reveal an off-screen source, not disturb reading.
       if (bounds.top < 0 || bounds.top > window.innerHeight - 100) {
         panel.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
@@ -94,15 +112,58 @@ export default function Review({
     return () => cancelAnimationFrame(frame);
   }, [sourceRequest, sourceVisible, reduced]);
   useEffect(() => {
+    if (
+      !suggestionRequest ||
+      tab !== 'suggestions' ||
+      consumedSuggestionRequest.current === suggestionRequest.sequence
+    )
+      return;
+    const frame = requestAnimationFrame(() => {
+      const card = document.getElementById(`suggestion-${suggestionRequest.id}`);
+      if (!card) return;
+      consumedSuggestionRequest.current = suggestionRequest.sequence;
+      card.querySelector<HTMLButtonElement>('.suggestion-title')?.focus({ preventScroll: true });
+      const bounds = card.getBoundingClientRect();
+      if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
+        card.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [suggestionRequest, tab, reduced]);
+  useEffect(() => {
     setTab(analysis.workflow === 'chronology' ? 'timeline' : 'findings');
     setFilter('all');
     setSearch('');
     setSelectedId(analysis.findings[0]?.id ?? '');
     setExpandedFindings(new Set(analysis.findings.slice(0, 1).map((finding) => finding.id)));
     setMarked(new Set());
+    setTimelineSourceIndex(null);
+    setSuggestionRequest(null);
+    consumedSuggestionRequest.current = 0;
   }, [analysis.id, analysis.workflow, analysis.findings]);
   const selected = analysis.findings.find((item) => item.id === selectedId);
   const sourceDocument = documents.find((doc) => doc.id === selected?.source_document_id);
+  const timelineEvent =
+    timelineSourceIndex === null ? undefined : analysis.timeline[timelineSourceIndex];
+  const timelineSource: SourceEvidence | undefined = timelineEvent
+    ? {
+        id: `${analysis.id}-timeline-${timelineSourceIndex}`,
+        source_document_id: timelineEvent.source_document_id ?? '',
+        source_quote: timelineEvent.source_quote ?? '',
+        source_location: timelineEvent.source,
+        verified: timelineEvent.verified ?? false,
+      }
+    : undefined;
+  const comparisonDocuments =
+    analysis.workflow === 'compare' && analysis.document_ids?.length === 2
+      ? analysis.document_ids.map((id) => documents.find((document) => document.id === id))
+      : null;
+  const reviewType =
+    analysis.workflow === 'compliance' && analysis.compliance_task === 'avv'
+      ? 'AVV-Prüfung'
+      : analysis.workflow === 'compliance' && analysis.compliance_task === 'dsfa'
+        ? 'DSFA-Vorbereitung'
+        : workflowName(analysis.workflow);
   const filtered = analysis.findings.filter(
     (item) =>
       (filter === 'all' || item.severity === filter) &&
@@ -129,7 +190,7 @@ export default function Review({
           <ArrowLeft size={14} /> Neue Analyse
         </button>
         <span>/</span>
-        <span>{workflowName(analysis.workflow)}</span>
+        <span>{reviewType}</span>
       </div>
       {analysis.is_demo && (
         <div className="demo-banner">
@@ -200,6 +261,18 @@ export default function Review({
           </AnimatePresence>
         </div>
       </header>
+      {comparisonDocuments && (
+        <dl className="review-comparison-documents" aria-label="Vergleichsdokumente">
+          {['Original', 'Gegenentwurf'].map((role, index) => (
+            <div key={role}>
+              <dt>{role}</dt>
+              <dd title={comparisonDocuments[index]?.name}>
+                {comparisonDocuments[index]?.name ?? 'Dokument nicht mehr verfügbar'}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <div className="review-overview">
         <div className="summary-block">
           <p>{analysis.summary}</p>
@@ -265,7 +338,11 @@ export default function Review({
                 }
               }}
               className={tab === item.id ? 'active' : ''}
-              onClick={() => setTab(item.id)}
+              onClick={() => {
+                setSuggestionRequest(null);
+                consumedSuggestionRequest.current = 0;
+                setTab(item.id);
+              }}
             >
               {item.label}
               <span>{item.count}</span>
@@ -369,6 +446,10 @@ export default function Review({
                   onSuggestion={() => {
                     setSelectedId(finding.id);
                     setTab('suggestions');
+                    setSuggestionRequest((previous) => ({
+                      id: finding.id,
+                      sequence: (previous?.sequence ?? 0) + 1,
+                    }));
                   }}
                 />
               ))}
@@ -413,6 +494,7 @@ export default function Review({
           <section className="suggestions-column">
             {suggestions.map((finding, index) => (
               <article
+                id={`suggestion-${finding.id}`}
                 className={`suggestion-card ${selectedId === finding.id ? 'active' : ''}`}
                 key={finding.id}
               >
@@ -526,6 +608,19 @@ export default function Review({
                             <blockquote>{event.source_quote}</blockquote>
                           </details>
                         )}
+                        {event.source_document_id && (
+                          <button
+                            className="text-button timeline-source-action"
+                            onClick={(eventButton) => {
+                              timelineSourceTrigger.current = eventButton.currentTarget;
+                              setTimelineSourceIndex(index);
+                              setSourceVisible(true);
+                              setSourceRequest((request) => request + 1);
+                            }}
+                          >
+                            <Quote size={13} /> Fundstelle ansehen
+                          </button>
+                        )}
                       </td>
                       <td>{event.open_question || <span className="muted">—</span>}</td>
                     </tr>
@@ -537,6 +632,17 @@ export default function Review({
             <div className="empty-state">
               <CircleHelp size={30} />
               <h3>Keine zeitlichen Ereignisse erfasst</h3>
+            </div>
+          )}
+          {timelineSource && (
+            <div className="timeline-source-view">
+              <SourcePanel
+                finding={timelineSource}
+                document={documents.find(
+                  (document) => document.id === timelineSource.source_document_id,
+                )}
+                onClose={closeSource}
+              />
             </div>
           )}
           {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
@@ -719,7 +825,7 @@ function SourcePanel({
   document,
   onClose,
 }: {
-  finding?: Finding;
+  finding?: SourceEvidence;
   document?: DocumentRecord;
   onClose: () => void;
 }) {
@@ -748,7 +854,7 @@ function SourcePanel({
   }
   const hasContext = Boolean(before.trim() || after.trim());
   return (
-    <aside className="source-panel" id="source-panel" aria-label="Quellenansicht">
+    <aside className="source-panel" id="source-panel" aria-label="Quellenansicht" tabIndex={-1}>
       <div className="source-panel-heading">
         <span>
           <FileText size={15} />
@@ -775,7 +881,9 @@ function SourcePanel({
             </div>
             <div>
               <strong>{document?.name ?? 'Dokument nicht mehr verfügbar'}</strong>
-              <span>{finding.source_location || 'Position nicht angegeben'}</span>
+              {finding.source_location !== document?.name && (
+                <span>{finding.source_location || 'Position nicht angegeben'}</span>
+              )}
             </div>
           </div>
           <div className="source-paper">
@@ -809,16 +917,18 @@ function SourcePanel({
               </div>
             )}
           </div>
-          <div className={`source-verification ${finding.verified ? 'verified' : ''}`}>
-            {finding.verified ? <Check size={14} /> : <CircleHelp size={14} />}
-            <span>
-              {finding.verified
-                ? document
-                  ? 'Zitat im Dokument gefunden'
-                  : 'Zitat bei der Analyse im Dokument gefunden'
-                : 'Zitat nicht bestätigt – im Original prüfen'}
-            </span>
-          </div>
+          {finding.source_quote && (
+            <div className={`source-verification ${finding.verified ? 'verified' : ''}`}>
+              {finding.verified ? <Check size={14} /> : <CircleHelp size={14} />}
+              <span>
+                {finding.verified
+                  ? document
+                    ? 'Zitat im Dokument gefunden'
+                    : 'Zitat bei der Analyse im Dokument gefunden'
+                  : 'Zitat nicht bestätigt – im Original prüfen'}
+              </span>
+            </div>
+          )}
           {document?.text && (
             <div className="document-expanded">
               <button
@@ -843,7 +953,8 @@ function SourcePanel({
           )}
           {!document && (
             <p className="document-unavailable">
-              Der Dokumenttext ist nicht mehr gespeichert. Das Zitat bleibt Teil dieses Berichts.
+              Der Dokumenttext ist nicht mehr gespeichert.
+              {finding.source_quote && ' Das Zitat bleibt Teil dieses Berichts.'}
             </p>
           )}
           <details className="source-note">

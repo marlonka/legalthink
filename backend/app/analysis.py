@@ -18,7 +18,7 @@ from openai import (
 )
 from pydantic import ValidationError
 
-from .prompts import PROMPT_VERSION, SYSTEM_PROMPT, WORKFLOW_PROMPTS
+from .prompts import COMPLIANCE_TASK_PROMPTS, PROMPT_VERSION, SYSTEM_PROMPT, WORKFLOW_PROMPTS
 from .schemas import (
     Analysis,
     AnalysisRequest,
@@ -44,6 +44,16 @@ def normalized(text: str) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFC", text)).strip()
 
 
+def _page_location(document: Document, quote: str) -> str | None:
+    if not document.name.lower().endswith(".pdf"):
+        return None
+    pages = re.split(r"\[Seite (\d+)\]\n", document.text)
+    for i in range(1, len(pages), 2):
+        if quote in normalized(pages[i + 1]):
+            return f"Seite {pages[i]}"
+    return None
+
+
 def verify_findings(
     result: ModelAnalysis, documents: list[Document], allowed_urls: set[str] | None = None
 ) -> list[Finding]:
@@ -56,14 +66,7 @@ def verify_findings(
         verified = bool(doc and len(quote) >= 12 and quote in normalized(doc.text))
         location = "Textfundstelle"
         if verified and doc:
-            pages = re.split(r"\[Seite (\d+)\]\n", doc.text)
-            if doc.name.lower().endswith(".pdf") and len(pages) > 1:
-                for i in range(1, len(pages), 2):
-                    if quote in normalized(pages[i + 1]):
-                        location = f"Seite {pages[i]}"
-                        break
-            else:
-                location = "Textfundstelle"
+            location = _page_location(doc, quote) or "Textfundstelle"
         elif not verified:
             location = "Beleg nicht bestätigt"
         fields = item.model_dump()
@@ -81,9 +84,10 @@ def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[Ti
         quote = normalized(item.source_quote)
         verified = bool(document and len(quote) >= 12 and quote in normalized(document.text))
         fields = item.model_dump()
-        fields["source"] = (
-            f"{document.name}: {item.source_quote}" if verified else "Beleg nicht bestätigt"
-        )
+        fields["source"] = "Beleg nicht bestätigt"
+        if verified and document:
+            location = _page_location(document, quote)
+            fields["source"] = document.name + (f" · {location}" if location else "")
         events.append(TimelineEntry(**fields, verified=verified))
     return events
 
@@ -130,6 +134,9 @@ class AnalysisService:
             "playbook": {"name": playbook.name, "content": playbook.content} if playbook else None,
             "documents": [doc.model_dump(include={"id", "name", "text"}) for doc in documents],
         }
+        if request.workflow == "compliance":
+            payload["compliance_task"] = request.compliance_task
+            payload["pruefumfang"] = COMPLIANCE_TASK_PROMPTS[request.compliance_task]
         kwargs: dict[str, Any] = {
             "model": request.model,
             "input": [
@@ -252,4 +259,6 @@ class AnalysisService:
             usage=usage,
             sources=sources,
             provider_request_id=getattr(response, "_request_id", None),
+            document_ids=list(request.document_ids),
+            compliance_task=request.compliance_task,
         )
