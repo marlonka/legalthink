@@ -28,7 +28,7 @@ New browser profiles and API requests without explicit model settings default to
 
 `source_text` accepts pasted source material separately from `context` (the analysis instructions). Non-comparison workflows accept text without uploaded files. Comparison still requires two ordered uploaded documents; pasted correspondence is supplemental evidence. After successful analysis, the server atomically saves the unchanged text and the result with its `source_text_document_id` and `source_text_document_name`. Its saved name includes the report title so users can identify the material in the document library. Failed requests do not save that text. The source is available through the existing document library and citation viewer. Draft text stays in session memory until submission; it is not written to browser storage.
 
-Keep model catalog data on the server so the UI and API agree on supported selections. Keep a stable result shape across workflows, while prompts and required inputs differ. Comparison needs two distinguishable versions; chronology needs traceable dates and evidence; compliance review must expose missing information.
+The server provides the built-in model catalog. Users can add model IDs and declared capabilities in their browser; each analysis sends that profile for server-side request validation. Adding a profile does not verify provider access or model capabilities. Keep a stable result shape across workflows, while prompts and required inputs differ. Comparison needs two distinguishable versions; chronology needs traceable dates and evidence; compliance review must expose missing information.
 
 ## Evidence model
 

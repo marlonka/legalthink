@@ -3,7 +3,7 @@ description: Reproduzierbaren Fehler in LegalThink beschreiben.
 body:
   - type: markdown
     attributes:
-      value: Verwende synthetische Beispiele. Keine Mandatsdaten, API-Schlüssel, `.env`-Dateien oder Datenbanken hochladen.
+      value: Verwende synthetische Beispiele, auch im privaten Repository. Keine Mandatsdaten, API-Schlüssel, `.env`-Dateien, Datenbanken oder vollständigen API-Anfragen hochladen.
   - type: textarea
     id: behavior
     attributes:
@@ -22,11 +22,11 @@ body:
     id: environment
     attributes:
       label: Umgebung
-      description: Betriebssystem, Browser und Version; Entwicklungsserver oder gebauter Stand.
+      description: Commit oder Version, Betriebssystem und Browser; Entwicklungsserver oder gebauter Stand. Bei Analysefehlern auch Modell-ID, Denkstufe, Region, Standard/Flex und Webrecherche angeben.
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
       label: Fehlermeldung oder Screenshot
-      description: Entferne vertrauliche Inhalte vor dem Hochladen.
+      description: Wortlaut der Fehlermeldung; falls vorhanden HTTP-Status. Screenshots mit synthetischen Daten nachstellen. Keine vollständigen Providerantworten oder Netzwerk-Mitschnitte anhängen.
