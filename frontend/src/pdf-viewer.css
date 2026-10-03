@@ -1,0 +1,90 @@
+.pdf-continuous-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.pdf-continuous-preview .pdf-toolbar {
+  flex: 0 0 auto;
+  min-height: 52px;
+}
+.pdf-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pdf-continuous-preview .pdf-viewport {
+  flex: 1 1 auto;
+  min-height: 240px;
+}
+.pdf-continuous-preview .pdf-status {
+  flex: 0 0 44px;
+  height: 44px;
+  margin: 0;
+  overflow: auto;
+}
+.pdf-continuous {
+  padding: 12px;
+}
+.pdf-page-slot {
+  position: relative;
+}
+.pdf-page-content {
+  position: relative;
+}
+.pdf-page-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  color: #535353;
+  font-size: 14px;
+  pointer-events: none;
+}
+.pdf-page-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.pdf-continuous-preview .pdf-pagination input {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 480px) {
+  .pdf-continuous-preview .pdf-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px;
+    padding: 6px 0;
+  }
+  .pdf-continuous-preview .pdf-pagination {
+    gap: 0;
+  }
+  .pdf-continuous-preview .pdf-pagination > label {
+    gap: 4px;
+    font-size: 0;
+  }
+  .pdf-continuous-preview .pdf-pagination input {
+    font-size: 13px;
+    width: 38px;
+  }
+  .pdf-continuous-preview .pdf-page-count {
+    min-width: 36px;
+  }
+  .pdf-continuous-preview .pdf-toolbar .icon-button {
+    min-width: 32px;
+    min-height: 40px;
+  }
+  .pdf-continuous-preview .pdf-toolbar select {
+    width: 112px;
+    font-size: 12px;
+  }
+  .pdf-view-actions {
+    gap: 0;
+  }
+}

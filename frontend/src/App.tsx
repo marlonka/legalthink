@@ -14,6 +14,7 @@ import {
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
 import Review from './Review';
+import { DocumentPreviewProvider } from './DocumentPreview';
 import { History, Playbooks, Settings } from './WorkspacePages';
 import { api, MAX_MATERIAL_CHARS } from './types';
 import { useThemePreference } from './theme';
@@ -689,7 +690,12 @@ export default function App() {
     (route === 'playbooks' && loadFailures.includes('Playbooks') && !playbooks.length) ||
     (route === 'settings' && loadFailures.includes('Dokumente') && !documents.length);
   return (
-    <>
+    <DocumentPreviewProvider
+      documents={documents}
+      onUpdated={(updated) =>
+        setDocuments((previous) => previous.map((doc) => (doc.id === updated.id ? updated : doc)))
+      }
+    >
       <a
         className="skip-link"
         href="#main-content"
@@ -913,11 +919,6 @@ export default function App() {
                   <Review
                     analysis={analysis}
                     documents={documents}
-                    onDocumentUpdated={(updated) =>
-                      setDocuments((previous) =>
-                        previous.map((doc) => (doc.id === updated.id ? updated : doc)),
-                      )
-                    }
                     onBack={() => navigate('new')}
                     onExport={(format) => void exportAnalysis(format)}
                     exporting={exporting}
@@ -1052,6 +1053,6 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
-    </>
+    </DocumentPreviewProvider>
   );
 }

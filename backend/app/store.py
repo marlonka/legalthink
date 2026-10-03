@@ -79,6 +79,10 @@ class Store:
             row = db.execute("SELECT body FROM documents WHERE id=?", (document_id,)).fetchone()
             if row is None:
                 return None
+            if db.execute(
+                "SELECT 1 FROM document_originals WHERE document_id=?", (document_id,)
+            ).fetchone():
+                raise FileExistsError("Document original already stored")
             document = json.loads(row[0])
             document["original_available"] = True
             db.execute(
@@ -86,8 +90,7 @@ class Store:
                 (json.dumps(document, ensure_ascii=False), document_id),
             )
             db.execute(
-                "INSERT INTO document_originals (document_id,content) VALUES (?,?) "
-                "ON CONFLICT(document_id) DO UPDATE SET content=excluded.content",
+                "INSERT INTO document_originals (document_id,content) VALUES (?,?)",
                 (document_id, original),
             )
             return document

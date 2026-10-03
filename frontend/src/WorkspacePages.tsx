@@ -27,6 +27,7 @@ import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui'
 import { workflowName } from './workflows';
 import { reviewCount } from './review-workflows';
 import { MotionButton } from './motion';
+import { useDocumentPreview } from './DocumentPreview';
 
 export function History({
   analyses,
@@ -437,6 +438,7 @@ export function Settings({
   onRefresh: () => void;
   refreshing: boolean;
 }) {
+  const { openPreview } = useDocumentPreview();
   return (
     <div className="standard-page settings-page">
       <header className="standard-page-header">
@@ -580,7 +582,7 @@ export function Settings({
             <h2>Gespeicherte Dokumente</h2>
             <p>
               {documents.length} {documents.length === 1 ? 'Dokument' : 'Dokumente'} auf diesem
-              Server. Löschen entfernt den Volltext und gespeicherte PDF-Originale.
+              Server. Löschen entfernt den Volltext und gespeicherte Originaldateien.
             </p>
           </div>
           <MotionButton
@@ -599,7 +601,12 @@ export function Settings({
               <div className="managed-document" key={document.id}>
                 <FileText size={17} />
                 <div>
-                  <strong>{document.name}</strong>
+                  <button
+                    className="document-name-button"
+                    onClick={() => openPreview({ source_document_id: document.id })}
+                  >
+                    {document.name}
+                  </button>
                   <small>{document.char_count.toLocaleString('de-DE')} Zeichen</small>
                 </div>
                 <MotionButton

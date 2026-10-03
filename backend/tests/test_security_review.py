@@ -6,6 +6,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
+from docx import Document as WordDocument
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NameObject
@@ -233,37 +234,63 @@ def _pdf_with_streams(streams):
     return output.getvalue()
 
 
-def test_pdf_original_roundtrip_legacy_attachment_and_deletion(local_client):
-    pdf = _pdf_with_streams([_PDF_TEXT])
-    response = local_client.post("/api/documents", files={"file": ("Vertrag.pdf", pdf)})
+def _original_file(suffix, text):
+    if suffix == ".pdf":
+        return _pdf_with_streams([_PDF_TEXT.replace(b"Vertragstext", text.encode())])
+    if suffix == ".docx":
+        document = WordDocument()
+        document.add_paragraph(text)
+        output = io.BytesIO()
+        document.save(output)
+        return output.getvalue()
+    return f"\ufeff# {text}\r\n\r\nWeitere Angaben.\r\n".encode()
+
+
+@pytest.mark.parametrize(
+    ("suffix", "media_type"),
+    [
+        (".pdf", "application/pdf"),
+        (".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        (".txt", "text/plain"),
+        (".md", "text/markdown"),
+    ],
+)
+def test_original_roundtrip_legacy_attachment_and_deletion(local_client, suffix, media_type):
+    original = _original_file(suffix, "Vertragstext")
+    name = f"Vertrag{suffix}"
+    response = local_client.post("/api/documents", files={"file": (name, original)})
     assert response.status_code == 201
     uploaded = response.json()
     original_url = f"/api/documents/{uploaded['id']}/original"
     assert uploaded["original_available"] is True
-    assert local_client.get(original_url).content == pdf
-    legacy = {**uploaded, "id": "legacy-pdf", "original_available": False}
+    downloaded = local_client.get(original_url)
+    assert downloaded.content == original
+    assert downloaded.headers["content-type"].startswith(media_type)
+    assert name in downloaded.headers["content-disposition"]
+    legacy = {**uploaded, "id": "legacy-source", "original_available": False}
     local_client.app.state.store.put("documents", legacy)
-    legacy_url = "/api/documents/legacy-pdf/original"
+    legacy_url = "/api/documents/legacy-source/original"
     assert local_client.get(legacy_url).status_code == 404
-    wrong_pdf = _pdf_with_streams([_PDF_TEXT.replace(b"Vertragstext", b"anderer Text")])
-    assert (
-        local_client.put(legacy_url, files={"file": ("Vertrag.pdf", wrong_pdf)}).status_code == 422
-    )
+    wrong_original = _original_file(suffix, "anderer Text")
+    assert local_client.put(legacy_url, files={"file": (name, wrong_original)}).status_code == 422
     assert local_client.get(legacy_url).status_code == 404
-    attached = local_client.put(legacy_url, files={"file": ("Vertrag.pdf", pdf)})
+    assert local_client.put(legacy_url, files={"file": ("Wrong.exe", original)}).status_code == 422
+    attached = local_client.put(legacy_url, files={"file": (name, original)})
     assert attached.status_code == 200 and attached.json()["original_available"] is True
-    assert local_client.get(legacy_url).content == pdf
+    assert local_client.get(legacy_url).content == original
+    assert local_client.put(legacy_url, files={"file": (name, original)}).status_code == 409
+    assert local_client.get(legacy_url).content == original
     assert local_client.delete(f"/api/documents/{uploaded['id']}").status_code == 204
     assert local_client.get(original_url).status_code == 404
     assert local_client.app.state.store.original(uploaded["id"]) is None
     assert (
         local_client.request(
-            "DELETE", "/api/documents", json={"document_ids": ["legacy-pdf"]}
+            "DELETE", "/api/documents", json={"document_ids": ["legacy-source"]}
         ).status_code
         == 204
     )
-    assert local_client.app.state.store.original("legacy-pdf") is None
-    assert local_client.get("/api/documents/legacy-pdf/text").status_code == 404
+    assert local_client.app.state.store.original("legacy-source") is None
+    assert local_client.get("/api/documents/legacy-source/text").status_code == 404
 
 
 def test_malformed_source_id_recovers_only_from_unique_case_source(local_client):

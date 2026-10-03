@@ -36,6 +36,13 @@ from .schemas import (
 from .security import RequestTooLarge, SecurityBoundary
 from .store import Store
 
+DOCUMENT_MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".txt": "text/plain; charset=utf-8",
+    ".md": "text/markdown; charset=utf-8",
+}
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings.from_env()
@@ -114,7 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def upload(file: Annotated[UploadFile, File()]):
         name = safe_filename(file.filename)
         suffix = Path(name).suffix.lower()
-        if suffix not in {".pdf", ".docx", ".txt", ".md"}:
+        if suffix not in DOCUMENT_MEDIA_TYPES:
             await file.close()
             raise HTTPException(415, "Unterstützt werden PDF, DOCX, TXT und Markdown.")
         try:
@@ -142,11 +149,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             text=text,
             page_count=pages,
             char_count=len(text),
-            original_available=suffix == ".pdf",
+            original_available=True,
         )
-        await run_in_threadpool(
-            app.state.store.save_document, document.model_dump(), data if suffix == ".pdf" else None
-        )
+        await run_in_threadpool(app.state.store.save_document, document.model_dump(), data)
         return document
 
     @app.get("/api/documents/{document_id}/text")
@@ -166,10 +171,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         source = app.state.store.get("documents", document_id)
         original = app.state.store.original(document_id)
         if not source or original is None:
-            raise HTTPException(404, "Das PDF-Original ist nicht gespeichert.")
+            raise HTTPException(404, "Die Originaldatei ist nicht gespeichert.")
         return Response(
             original,
-            media_type="application/pdf",
+            media_type=DOCUMENT_MEDIA_TYPES.get(
+                Path(source["name"]).suffix.lower(), "application/octet-stream"
+            ),
             headers={
                 "Content-Disposition": (
                     f"attachment; filename*=UTF-8''{quote(safe_filename(source['name']))}"
@@ -183,8 +190,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             if not source:
                 raise HTTPException(404, "Dokument nicht gefunden.")
-            if Path(source["name"]).suffix.lower() != ".pdf":
-                raise HTTPException(422, "Diese Quelle ist kein PDF.")
+            suffix = Path(source["name"]).suffix.lower()
+            if suffix not in DOCUMENT_MEDIA_TYPES:
+                raise HTTPException(422, "Für dieses Dateiformat ist keine Vorschau verfügbar.")
+            if Path(safe_filename(file.filename)).suffix.lower() != suffix:
+                raise HTTPException(422, "Bitte eine Datei im gleichen Format auswählen.")
             data = await file.read(config.max_upload_bytes + 1)
         finally:
             await file.close()
@@ -195,16 +205,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
         try:
             async with slots:
-                text, _ = await extract_isolated(data, ".pdf")
+                text, _ = await extract_isolated(data, suffix)
         except ExtractionError as error:
             raise HTTPException(422, str(error)) from None
         except TimeoutError:
-            raise HTTPException(422, "Das Lesen der PDF-Datei dauerte zu lange.") from None
+            raise HTTPException(422, "Das Lesen der Datei dauerte zu lange.") from None
         if normalized(text) != normalized(source["text"]):
             raise HTTPException(
-                422, "Dieses PDF stimmt nicht mit dem gespeicherten Quelltext überein."
+                422, "Der Text dieser Datei stimmt nicht mit dem gespeicherten Quelltext überein."
             )
-        updated = await run_in_threadpool(app.state.store.attach_original, document_id, data)
+        try:
+            updated = await run_in_threadpool(app.state.store.attach_original, document_id, data)
+        except FileExistsError:
+            raise HTTPException(
+                409, "Für diese Quelle ist bereits eine Originaldatei gespeichert."
+            ) from None
         if updated is None:
             raise HTTPException(404, "Dokument nicht mehr verfügbar.")
         return updated

@@ -39,7 +39,7 @@ Für den Vergleich zuerst den eigenen Entwurf, dann den Gegenentwurf wählen. Ge
 | Werbeprüfung | Aussagen, Prüfbedarf und rechtliche Anknüpfungspunkte |
 | Kanzlei-Playbooks | Eigene Prüfmaßstäbe und Formulierungsvorgaben |
 
-Ergebnisansichten und Vorschlagsbezeichnungen richten sich nach der Aufgabe. Leere Nebenansichten entfallen. Fundstellen öffnen in einem Dialog, ohne die Ergebnisliste zu verschieben. Neue Vergleiche speichern und prüfen den Wortlaut beider Fassungen getrennt; ältere Ergebnisse behalten ihre vorhandenen Belege. Für die Gegenüberstellung alter Vergleiche ist eine neue Analyse nötig.
+Ergebnisansichten und Vorschlagsbezeichnungen richten sich nach der Aufgabe. Leere Nebenansichten entfallen. Fundstellen öffnen rechts neben der Analyse, auf schmaleren Fenstern bildschirmfüllend. Weitere Quellen lassen sich direkt aus der Ergebnisliste öffnen. Neue Vergleiche speichern und prüfen den Wortlaut beider Fassungen getrennt; ältere Ergebnisse behalten ihre vorhandenen Belege. Für die Gegenüberstellung alter Vergleiche ist eine neue Analyse nötig.
 
 ## Modelle
 
@@ -52,9 +52,15 @@ Standard für neue Browserprofile und API-Anfragen ohne Modellauswahl: `gpt-6-lu
 
 ## Daten und Betrieb
 
-Dies ist ein lokal betriebener Einzelbenutzer-Arbeitsraum. Dokumenttexte, PDF-Originale, Playbooks und Analysen werden in einer lokalen SQLite-Datenbank gespeichert. Keine integrierte Anmeldung, Mandantentrennung oder Verschlüsselung der Datenbank. Der Entwicklungsserver bindet standardmäßig an die Loopback-Adresse.
+Dies ist ein lokal betriebener Einzelbenutzer-Arbeitsraum. Dokumenttexte, Originaldateien (PDF, DOCX, TXT und Markdown), Playbooks und Analysen werden in einer lokalen SQLite-Datenbank gespeichert. Keine integrierte Anmeldung, Mandantentrennung oder Verschlüsselung der Datenbank. Der Entwicklungsserver bindet standardmäßig an die Loopback-Adresse.
 
-Eingefügter Text wird mit der abgeschlossenen Analyse als TXT-Quelle gespeichert und kann unter „Quellen“ heruntergeladen werden. PDF-Fundstellen öffnen das Original mit Seitenwahl, Zoom und Markierung eines eindeutig gefundenen Zitats. Frühere PDF-Uploads enthalten nur den ausgelesenen Text; das Original kann nachträglich hinzugefügt werden, wenn der Text übereinstimmt. Das Löschen eines Dokuments entfernt auch sein gespeichertes PDF-Original.
+Eingefügter Text wird mit der abgeschlossenen Analyse als TXT-Quelle gespeichert. Dokumentnamen und „Fundstelle ansehen“ öffnen eine gemeinsame Vorschau:
+
+- PDF: fortlaufende Originalseiten, Seitenwahl, Zoom und Markierung eines eindeutigen Zitats.
+- Word: formatierte DOCX-Vorschau mit Tabellen, Rasterbildern und Änderungsverfolgung. Layout und Seitenumbrüche können von Word abweichen; Makros, externe Ressourcen und eingebettete aktive Inhalte werden nicht ausgeführt.
+- TXT und Markdown: vollständiger Text mit Zitatmarkierung. Markdown bietet zusätzlich eine Leseansicht; externe Bilder und eingebettetes HTML werden nicht geladen.
+
+Alle neuen Uploads behalten ihre ursprünglichen Bytes für den Download. Alte PDF-/Word-Quellen ohne Original zeigen den ausgelesenen Text. Eine Datei lässt sich nachträglich zuordnen, wenn ihr ausgelesener Text übereinstimmt; ein vorhandenes Original wird nicht überschrieben. Das Löschen eines Dokuments entfernt auch die gespeicherten Originalbytes.
 
 Bei einer gestarteten KI-Analyse werden die ausgewählten Dokumenttexte, der Prüfauftrag und das ausgewählte Playbook an OpenAI übertragen. `store=false` verhindert die Speicherung der Response als abrufbares API-Objekt. Es ist **keine** Zusage zu Zero Data Retention oder EU-Verarbeitung. Projektverträge, Aufbewahrungsregeln und freigegebene Verarbeitung müssen zur Kanzlei passen. Details: [OpenAI-Integration](docs/openai-integration.md).
 
