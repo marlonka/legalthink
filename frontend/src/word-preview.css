@@ -104,7 +104,9 @@
   color: var(--text-secondary);
 }
 .word-preview-notes {
-  flex: 0 0 96px;
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: min(144px, 25dvh);
   overflow: auto;
   scrollbar-gutter: stable;
   padding: 10px 16px;

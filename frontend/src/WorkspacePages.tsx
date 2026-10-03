@@ -344,8 +344,8 @@ export function Playbooks({
                   disabled={saving || importing}
                 />
                 <p className="field-help">
-                  PDF, DOCX, TXT oder Markdown. Importierte Unterlagen werden auf diesem Server
-                  gespeichert und können unter Einstellungen gelöscht werden.
+                  PDF, DOCX, TXT oder Markdown. Playbooks löschen Sie unter „Kanzlei-Playbooks“,
+                  separat gespeicherte Importdateien unter „Einstellungen → Gespeicherte Dokumente“.
                 </p>
                 {formError && <ErrorMessage>{formError}</ErrorMessage>}
               </div>

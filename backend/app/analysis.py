@@ -372,18 +372,45 @@ class AnalysisService:
             ) from None
         except AuthenticationError:
             raise AnalysisError(
-                "OpenAI-Zugang nicht gültig. Bitte die Serverkonfiguration prüfen.", 503
+                "OpenAI hat die Anmeldung abgewiesen. Bitte API-Schlüssel und "
+                "Zugriffsberechtigungen in der Serverkonfiguration prüfen.",
+                503,
             ) from None
         except RateLimitError as error:
             if request.service_tier == "flex" and error.code == "resource_unavailable":
                 raise AnalysisError(
                     "OpenAI hat derzeit keine Flex-Kapazität. Bitte später erneut starten "
-                    "oder Standardverarbeitung zum regulären Preis wählen.",
+                    "oder unter Erweiterte Einstellungen den Verarbeitungsmodus ändern.",
+                    429,
+                ) from None
+            quota_messages = {
+                "credit_balance_exhausted": (
+                    "Das OpenAI-API-Guthaben ist aufgebraucht. Bitte die Abrechnung "
+                    "bei OpenAI prüfen."
+                ),
+                "project_spend_limit_exceeded": (
+                    "Das OpenAI-Projektlimit ist erreicht. Bitte die Limits des "
+                    "zugehörigen Projekts bei OpenAI prüfen."
+                ),
+                "organization_spend_limit_exceeded": (
+                    "Das Ausgabenlimit der OpenAI-Organisation ist erreicht. Bitte "
+                    "die Organisationslimits bei OpenAI prüfen."
+                ),
+                "organization_usage_limit_exceeded": (
+                    "Das Nutzungslimit der OpenAI-Organisation ist erreicht. Bitte "
+                    "die Organisationslimits bei OpenAI prüfen."
+                ),
+            }
+            if error.code in quota_messages:
+                raise AnalysisError(quota_messages[error.code], 429) from None
+            if error.code == "insufficient_quota" or error.type == "insufficient_quota":
+                raise AnalysisError(
+                    "OpenAI-API-Kontingent nicht verfügbar. Bitte Guthaben und Limits "
+                    "bei OpenAI prüfen, bevor Sie erneut starten.",
                     429,
                 ) from None
             raise AnalysisError(
-                "OpenAI-Kontingent oder Ratenlimit erreicht. Bitte später erneut "
-                "versuchen und das API-Kontingent prüfen.",
+                "OpenAI-Ratenlimit erreicht. Bitte später erneut starten.",
                 429,
             ) from None
         except APIConnectionError:
@@ -391,6 +418,20 @@ class AnalysisService:
                 "OpenAI ist nicht erreichbar. Bitte die Verbindung prüfen.", 503
             ) from None
         except APIStatusError as error:
+            if error.code == "context_length_exceeded":
+                raise AnalysisError(
+                    "Die Eingabe überschreitet das Kontextlimit des gewählten Modells. "
+                    "Bitte weniger Dokumente oder Text verwenden.",
+                    422,
+                ) from None
+            if error.status_code == 400 and error.param == "service_tier":
+                tier_label = "Flex" if request.service_tier == "flex" else "Standard"
+                raise AnalysisError(
+                    f"OpenAI hat den Verarbeitungsmodus {tier_label} abgewiesen. "
+                    "Bitte die erlaubten Verarbeitungsmodi im OpenAI-Projekt prüfen "
+                    "oder unter Erweiterte Einstellungen einen anderen Modus wählen.",
+                    503,
+                ) from None
             if error.code == "model_not_found":
                 raise AnalysisError(
                     f"Das Modell {request.model} ist für das OpenAI-Projekt dieses "
@@ -404,8 +445,8 @@ class AnalysisService:
                     "OpenAI verweigert den Zugriff. Prüfen Sie die Berechtigungen des "
                     "API-Schlüssels und des zugehörigen Projekts."
                     + (
-                        " Für EU-Verarbeitung muss das Projekt die regionalen "
-                        "Voraussetzungen erfüllen; die Anfrage wurde nicht global wiederholt."
+                        " Gewählte Region: Europa. Prüfen Sie auch die Region des "
+                        "OpenAI-Projekts; die Anfrage wurde nicht global wiederholt."
                         if region == "eu"
                         else ""
                     ),
@@ -413,17 +454,23 @@ class AnalysisService:
                 ) from None
             if error.status_code == 400 and (region == "eu" or request.service_tier == "flex"):
                 raise AnalysisError(
-                    "OpenAI hat die gewählte Verarbeitung abgewiesen. Bitte die "
-                    "Verfügbarkeit von "
-                    + " und ".join(
-                        label
-                        for enabled, label in (
-                            (region == "eu", "EU-Verarbeitung"),
-                            (request.service_tier == "flex", "Flex"),
-                        )
-                        if enabled
-                    )
-                    + " sowie den Modellzugang prüfen. Die Auswahl wurde nicht geändert.",
+                    "OpenAI hat die Anfrage abgewiesen. Gewählt: "
+                    + ("Europa" if region == "eu" else "Global")
+                    + " · "
+                    + ("Flex" if request.service_tier == "flex" else "Standard")
+                    + ". Bitte die Verarbeitungseinstellungen und den Modellzugang "
+                    "im OpenAI-Projekt prüfen. Die Auswahl wurde nicht geändert.",
+                    503,
+                ) from None
+            if error.status_code == 408:
+                raise AnalysisError(
+                    "OpenAI hat die Anfrage wegen Zeitüberschreitung beendet. "
+                    "Bitte später erneut starten oder den Umfang reduzieren.",
+                    504,
+                ) from None
+            if error.status_code >= 500:
+                raise AnalysisError(
+                    "OpenAI ist vorübergehend nicht verfügbar. Bitte später erneut starten.",
                     503,
                 ) from None
             raise AnalysisError(
