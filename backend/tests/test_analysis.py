@@ -106,7 +106,7 @@ async def test_serialized_openai_request_and_verified_evidence():
         await client.close()
     body = captured[0]
     assert body["model"] == "gpt-6-luna"
-    assert body["reasoning"] == {"effort": "high"}
+    assert body["reasoning"] == {"effort": "xhigh"}
     assert body["store"] is False
     assert body["prompt_cache_options"] == {"mode": "explicit", "ttl": "30m"}
     assert body["input"][0]["content"][0]["prompt_cache_breakpoint"] == {"mode": "explicit"}

@@ -91,4 +91,4 @@ EU residency is a project/account configuration with eligibility and feature res
 
 ## Deferred live validation
 
-Only after explicit authorization: use `gpt-6-luna` with `high`, send synthetic material, and inspect schema/refusal handling, citations, cache reads/writes, latency, and provider request identifiers. A configured key alone is not permission to run a paid check. Keep Luna/high as the application default. Sol remains an explicit user choice. Review project retention and regional settings separately; do not use real client matters for the initial integration check.
+Only after explicit authorization: use `gpt-6-luna` with `high`, send synthetic material, and inspect schema/refusal handling, citations, cache reads/writes, latency, and provider request identifiers. A configured key alone is not permission to run a paid check. Keep Luna/xhigh as the application default. Sol remains an explicit user choice. Review project retention and regional settings separately; do not use real client matters for the initial integration check.

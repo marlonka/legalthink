@@ -114,7 +114,7 @@ export default function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
   const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6-luna'));
-  const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'high'));
+  const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'xhigh'));
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);

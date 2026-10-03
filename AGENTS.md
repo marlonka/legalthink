@@ -18,5 +18,5 @@ Verbotene Muster: „Mehr Klarheit. Für Ihr nächstes Argument.“, „Raum fü
 
 - Vorhandene Bedienabläufe und Barrierefreiheit bei Text- und Layoutänderungen erhalten. Desktop und Mobilansicht prüfen.
 - Keine echten OpenAI-Anfragen in Entwicklung oder Tests, sofern Marlon sie nicht ausdrücklich freigibt.
-- Für freigegebene echte Modelltests ausschließlich `gpt-6-luna` mit `high` verwenden. Standardauswahl der Anwendung ist ebenfalls Luna/Hoch.
+- Für freigegebene echte Modelltests ausschließlich `gpt-6-luna` mit `high` verwenden. Standardauswahl der Anwendung ist Luna/Sehr hoch (`xhigh`).
 - Änderungen mit Conventional Commit committen und pushen.

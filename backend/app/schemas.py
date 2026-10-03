@@ -21,7 +21,7 @@ MODELS = [
         "name": "GPT-6 Luna",
         "description": "Für fokussierte Aufgaben und schnelle erste Prüfungen.",
         "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
-        "default_effort": "high",
+        "default_effort": "xhigh",
     },
     {
         "id": "gpt-6.1-sol",
@@ -64,7 +64,7 @@ class AnalysisRequest(StrictModel):
     source_text: str = Field(default="", max_length=MAX_MATERIAL_CHARS)
     context: str = Field(default="", max_length=20000)
     model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
-    effort: Effort = "high"
+    effort: Effort = "xhigh"
     playbook_id: str | None = None
     research: bool = True
     compliance_task: ComplianceTask = "general"
