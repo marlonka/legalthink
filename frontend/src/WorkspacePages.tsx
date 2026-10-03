@@ -163,6 +163,7 @@ export function Playbooks({
   const [formError, setFormError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   async function save() {
+    if (saving || importing) return;
     if (!name.trim() || !content.trim()) {
       setFormError('Geben Sie einen Namen und mindestens eine Prüfvorgabe ein.');
       return;
@@ -191,6 +192,7 @@ export function Playbooks({
     }
   }
   async function importFile(file: File) {
+    if (saving || importing) return;
     setImporting(true);
     setFormError('');
     try {
@@ -203,7 +205,7 @@ export function Playbooks({
         setFormError(
           'Das importierte Dokument enthält mehr als 30.000 Zeichen. Der vollständige Text ist unten editierbar; kürzen Sie ihn vor dem Speichern.',
         );
-      if (!name) setName(file.name.replace(/\.[^.]+$/, ''));
+      setName((current) => current || file.name.replace(/\.[^.]+$/, ''));
     } catch (error) {
       setFormError(
         error instanceof Error ? error.message : 'Das Dokument konnte nicht eingelesen werden.',

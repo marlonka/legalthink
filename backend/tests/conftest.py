@@ -1,6 +1,7 @@
-"""Fail closed: the test suite cannot make a real httpx/OpenAI network request."""
+"""Fail closed: the test suite cannot make real HTTPX or HTTPX2 network requests."""
 
 import httpx
+import httpx2
 import pytest
 
 
@@ -12,5 +13,6 @@ def no_external_http(monkeypatch):
     async def async_forbidden(*args, **kwargs):
         raise AssertionError("External HTTP is forbidden in offline tests.")
 
-    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", forbidden)
-    monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", async_forbidden)
+    for http in (httpx, httpx2):
+        monkeypatch.setattr(http.HTTPTransport, "handle_request", forbidden)
+        monkeypatch.setattr(http.AsyncHTTPTransport, "handle_async_request", async_forbidden)

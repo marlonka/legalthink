@@ -52,7 +52,6 @@ export function reviewCount(analysis: Analysis) {
   const singular: Record<string, string> = {
     Änderungen: 'Änderung',
     Ereignisse: 'Ereignis',
-    Werbeaussagen: 'Werbeaussage',
     Prüfpunkte: 'Prüfpunkt',
     Vertragspunkte: 'Vertragspunkt',
   };

@@ -15,7 +15,6 @@ export interface DocumentRecord {
 export interface Model {
   id: string;
   name: string;
-  description: string;
   efforts: string[];
   default_effort: string;
 }

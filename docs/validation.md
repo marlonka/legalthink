@@ -31,12 +31,42 @@ npx playwright install chromium
 npm run test:built
 ```
 
-Die CI führt dieselben Prüfungen aus. Tests verwenden synthetische Daten, eigene temporäre Datenverzeichnisse und einen leeren API-Schlüssel. Direkte httpx-Netzwerkzugriffe sind in Python-Tests gesperrt; die OpenAI-Anbindung wird über MockTransport geprüft.
+Die CI führt dieselben Prüfungen aus. Tests verwenden synthetische Daten, eigene temporäre Datenverzeichnisse und einen leeren API-Schlüssel. Direkte HTTPX- und HTTPX2-Netzwerkzugriffe sind in Python-Tests gesperrt; die OpenAI-Anbindung wird über MockTransport geprüft.
 
 ## Grenzen
 
 Layoutstabilität, Themevarianten, Fokusabläufe und Barrierefreiheit werden nicht mehr flächendeckend automatisch geprüft. Bei Änderungen die betroffenen Bedienabläufe gezielt prüfen.
 
-Es liegt kein erfolgreicher Live-Modelltest vor. Rechtliche Ausgabequalität, tatsächliche Recherche, Cachetreffer, Kosten und Latenz bleiben ungeprüft. Das [Evaluationspaket](../evals/README.md) enthält manuelle Kriterien und synthetische Unterlagen; es wird nicht automatisch ausgeführt. Word-Paginierung wurde nicht visuell geprüft.
+Es liegt kein erfolgreicher Live-Modelltest vor. Rechtliche Ausgabequalität, tatsächliche Recherche, Cachetreffer, Kosten und Latenz bleiben ungeprüft. Das [Evaluationspaket](../evals/README.md) enthält manuelle Kriterien und synthetische Unterlagen; es wird nicht automatisch ausgeführt.
 
 Ältere Design- und Workflowberichte dokumentieren den damaligen Stand und beschreiben teilweise inzwischen entfernte Tests.
+
+## Abhängigkeiten und Review – 3. Oktober 2026
+
+Aktualisierte Laufzeit- und Werkzeugversionen:
+
+| Paket | Vorher installiert | Jetzt |
+| --- | --- | --- |
+| Vite | 7.3.6 | 8.3.2 |
+| Vite React Plugin | 5.2.0 | 6.1.1 |
+| TypeScript | 5.9.3 | 7.0.2 |
+| Motion | 12.43.0 | 14.0.0 |
+| Lucide React | 0.545.0 | 1.51.0 |
+| docx-preview | 0.3.7 | 0.4.1 |
+| JSZip | 3.10.1 | 3.10.2 |
+| OpenAI Python | 2.54.0 | 3.24.0 |
+| WebSockets | 17.1 | 17.2 |
+| uv in CI | 0.11.28 | 0.12.22 |
+
+Die übrigen direkten Pakete waren bereits auf dem aktuellen stabilen Stand. Manifest und Lockdateien halten die geprüften Versionen fest. HTTPX wird nur für FastAPI-Tests benötigt; der OpenAI-SDK nutzt HTTPX2. Der bisherige `extra_body`-Umweg für `prompt_cache_options` entfällt.
+
+Migrationen anhand der Primärquellen geprüft: [Vite 8](https://vite.dev/guide/migration), [TypeScript 7](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/), [Motion 13/14](https://motion.dev/docs/react-upgrade-guide), [Lucide 1](https://lucide.dev/guide/version-1), [docx-preview](https://github.com/VolodymyrBaydalka/docxjs/releases), [OpenAI HTTPX2](https://github.com/openai/openai-python/blob/main/httpx2.md).
+
+- Unbenutzte Theme-Tokens, Modellbeschreibungen, eine unerreichbare Singular-Zuordnung und einen lokalen Typ-Export entfernt. Dynamische Vorschauimporte und Kompatibilitätspfade bleiben erhalten.
+- Playbook-Import behält einen Namen, den der Nutzer während des Imports eingegeben hat.
+- DOCX-Import weist offene Einfügungen, Löschungen und Verschiebungen mit einer konkreten Meldung ab, statt geänderte Passagen still auszulassen. Normale DOCX-Dateien bleiben importierbar.
+- PDF-Seitenangaben werden nur aus einer vollständigen, eindeutigen Folge der vom Import erzeugten Seitenmarker abgeleitet. Dokumenttext wie `[Seite 999]` ergibt keine erfundene Seitenzahl. Der belegte Wortlaut bleibt als Textfundstelle verfügbar.
+- Beide Quellenfehler wurden vor der Korrektur reproduziert. Drei zusätzliche Fälle in den bestehenden Testdateien schützen diese Datenintegrität; keine neue Testsuite.
+- npm meldet für Root und Frontend keine veralteten direkten Pakete und keine bekannten Schwachstellen. `pip-audit` prüfte alle 42 festgeschriebenen Python-Drittanbieterpakete einschließlich plattformspezifischer Einträge: keine bekannten Schwachstellen, nichts übersprungen.
+- Vorschau mit synthetischen Daten geprüft: Word-Paginierung über 11 Seiten, Zoom und Zitatmarkierung; PDF-Originalfarben und Zitatmarkierung; Menüfokus und unveränderte Positionen unter Motion 14; kein horizontaler Seitenüberlauf bei 390 px. Keine Konsolenfehler in diesen Abläufen.
+- Abschließend: 69 Offline-Backendfälle und der einzelne Build-Smoke-Test bestanden. Produktionsbuild mit TypeScript 7/Vite 8, Ruff, Prettier und `git diff --check` bestanden. Keine echten OpenAI-Anfragen.

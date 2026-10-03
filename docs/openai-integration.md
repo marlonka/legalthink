@@ -73,7 +73,7 @@ For a future approved evaluation, compare a cold request with repeated requests 
 
 ### SDK compatibility
 
-The documentation can advance ahead of a pinned SDK's generated argument types. Inspect the installed Python SDK signature before passing `prompt_cache_options`. If the typed argument is absent, the SDK's supported `extra_body` extension can carry the documented JSON field; test the serialized HTTP body with a mocked transport. Do not send both the obsolete and current caching fields. An offline serialization test does not prove the provider accepted the request. Upgrade the SDK and repeat that test when native typing becomes available.
+OpenAI Python 3.24.0 accepts `prompt_cache_options` directly. The application uses this typed argument; the earlier `extra_body` workaround is removed. The existing offline test checks the serialized JSON request with the SDK's HTTPX2 transport. Both HTTPX and HTTPX2 network transports are blocked in tests. An offline serialization test does not prove provider acceptance. SDK 3 uses the operating-system certificate store; see the [official HTTPX2 migration guide](https://github.com/openai/openai-python/blob/main/httpx2.md).
 
 ## Web research and citations
 
@@ -81,7 +81,7 @@ Make research an explicit user option. Use the current `web_search` tool and req
 
 Use an allowlist of relevant primary legal sources for focused legal research where appropriate. Tool availability does not prove a search occurred; inspect output tool calls. Search broadens data transmission and may expose generated queries to external search services. Do not send case identifiers or confidential text as search terms by design. Source: [Web search](https://developers.openai.com/api/docs/guides/tools-web-search).
 
-The allowlist includes DSK, EDPB and BfDI for privacy guidance. Hosted search still operates in the same model request that sees the matter. Query minimization is a prompt instruction, not a deterministic redaction boundary. The default remains research off; the opt-in warns that queries may include document content. Do not describe this arrangement as technically enforcing professional secrecy. A separate research stage with reviewed abstract questions would require a further architecture decision; generated “anonymous” questions alone would not establish that boundary.
+The allowlist includes DSK, EDPB and BfDI for privacy guidance. Hosted search still operates in the same model request that sees the matter. Query minimization is a prompt instruction, not a deterministic redaction boundary. Research is enabled by default at the user's request and can be disabled with the globe beside the model picker. Its description and the expanded review options state that queries may include document content. Do not describe this arrangement as technically enforcing professional secrecy. A separate research stage with reviewed abstract questions would require a further architecture decision; generated “anonymous” questions alone would not establish that boundary.
 
 ## Data handling claims
 

@@ -12,6 +12,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 from docx import Document as WordDocument
+from docx.oxml import parse_xml
 from pypdf import Configuration, PdfReader, apply_configuration
 from pypdf.errors import LimitReachedError
 
@@ -133,6 +134,26 @@ def extract(data: bytes, suffix: str) -> tuple[str, int]:
                 raise ExtractionError("Die Word-Datei hat eine ungewöhnlich hohe Kompression.")
             if "word/document.xml" not in archive.namelist():
                 raise ExtractionError("Die Datei ist kein gültiges Word-Dokument.")
+            revision_tags = {
+                f"{{{namespace}}}{change}"
+                for namespace in (
+                    "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+                    "http://purl.oclc.org/ooxml/wordprocessingml/main",
+                )
+                for change in ("ins", "del", "moveFrom", "moveTo")
+            }
+            for entry in entries:
+                if not entry.filename.startswith("word/") or not entry.filename.endswith(".xml"):
+                    continue
+                # Reuse python-docx's parser with entity resolution disabled. The
+                # paragraph API otherwise silently omits tracked text changes.
+                root = parse_xml(archive.read(entry))
+                if any(element.tag in revision_tags for element in root.iter()):
+                    raise ExtractionError(
+                        "Die Word-Datei enthält nicht abgeschlossene Änderungen. "
+                        "Nehmen Sie diese in einer Kopie zuerst an oder lehnen Sie sie ab "
+                        "und laden Sie die Kopie erneut hoch."
+                    )
         doc = WordDocument(io.BytesIO(data))
         paragraphs = []
         # iter_inner_content retains the order of paragraphs and tables.

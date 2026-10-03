@@ -1,11 +1,15 @@
 import asyncio
+import io
 import json
 
-import httpx
+import httpx2
 import pytest
 from openai import AsyncOpenAI
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from app.analysis import AnalysisError, AnalysisService, recover_source_references, verify_findings
+from app.extraction import extract
 from app.schemas import Analysis, AnalysisRequest, Document, ModelAnalysis, Playbook
 
 QUOTE = "Die Haftung ist auf eine Monatsvergütung beschränkt."
@@ -79,7 +83,7 @@ def service_with_handler(handler, timeout=5):
     client = AsyncOpenAI(
         api_key="offline-test-key",
         max_retries=0,
-        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
     )
     return AnalysisService(client, timeout), client
 
@@ -89,7 +93,7 @@ async def test_serialized_openai_request_and_verified_evidence():
 
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx.Response(
+        return httpx2.Response(
             200, json=provider_response(), headers={"x-request-id": "req_offline"}
         )
 
@@ -133,13 +137,47 @@ def test_repeated_pdf_quote_has_no_unique_page_location(repetition):
     assert finding.source_location == "Textfundstelle"
 
 
+@pytest.mark.parametrize("marker", ["[Seite 999]", "[Seite 1]"])
+def test_pdf_content_cannot_forge_page_attribution(marker):
+    quote = "Der Auftragnehmer haftet unbegrenzt."
+    for content_marker, expected in (("Dokumentinhalt", "Seite 1"), (marker, "Textfundstelle")):
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=612, height=792)
+        font = DictionaryObject(
+            {
+                NameObject("/Type"): NameObject("/Font"),
+                NameObject("/Subtype"): NameObject("/Type1"),
+                NameObject("/BaseFont"): NameObject("/Helvetica"),
+            }
+        )
+        page[NameObject("/Resources")] = DictionaryObject(
+            {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
+        )
+        stream = DecodedStreamObject()
+        stream.set_data(
+            f"BT /F1 12 Tf 72 720 Td ({content_marker}) Tj 0 -20 Td ({quote}) Tj ET".encode()
+        )
+        page[NameObject("/Contents")] = writer._add_object(stream)
+        output = io.BytesIO()
+        writer.write(output)
+        text, pages = extract(output.getvalue(), ".pdf")
+        document = DOC.model_copy(
+            update={"name": "Beleg.pdf", "text": text, "page_count": pages, "char_count": len(text)}
+        )
+        result = model_result()
+        result["findings"][0]["source_quote"] = quote
+        finding = verify_findings(ModelAnalysis.model_validate(result), [document])[0]
+        assert finding.verified
+        assert finding.source_location == expected
+
+
 async def test_default_research_retains_only_provider_attributed_urls():
     url = "https://gesetze-im-internet.de/bgb/__276.html"
     captured = []
 
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx.Response(
+        return httpx2.Response(
             200,
             json=provider_response(
                 annotations=[
@@ -172,7 +210,7 @@ async def test_cached_prefix_excludes_changing_matter_and_workflow_data():
 
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx.Response(200, json=provider_response())
+        return httpx2.Response(200, json=provider_response())
 
     service, client = service_with_handler(handler)
     private_context = "MANDATE_PRIVATE: Wir vertreten den Verarbeiter."
@@ -242,7 +280,7 @@ async def test_pasted_text_is_a_separate_verified_source_and_never_a_mandate():
 
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx.Response(200, json=provider_response(result=model))
+        return httpx2.Response(200, json=provider_response(result=model))
 
     service, client = service_with_handler(handler)
     try:
@@ -272,10 +310,22 @@ async def test_pasted_text_is_a_separate_verified_source_and_never_a_mandate():
 
 
 async def test_compare_pasted_source_does_not_become_a_version_or_redline_target():
-    original = DOC.model_copy(update={"name": "Original.pdf", "text": "[Seite 2]\n" + QUOTE})
+    original = DOC.model_copy(
+        update={
+            "name": "Original.pdf",
+            "text": "[Seite 1]\nDeckblatt\n[Seite 2]\n" + QUOTE,
+            "page_count": 2,
+        }
+    )
     counter_quote = "Die Haftung ist auf eine Jahresvergütung beschränkt."
     counter = DOC.model_copy(
-        update={"id": "counter", "name": "Gegenentwurf.pdf", "text": "[Seite 4]\n" + counter_quote}
+        update={
+            "id": "counter",
+            "name": "Gegenentwurf.pdf",
+            "text": "[Seite 1]\nDeckblatt\n[Seite 2]\nInhalt\n[Seite 3]\nParteien\n[Seite 4]\n"
+            + counter_quote,
+            "page_count": 4,
+        }
     )
     pasted = DOC.model_copy(
         update={"id": "pasted", "name": "Eingefügter Text.txt", "text": "Nur eine E-Mail-Aussage."}
@@ -306,7 +356,7 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
 
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx.Response(200, json=provider_response(result=model))
+        return httpx2.Response(200, json=provider_response(result=model))
 
     service, client = service_with_handler(handler)
     try:
@@ -326,10 +376,18 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     assert result.source_text_document_id == pasted.id
     assert [item.verified for item in result.findings] == [True, True, True, False, False]
     assert [item.source_quote for item in result.findings] == [
-        counter_quote, counter_quote, QUOTE, pasted.text, QUOTE
+        counter_quote,
+        counter_quote,
+        QUOTE,
+        pasted.text,
+        QUOTE,
     ]
     assert [item.source_document_name for item in result.findings] == [
-        counter.name, counter.name, original.name, counter.name, counter.name
+        counter.name,
+        counter.name,
+        original.name,
+        counter.name,
+        counter.name,
     ]
     assert all(item.description == finding["description"] for item in result.findings)
     assert [item.suggestion for item in result.findings] == [
@@ -373,7 +431,7 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     ],
 )
 async def test_provider_non_results_fail_closed(payload, expected):
-    service, client = service_with_handler(lambda request: httpx.Response(200, json=payload))
+    service, client = service_with_handler(lambda request: httpx2.Response(200, json=payload))
     try:
         with pytest.raises(AnalysisError) as error:
             await service.run(AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC])
@@ -389,7 +447,7 @@ async def test_provider_errors_hide_raw_content(status, expected):
 
     def handler(request):
         calls.append(request)
-        return httpx.Response(
+        return httpx2.Response(
             status, json={"error": {"message": "PRIVATE DOCUMENT API KEY", "type": "test_error"}}
         )
 
@@ -409,7 +467,7 @@ async def test_provider_errors_hide_raw_content(status, expected):
 )
 async def test_model_access_error_is_actionable_without_exposing_provider_details(status, code):
     service, client = service_with_handler(
-        lambda request: httpx.Response(
+        lambda request: httpx2.Response(
             status,
             json={
                 "error": {

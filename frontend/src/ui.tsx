@@ -12,14 +12,12 @@ export const DEFAULT_MODELS: Model[] = [
   {
     id: 'gpt-6-luna',
     name: 'GPT-6 Luna',
-    description: '',
     efforts: ['none', 'low', 'medium', 'high', 'xhigh', 'max'],
     default_effort: 'high',
   },
   {
     id: 'gpt-6.1-sol',
     name: 'GPT-6.1 Sol',
-    description: '',
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     default_effort: 'medium',
   },
