@@ -1,0 +1,20 @@
+FIKTIVER TESTFALL — KEIN MANDAT
+Softwarebereitstellungsvertrag · Gegenentwurf
+Vertrag zwischen Anbieter GmbH und Kunde GmbH
+
+Vorbemerkung
+Die Parteien bezeichnen diesen Vertrag als individuell ausgehandelt.
+Einzelheiten zu Verhandlungen über einzelne Klauseln sind nicht dokumentiert.
+
+§ 1 Leistung
+Der Anbieter stellt einen webbasierten Projektraum für 50 Nutzer bereit.
+
+§ 2 Vergütung
+Die monatliche Vergütung beträgt 2.400 EUR netto.
+
+§ 3 Haftung
+Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten ist die Haftung auf eine Monatsvergütung begrenzt.
+Die Haftung für Vorsatz, grobe Fahrlässigkeit sowie Schäden an Leben, Körper oder Gesundheit bleibt unbeschränkt.
+
+§ 6 Vertraulichkeit
+Beide Parteien behandeln nicht öffentlich bekannte Geschäftsunterlagen der anderen Partei vertraulich.

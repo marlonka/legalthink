@@ -7,8 +7,8 @@ Stand: 3. Oktober 2026. Synthetische Unterlagen; keine echten OpenAI-Anfragen.
 | Prüfung | Ergebnis |
 | --- | --- |
 | TypeScript und Vite-Produktionsbuild | Erfolgreich |
-| Python-Tests | 56 bestanden |
-| Browserabläufe mit Chromium | 31 bestanden |
+| Python-Tests | 66 bestanden |
+| Browserabläufe mit Chromium | 32 bestanden |
 | Gebaute Oberfläche direkt über FastAPI | Bestanden; lokale Assets, CSP, Verlauf und Markdown-Export |
 | Ruff und Prettier | Erfolgreich |
 | Automatisierte WCAG-A/AA-Prüfungen mit axe | Keine gemeldeten Verstöße auf den geprüften Ansichten |
@@ -22,6 +22,10 @@ Die Python-Suite deckt API-Validierung, Persistenz, Host/Origin/Loopback-Zugriff
 Die Aufgabenprüfung ergänzt sieben passende Offline-Beispiele, getrennte Entwürfe für die fünf Prüfungsarten und AVV/DSFA, unveränderten optionalen Prüfauftrag, feste Vergleichsrollen beim Ersetzen einer Datei, Fokus beim Öffnen und Schließen von Chronologiebelegen sowie gezielte Formulierungsnavigation. Luna/Hoch wird in einem frischen Browserprofil geprüft; eine ausdrücklich gewählte Sol-Einstellung bleibt nach dem Neuladen erhalten. Quellenlabel und Zitat bleiben auch beim Export älterer Chronologien getrennt, ohne die gespeicherten Originaldaten umzuschreiben. Sichtbefunde und Umfang: [Prüfung der Arbeitsabläufe](workflow-review.md).
 
 Die Oberfläche verwendet lokal ausgelieferte Inter-Schriften. Dateigrößen und Komprimierung werden im Vite-Build ausgegeben; sie sind keine gemessenen Ladezeiten.
+
+Die fachliche Promptprüfung ergänzt Regressionen für unveränderte Cachepräfixe bei wechselnden Aufgaben und Mandatsdaten, separat erfasste Cache-Schreibtoken, unbekannte ältere Messwerte und erhaltene Quelldateinamen. Vergleichsvorschläge können serverseitig nur den Gegenentwurf ersetzen; Originalbelege bleiben für Streichungen erhalten. Word und Markdown enthalten bei Chronologien keine leeren Vertragsvorschläge. Der Zitatabgleich wird ausdrücklich vom Beweiswert des Inhalts getrennt. Die Verarbeitungshinweise bleiben eingeklappt; Nullwerte und fehlende Angaben werden in der Browserprüfung unterschieden.
+
+Das aktualisierte Chronologiebeispiel mit widersprechenden Lieferangaben wurde im lokalen Browser auf Desktop- und 390-px-Mobilbreite angesehen. Zusätzliche fachliche Kriterien für Streichungen, Rollentausch, AGB und Gegenbelege liegen im [Evaluationspaket](../evals/README.md); sie wurden nicht durch echte Modellantworten bewertet. Quellen und verbleibende Recherchegrenze: [Fachliche Prüfung](legal-prompt-review.md).
 
 ## Grenzen der Nachweise
 

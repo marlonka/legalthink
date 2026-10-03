@@ -6,7 +6,7 @@ import pytest
 from openai import AsyncOpenAI
 
 from app.analysis import AnalysisError, AnalysisService
-from app.schemas import AnalysisRequest, Document
+from app.schemas import AnalysisRequest, Document, Playbook
 
 QUOTE = "Die Haftung ist auf eine Monatsvergütung beschränkt."
 DOC = Document(id="doc-1", name="Vertrag.txt", text=QUOTE, page_count=1, char_count=len(QUOTE))
@@ -69,7 +69,7 @@ def provider_response(result=None, status="completed", refusal=False, annotation
             "input_tokens": 2000,
             "output_tokens": 400,
             "total_tokens": 2400,
-            "input_tokens_details": {"cached_tokens": 1000},
+            "input_tokens_details": {"cached_tokens": 1000, "cache_write_tokens": 512},
             "output_tokens_details": {"reasoning_tokens": 100},
         },
     }
@@ -112,11 +112,44 @@ async def test_serialized_openai_request_and_verified_evidence():
     assert body["text"]["format"]["schema"]["additionalProperties"] is False
     assert result.findings[0].verified
     assert result.findings[0].source_location == "Textfundstelle"
+    assert result.findings[0].source_document_name == "Vertrag.txt"
     assert result.findings[0].source_urls == []
     assert result.usage.cached_tokens == 1000
+    assert result.usage.cache_write_tokens == 512
+    assert result.prompt_version
+    assert result.provider_duration_ms >= 0
     assert result.provider_request_id == "req_offline"
     assert result.document_ids == [DOC.id]
     assert result.compliance_task == "general"
+
+
+@pytest.mark.parametrize("source_is_original", [True, False])
+async def test_comparison_replacements_can_only_target_counterdraft(source_is_original):
+    counter_quote = "Die Haftung ist auf zwei Monatsvergütungen beschränkt."
+    counter = Document(
+        id="doc-2",
+        name="Gegenentwurf.txt",
+        text=counter_quote,
+        page_count=1,
+        char_count=len(counter_quote),
+    )
+    result = model_result()
+    source = DOC if source_is_original else counter
+    result["findings"][0].update(source_document_id=source.id, source_quote=source.text)
+    service, client = service_with_handler(
+        lambda request: httpx.Response(200, json=provider_response(result=result))
+    )
+    try:
+        analysis = await service.run(
+            AnalysisRequest(workflow="compare", document_ids=[DOC.id, counter.id]), [DOC, counter]
+        )
+    finally:
+        await client.close()
+    finding = analysis.findings[0]
+    assert finding.verified and finding.source_quote == source.text
+    assert finding.source_document_name == source.name
+    assert finding.description == result["findings"][0]["description"]
+    assert finding.suggestion == ("" if source_is_original else result["findings"][0]["suggestion"])
 
 
 async def test_research_retains_only_provider_attributed_urls():
@@ -176,11 +209,67 @@ async def test_compliance_scope_is_structured_and_preserves_mandate_context(task
     assert request.context == context
     assert result.compliance_task == task
     assert result.document_ids == [DOC.id]
-    assert "aus Sicht des Verantwortlichen" not in payload["pruefumfang"]
-    if task == "avv":
-        assert "Mandantenrolle" in payload["pruefumfang"]
-    if task == "dsfa":
-        assert "Sichtung" in payload["pruefumfang"]
+    assert "auftrag" not in payload and "pruefumfang" not in payload
+    assert captured[0]["input"][0]["role"] == "developer"
+    assert captured[0]["input"][1]["role"] == "user"
+
+
+async def test_cached_prefix_excludes_changing_matter_and_workflow_data():
+    captured = []
+
+    def handler(request):
+        captured.append(json.loads(request.content))
+        return httpx.Response(200, json=provider_response())
+
+    service, client = service_with_handler(handler)
+    private_context = "MANDATE_PRIVATE: Wir vertreten den Verarbeiter."
+    book = Playbook(
+        id="book-private",
+        name="PRIVATE_PLAYBOOK",
+        content="PRIVATE_POSITION",
+        created_at="2026-10-03",
+    )
+    changed_doc = DOC.model_copy(update={"name": "PRIVATE_NAME.txt", "text": "PRIVATE_DOCUMENT"})
+    try:
+        await service.run(AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC])
+        await service.run(
+            AnalysisRequest(
+                workflow="compliance",
+                compliance_task="avv",
+                document_ids=[DOC.id],
+                context=private_context,
+            ),
+            [changed_doc],
+            book,
+        )
+    finally:
+        await client.close()
+    first, second = captured
+    assert first["input"][0]["content"][0] == second["input"][0]["content"][0]
+    assert first["prompt_cache_key"] == second["prompt_cache_key"]
+    assert first["text"] == second["text"]
+    assert first["input"][0]["content"][1] != second["input"][0]["content"][1]
+    developer = json.dumps(second["input"][0])
+    assert "PRIVATE" not in developer
+    assert "prompt_cache_breakpoint" not in json.dumps(second["input"][0]["content"][1:])
+    assert "prompt_cache_breakpoint" not in second["input"][1]["content"]
+    user = json.loads(second["input"][1]["content"])
+    assert user["kontext"] == private_context
+    assert user["playbook"]["content"] == book.content
+    assert user["documents"][0]["text"] == changed_doc.text
+
+
+async def test_missing_cache_write_metric_stays_unknown():
+    response = provider_response()
+    del response["usage"]["input_tokens_details"]["cache_write_tokens"]
+    service, client = service_with_handler(lambda request: httpx.Response(200, json=response))
+    try:
+        result = await service.run(
+            AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC]
+        )
+    finally:
+        await client.close()
+    assert result.usage.cache_write_tokens is None
 
 
 @pytest.mark.parametrize(

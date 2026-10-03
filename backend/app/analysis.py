@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import unicodedata
+from time import perf_counter
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -72,7 +73,14 @@ def verify_findings(
         fields = item.model_dump()
         fields["source_location"] = location
         fields["source_urls"] = [url for url in item.source_urls if url in (allowed_urls or set())]
-        findings.append(Finding(**fields, id=new_id(), verified=verified))
+        findings.append(
+            Finding(
+                **fields,
+                id=new_id(),
+                verified=verified,
+                source_document_name=doc.name if doc else "",
+            )
+        )
     return findings
 
 
@@ -126,9 +134,16 @@ class AnalysisService:
     async def run(
         self, request: AnalysisRequest, documents: list[Document], playbook: Playbook | None = None
     ) -> Analysis:
+        scope = WORKFLOW_PROMPTS[request.workflow]
+        if request.workflow == "compliance":
+            scope += "\n" + COMPLIANCE_TASK_PROMPTS[request.compliance_task]
+        scope += (
+            "\nWebrecherche ist freigegeben."
+            if request.research
+            else "\nWebrecherche ist nicht freigegeben."
+        )
         payload = {
             "workflow": request.workflow,
-            "auftrag": WORKFLOW_PROMPTS[request.workflow],
             "kontext": request.context,
             "recherche_freigegeben": request.research,
             "playbook": {"name": playbook.name, "content": playbook.content} if playbook else None,
@@ -136,7 +151,6 @@ class AnalysisService:
         }
         if request.workflow == "compliance":
             payload["compliance_task"] = request.compliance_task
-            payload["pruefumfang"] = COMPLIANCE_TASK_PROMPTS[request.compliance_task]
         kwargs: dict[str, Any] = {
             "model": request.model,
             "input": [
@@ -147,7 +161,8 @@ class AnalysisService:
                             "type": "input_text",
                             "text": SYSTEM_PROMPT,
                             "prompt_cache_breakpoint": {"mode": "explicit"},
-                        }
+                        },
+                        {"type": "input_text", "text": scope},
                     ],
                 },
                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
@@ -181,12 +196,16 @@ class AnalysisService:
                             "curia.europa.eu",
                             "bundesgerichtshof.de",
                             "bundesverfassungsgericht.de",
+                            "datenschutzkonferenz-online.de",
+                            "edpb.europa.eu",
+                            "bfdi.bund.de",
                         ]
                     },
                 }
             ]
             kwargs["include"] = ["web_search_call.action.sources"]
             kwargs["max_tool_calls"] = 5
+        started = perf_counter()
         try:
             async with asyncio.timeout(self.timeout):
                 response = await self.client.responses.create(**kwargs)
@@ -216,6 +235,7 @@ class AnalysisService:
                 "und Konfiguration prüfen."
             ) from None
 
+        provider_duration_ms = round((perf_counter() - started) * 1000)
         for item in response.output:
             for content in getattr(item, "content", []):
                 if getattr(content, "type", "") == "refusal":
@@ -242,14 +262,24 @@ class AnalysisService:
                 input_tokens=response.usage.input_tokens,
                 output_tokens=response.usage.output_tokens,
                 cached_tokens=getattr(response.usage.input_tokens_details, "cached_tokens", 0) or 0,
+                cache_write_tokens=getattr(
+                    response.usage.input_tokens_details, "cache_write_tokens", None
+                ),
             )
         sources = provider_sources(response) if request.research else []
+        findings = verify_findings(result, documents, {s.url for s in sources})
+        if request.workflow == "compare":
+            for finding in findings:
+                # A proposed replacement must target the counterdraft. Original-only
+                # evidence can document a deletion, but cannot produce a counterdraft redline.
+                if finding.source_document_id != request.document_ids[1]:
+                    finding.suggestion = ""
         return Analysis(
             id=new_id(),
             title=result.title,
             workflow=request.workflow,
             summary=result.summary,
-            findings=verify_findings(result, documents, {s.url for s in sources}),
+            findings=findings,
             timeline=verify_timeline(result, documents),
             questions=result.questions,
             created_at=now(),
@@ -259,6 +289,8 @@ class AnalysisService:
             usage=usage,
             sources=sources,
             provider_request_id=getattr(response, "_request_id", None),
+            provider_duration_ms=provider_duration_ms,
+            prompt_version=PROMPT_VERSION,
             document_ids=list(request.document_ids),
             compliance_task=request.compliance_task,
         )

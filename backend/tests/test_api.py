@@ -172,12 +172,14 @@ def test_exports_preserve_revisions_labels_and_separate_timeline_quotes(client):
     markdown = client.get(f"/api/analyses/{chronology['id']}/export?format=md")
     assert word.status_code == markdown.status_code == 200
     paragraphs = [paragraph.text for paragraph in WordDocument(io.BytesIO(word.content)).paragraphs]
+    timeline_paragraphs = paragraphs[paragraphs.index("Chronologie") + 1 :]
+    timeline_markdown = markdown.text.split("## Chronologie\n", 1)[1]
     for event in loaded["timeline"]:
         assert event["source_quote"] not in event["source"]
         assert f"Quelle: {event['source']}" in paragraphs
-        assert paragraphs.count(event["source_quote"]) == 1
+        assert timeline_paragraphs.count(event["source_quote"]) == 1
         blockquote = "> " + event["source_quote"].replace("\n", "\n> ")
-        assert markdown.text.count(blockquote) == 1
+        assert timeline_markdown.count(blockquote) == 1
         assert f"Quelle: {event['source']}" in markdown.text
     assert (
         client.app.state.store.get("analyses", chronology["id"])["timeline"]
@@ -190,7 +192,7 @@ def test_exports_preserve_revisions_labels_and_separate_timeline_quotes(client):
     [
         ("contract", "contract", "general", 1),
         ("compare", "compare", "general", 2),
-        ("chronology", "chronology", "general", 3),
+        ("chronology", "chronology", "general", 4),
         ("compliance", "compliance", "general", 1),
         ("avv", "compliance", "avv", 2),
         ("dsfa", "compliance", "dsfa", 2),
@@ -236,6 +238,7 @@ def test_demo_scenarios_persist_matching_documents_and_confirmed_evidence(
             "2026-09-05",
             "2026-09-15",
             "2026-09-17",
+            "2026-09-22",
             "2026-09-23",
         ]
         assert any(item["open_question"] for item in analysis["timeline"])
@@ -250,6 +253,25 @@ def test_demo_default_stays_contract_and_invalid_scenario_does_not_create_data(c
     default = client.post("/api/demo").json()
     assert default["demo_scenario"] == "contract"
     assert default["workflow"] == "contract"
+
+
+def test_older_reports_recover_source_names_without_rewriting_saved_data(client):
+    analysis = client.post("/api/demo").json()
+    for finding in analysis["findings"]:
+        finding.pop("source_document_name", None)
+    for field in ("prompt_version", "provider_duration_ms"):
+        analysis.pop(field, None)
+    analysis["usage"] = {"input_tokens": 2000, "output_tokens": 400, "cached_tokens": 1000}
+    client.app.state.store.put("analyses", analysis)
+    loaded = client.get(f"/api/analyses/{analysis['id']}").json()
+    assert loaded["usage"]["cache_write_tokens"] is None
+    assert loaded["provider_duration_ms"] is None and loaded["prompt_version"] is None
+    assert all(
+        f["source_document_name"] == "Beispiel · Cloud-Vertrag.txt" for f in loaded["findings"]
+    )
+    exported = client.get(f"/api/analyses/{analysis['id']}/export?format=md")
+    assert "Beispiel · Cloud-Vertrag.txt" in exported.text
+    assert client.app.state.store.get("analyses", analysis["id"]) == analysis
 
 
 def test_unverified_quotes_never_become_word_revisions(client):

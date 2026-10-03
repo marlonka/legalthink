@@ -33,7 +33,12 @@ const SEVERITIES: Record<Severity, { label: string; short: string }> = {
 type Tab = 'findings' | 'suggestions' | 'timeline';
 type SourceEvidence = Pick<
   Finding,
-  'id' | 'source_document_id' | 'source_quote' | 'source_location' | 'verified'
+  | 'id'
+  | 'source_document_id'
+  | 'source_document_name'
+  | 'source_quote'
+  | 'source_location'
+  | 'verified'
 >;
 
 export default function Review({
@@ -143,6 +148,12 @@ export default function Review({
   }, [analysis.id, analysis.workflow, analysis.findings]);
   const selected = analysis.findings.find((item) => item.id === selectedId);
   const sourceDocument = documents.find((doc) => doc.id === selected?.source_document_id);
+  const sourceDocumentIndex =
+    analysis.document_ids?.indexOf(selected?.source_document_id ?? '') ?? -1;
+  const sourceDocumentRole =
+    analysis.workflow === 'compare' && sourceDocumentIndex >= 0 && sourceDocumentIndex < 2
+      ? ['Original', 'Gegenentwurf'][sourceDocumentIndex]
+      : undefined;
   const timelineEvent =
     timelineSourceIndex === null ? undefined : analysis.timeline[timelineSourceIndex];
   const timelineSource: SourceEvidence | undefined = timelineEvent
@@ -154,9 +165,14 @@ export default function Review({
         verified: timelineEvent.verified ?? false,
       }
     : undefined;
-  const comparisonDocuments =
+  const comparisonDocumentNames =
     analysis.workflow === 'compare' && analysis.document_ids?.length === 2
-      ? analysis.document_ids.map((id) => documents.find((document) => document.id === id))
+      ? analysis.document_ids.map(
+          (id) =>
+            documents.find((document) => document.id === id)?.name ??
+            analysis.findings.find((finding) => finding.source_document_id === id)
+              ?.source_document_name,
+        )
       : null;
   const reviewType =
     analysis.workflow === 'compliance' && analysis.compliance_task === 'avv'
@@ -261,13 +277,13 @@ export default function Review({
           </AnimatePresence>
         </div>
       </header>
-      {comparisonDocuments && (
+      {comparisonDocumentNames && (
         <dl className="review-comparison-documents" aria-label="Vergleichsdokumente">
           {['Original', 'Gegenentwurf'].map((role, index) => (
             <div key={role}>
               <dt>{role}</dt>
-              <dd title={comparisonDocuments[index]?.name}>
-                {comparisonDocuments[index]?.name ?? 'Dokument nicht mehr verfügbar'}
+              <dd title={comparisonDocumentNames[index]}>
+                {comparisonDocumentNames[index] || 'Dokument nicht mehr verfügbar'}
               </dd>
             </div>
           ))}
@@ -477,7 +493,12 @@ export default function Review({
             {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
           </section>
           {sourceVisible && (
-            <SourcePanel finding={selected} document={sourceDocument} onClose={closeSource} />
+            <SourcePanel
+              finding={selected}
+              document={sourceDocument}
+              documentRole={sourceDocumentRole}
+              onClose={closeSource}
+            />
           )}
         </motion.div>
       )}
@@ -560,7 +581,12 @@ export default function Review({
             )}
           </section>
           {sourceVisible && (
-            <SourcePanel finding={selected} document={sourceDocument} onClose={closeSource} />
+            <SourcePanel
+              finding={selected}
+              document={sourceDocument}
+              documentRole={sourceDocumentRole}
+              onClose={closeSource}
+            />
           )}
         </motion.div>
       )}
@@ -671,8 +697,31 @@ export default function Review({
                 <dd>{analysis.usage.input_tokens.toLocaleString('de-DE')} Token</dd>
                 <dt>Davon aus Cache</dt>
                 <dd>{analysis.usage.cached_tokens.toLocaleString('de-DE')} Token</dd>
+                {analysis.usage.cache_write_tokens != null && (
+                  <>
+                    <dt>Davon in Cache geschrieben</dt>
+                    <dd>{analysis.usage.cache_write_tokens.toLocaleString('de-DE')} Token</dd>
+                  </>
+                )}
                 <dt>Ausgabe</dt>
                 <dd>{analysis.usage.output_tokens.toLocaleString('de-DE')} Token</dd>
+              </>
+            )}
+            {analysis.provider_duration_ms != null && (
+              <>
+                <dt>API-Dauer</dt>
+                <dd>
+                  {(analysis.provider_duration_ms / 1000).toLocaleString('de-DE', {
+                    maximumFractionDigits: 1,
+                  })}{' '}
+                  s
+                </dd>
+              </>
+            )}
+            {analysis.prompt_version && (
+              <>
+                <dt>Promptversion</dt>
+                <dd>{analysis.prompt_version}</dd>
               </>
             )}
             {analysis.provider_request_id && (
@@ -823,10 +872,12 @@ function FindingCard({
 function SourcePanel({
   finding,
   document,
+  documentRole,
   onClose,
 }: {
   finding?: SourceEvidence;
   document?: DocumentRecord;
+  documentRole?: string;
   onClose: () => void;
 }) {
   const [expandedFor, setExpandedFor] = useState('');
@@ -858,7 +909,7 @@ function SourcePanel({
       <div className="source-panel-heading">
         <span>
           <FileText size={15} />
-          Im Dokument
+          {documentRole ?? 'Im Dokument'}
         </span>
         <MotionButton
           className="icon-button small"
@@ -880,7 +931,10 @@ function SourcePanel({
               <FileText size={22} strokeWidth={1.3} />
             </div>
             <div>
-              <strong>{document?.name ?? 'Dokument nicht mehr verfügbar'}</strong>
+              <strong>
+                {document?.name ??
+                  (finding.source_document_name || 'Dokument nicht mehr verfügbar')}
+              </strong>
               {finding.source_location !== document?.name && (
                 <span>{finding.source_location || 'Position nicht angegeben'}</span>
               )}
@@ -960,8 +1014,8 @@ function SourcePanel({
           <details className="source-note">
             <summary>Zum Zitatabgleich</summary>
             <p>
-              Geprüft wird der Wortlaut im Dokument. Die rechtliche Bewertung wird nicht
-              verifiziert.
+              Geprüft wird der Wortlaut im Dokument. Behauptete Tatsachen, Daten und die rechtliche
+              Bewertung werden dadurch nicht bestätigt.
             </p>
           </details>
         </motion.div>

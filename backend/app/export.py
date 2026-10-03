@@ -9,13 +9,31 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
-from .schemas import Analysis
+from .schemas import Analysis, Finding
 
 DISCLAIMER = (
     "Arbeitsentwurf zur anwaltlichen Prüfung. Zitatbestätigung belegt nur die "
-    "Textfundstelle, nicht die rechtliche Richtigkeit. Änderungen sind Vorschläge."
+    "Textfundstelle, nicht die behaupteten Tatsachen oder die rechtliche Richtigkeit."
 )
 PRIORITIES = {"high": "Hoch", "medium": "Mittel", "low": "Niedrig", "info": "Hinweis"}
+
+
+def finding_source(finding: Finding) -> str:
+    return " · ".join(
+        part for part in (finding.source_document_name, finding.source_location) if part.strip()
+    )
+
+
+def quote_confirmation(verified: bool) -> str:
+    return (
+        "Zitat im Dokument bestätigt: Ja (nur Textabgleich)."
+        if verified
+        else "Zitat im Dokument bestätigt: Nein."
+    )
+
+
+def has_revision(finding: Finding) -> bool:
+    return bool(finding.verified and finding.source_quote.strip() and finding.suggestion.strip())
 
 
 def markdown(analysis: Analysis) -> bytes:
@@ -40,20 +58,21 @@ def markdown(analysis: Analysis) -> bytes:
             "",
             finding.description,
             "",
-            f"Fundstelle: {finding.source_location}",
-            f"Zitat im Dokument bestätigt: {'Ja' if finding.verified else 'Nein'}",
-            "",
-            "> " + finding.source_quote.replace("\n", "\n> "),
-            "",
-            "**Formulierungsvorschlag**",
-            "",
-            finding.suggestion or "Kein Ersatztext.",
-            "",
-            "**Rechtlicher Bezug (zu prüfen)**",
-            "",
-            finding.legal_basis,
-            "",
         ]
+        source = finding_source(finding)
+        if source:
+            lines += [f"Fundstelle: {source}", ""]
+        if finding.source_quote.strip():
+            lines += [
+                "> " + finding.source_quote.replace("\n", "\n> "),
+                "",
+                quote_confirmation(finding.verified),
+                "",
+            ]
+        if finding.suggestion.strip():
+            lines += ["**Formulierungsvorschlag**", "", finding.suggestion, ""]
+        if finding.legal_basis.strip():
+            lines += ["**Rechtlicher Bezug (zu prüfen)**", "", finding.legal_basis, ""]
         if finding.source_urls:
             lines += ["Recherchequellen zum Befund:", *[f"- {u}" for u in finding.source_urls], ""]
     if analysis.timeline:
@@ -63,12 +82,16 @@ def markdown(analysis: Analysis) -> bytes:
                 f"### {event.date} · {event.event}",
                 f"Quelle: {event.source}",
                 "",
-                "> " + event.source_quote.replace("\n", "\n> "),
-                "",
-                f"Zitat im Dokument bestätigt: {'Ja' if event.verified else 'Nein'}",
-                f"Offen: {event.open_question}" if event.open_question else "",
-                "",
             ]
+            if event.source_quote.strip():
+                lines += [
+                    "> " + event.source_quote.replace("\n", "\n> "),
+                    "",
+                    quote_confirmation(event.verified),
+                    "",
+                ]
+            if event.open_question:
+                lines += [f"Offen: {event.open_question}", ""]
     if analysis.questions:
         lines += ["## Offene Fragen", "", *[f"- {q}" for q in analysis.questions], ""]
     if analysis.sources:
@@ -129,32 +152,34 @@ def docx(analysis: Analysis) -> bytes:
     document.add_paragraph(f"{analysis.created_at[:10]} · {analysis.model} · {analysis.effort}")
     document.add_heading("Überblick", 1)
     document.add_paragraph(analysis.summary)
-    document.add_paragraph(
-        "Die folgenden Revisionen stehen in diesem Prüfvermerk. "
-        "Sie wurden nicht in das ursprüngliche Vertragsdokument eingesetzt."
-    )
+    includes_revisions = any(has_revision(finding) for finding in analysis.findings)
+    if includes_revisions:
+        document.add_paragraph(
+            "Die folgenden Revisionen stehen in diesem Prüfvermerk. "
+            "Sie wurden nicht in das ursprüngliche Vertragsdokument eingesetzt."
+        )
     for index, finding in enumerate(analysis.findings, 1):
         document.add_heading(f"{index}. {finding.title}", 1)
-        document.add_paragraph(
-            f"Priorität {PRIORITIES[finding.severity]} · {finding.category} · "
-            f"{finding.source_location}"
-        )
+        metadata = f"Priorität {PRIORITIES[finding.severity]} · {finding.category}"
+        source = finding_source(finding)
+        document.add_paragraph(f"{metadata} · {source}" if source else metadata)
         document.add_paragraph(finding.description)
-        document.add_heading("Text und Änderungsvorschlag", 2)
-        if finding.verified and finding.source_quote and finding.suggestion:
+        if has_revision(finding):
+            document.add_heading("Text und Änderungsvorschlag", 2)
             paragraph = document.add_paragraph()
             add_revision(paragraph, finding.source_quote, True, index * 2)
             add_revision(paragraph, finding.suggestion, False, index * 2 + 1)
-            document.add_paragraph("Nachverfolgte Änderung · Zitat im Ausgangstext bestätigt.")
+            document.add_paragraph(f"Nachverfolgte Änderung · {quote_confirmation(True)}")
         else:
-            if finding.source_quote:
+            if finding.source_quote.strip():
                 document.add_paragraph(finding.source_quote, "Quote")
-            document.add_paragraph(finding.suggestion or "Kein Ersatztext vorgeschlagen.")
-            document.add_paragraph(
-                "Keine nachverfolgte Änderung: kein bestätigtes Zitat mit geeignetem Ersatztext."
-            )
-        document.add_heading("Rechtlicher Bezug (zu prüfen)", 2)
-        document.add_paragraph(finding.legal_basis)
+                document.add_paragraph(quote_confirmation(finding.verified))
+            if finding.suggestion.strip():
+                document.add_heading("Formulierungsvorschlag", 2)
+                document.add_paragraph(finding.suggestion)
+        if finding.legal_basis.strip():
+            document.add_heading("Rechtlicher Bezug (zu prüfen)", 2)
+            document.add_paragraph(finding.legal_basis)
         for url in finding.source_urls:
             add_hyperlink(document.add_paragraph(), url, url)
     if analysis.timeline:
@@ -162,11 +187,9 @@ def docx(analysis: Analysis) -> bytes:
         for event in analysis.timeline:
             document.add_heading(f"{event.date} · {event.event}", 2)
             document.add_paragraph(f"Quelle: {event.source}")
-            if event.source_quote:
+            if event.source_quote.strip():
                 document.add_paragraph(event.source_quote, "Quote")
-            document.add_paragraph(
-                "Zitat im Dokument bestätigt: " + ("Ja" if event.verified else "Nein")
-            )
+                document.add_paragraph(quote_confirmation(event.verified))
             if event.open_question:
                 document.add_paragraph(f"Offen: {event.open_question}")
     if analysis.questions:
@@ -177,8 +200,9 @@ def docx(analysis: Analysis) -> bytes:
         document.add_heading("Recherchequellen", 1)
         for source in analysis.sources:
             add_hyperlink(document.add_paragraph(), source.title, source.url)
-    tracking = OxmlElement("w:trackRevisions")
-    document.settings.element.append(tracking)
+    if includes_revisions:
+        tracking = OxmlElement("w:trackRevisions")
+        document.settings.element.append(tracking)
     buffer = io.BytesIO()
     document.save(buffer)
     return buffer.getvalue()
