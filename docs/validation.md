@@ -8,7 +8,7 @@ Stand: 3. Oktober 2026. Automatisierte Tests ausschließlich mit synthetischen U
 | --- | --- |
 | TypeScript und Vite-Produktionsbuild | Erfolgreich |
 | Python-Tests | 91 bestanden |
-| Browserabläufe mit Chromium | 38 bestanden |
+| Browserabläufe mit Chromium | 43 bestanden |
 | Gebaute Oberfläche direkt über FastAPI | Bestanden; lokale Assets, CSP, Verlauf und Markdown-Export |
 | Ruff und Prettier | Erfolgreich |
 | Automatisierte WCAG-A/AA-Prüfungen mit axe | Keine gemeldeten Verstöße auf den geprüften Ansichten |
