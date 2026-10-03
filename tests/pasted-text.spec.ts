@@ -296,25 +296,24 @@ async function expectStableInput(page: Page, input: () => Promise<void>) {
   }
 }
 
-test('1M pasted characters scroll inside the field without moving controls in either theme', async ({
-  page,
-}) => {
-  // Six native paste operations at the full input limit need a larger test budget.
-  test.setTimeout(120_000);
-  const evidence = (
-    'Von: Mandant\nBetreff: Lieferverlauf\nAm 17. September war die Lieferung noch offen.\n\n' +
-    'Aktenzeichen-ohne-Leerzeichen-'.repeat(40) +
-    '\n'
-  )
-    .repeat(1_000)
-    .slice(0, 1_000_000);
-  expect(evidence.length).toBe(1_000_000);
-  for (const theme of ['Hell', 'Dunkel']) {
-    await page.setViewportSize({ width: 1280, height: 1000 });
-    await page.goto('/#settings');
-    await page.getByRole('radio', { name: theme, exact: true }).check();
-    await page.goto('/#new');
-    for (const width of [1280, 390, 320]) {
+for (const theme of ['Hell', 'Dunkel']) {
+  for (const width of [1280, 390, 320]) {
+    test(`${theme} ${width}px: 1M pasted characters scroll without moving controls`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000);
+      const evidence = (
+        'Von: Mandant\nBetreff: Lieferverlauf\nAm 17. September war die Lieferung noch offen.\n\n' +
+        'Aktenzeichen-ohne-Leerzeichen-'.repeat(40) +
+        '\n'
+      )
+        .repeat(1_000)
+        .slice(0, 1_000_000);
+      expect(evidence.length).toBe(1_000_000);
+      await page.setViewportSize({ width: 1280, height: 1000 });
+      await page.goto('/#settings');
+      await page.getByRole('radio', { name: theme, exact: true }).check();
+      await page.goto('/#new');
       await page.setViewportSize({ width, height: 1000 });
       await sourceInput(page).fill('');
       await sourceInput(page).focus();
@@ -339,6 +338,6 @@ test('1M pasted characters scroll inside the field without moving controls in ei
       expect(scroll.top).toBeGreaterThan(0);
       await expect(contextInput(page)).toHaveValue('');
       await page.screenshot({ path: `artifacts/million-characters-${theme}-${width}.png` });
-    }
+    });
   }
-});
+}
