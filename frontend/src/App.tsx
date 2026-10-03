@@ -124,7 +124,6 @@ export default function App() {
   const [serviceTier, setServiceTierState] = useState<ServiceTier>(() =>
     stored('legalthink-service-tier', 'default') === 'flex' ? 'flex' : 'default',
   );
-  const effectiveProcessingRegion = processingRegion ?? health?.default_processing_region ?? null;
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const userDocuments = useMemo(
     () => documents.filter((document) => !document.is_demo),
@@ -986,7 +985,9 @@ export default function App() {
                   models={models}
                   onModel={setModel}
                   onEffort={setEffort}
-                  processingRegion={effectiveProcessingRegion}
+                  processingRegion={processingRegion}
+                  serverDefaultRegion={health?.default_processing_region}
+                  onProcessingRegion={setProcessingRegion}
                   serviceTier={serviceTier}
                   onServiceTier={setServiceTier}
                   playbooks={playbooks}

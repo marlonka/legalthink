@@ -934,6 +934,17 @@
 .settings-section-heading.settings-documents-heading > div {
   min-width: 0;
 }
+.settings-section-heading.settings-api-heading {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+}
+.settings-section-heading.settings-api-heading > div {
+  min-width: 0;
+}
+.settings-api-heading > .small-button {
+  min-height: 40px;
+}
 .icon-button.delete-all-documents {
   width: 44px;
   height: 44px;
@@ -943,7 +954,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: 10px;
+  margin-left: 32px;
   padding: 7px 10px;
   white-space: nowrap;
   border: 1px solid var(--border-subtle);
@@ -953,7 +964,7 @@
   font-size: 12px;
 }
 .setup-instructions {
-  margin: 0 0 17px 32px;
+  margin: 16px 0 0 32px;
   padding: 19px;
   border: 1px solid var(--border-subtle);
   border-radius: 18px;
@@ -973,9 +984,6 @@
 .setup-instructions .field-help {
   font-size: 12px;
 }
-.settings-section > .small-button {
-  margin-left: 32px;
-}
 .settings-model-row {
   display: flex;
   align-items: center;
@@ -988,11 +996,6 @@
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--surface-raised);
-}
-.settings-model-row > span {
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.6;
 }
 .settings-model-row .picker-popover {
   bottom: auto;
@@ -1009,38 +1012,28 @@
 .settings-processing {
   margin: 0 0 24px 32px;
 }
-.settings-processing-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
-  align-items: center;
-  gap: 12px 24px;
-  font-size: 14px;
-}
+.settings-processing > .processing-region-field,
 .settings-processing > .service-tier-field {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
   align-items: center;
   gap: 0 24px;
-  padding-top: 24px;
 }
+.settings-processing > .service-tier-field {
+  margin-top: 24px;
+}
+.settings-processing .processing-region-field > .field-label,
 .settings-processing .service-tier-field > .field-label {
   margin-bottom: 0;
 }
+.settings-processing .processing-region-field > .field-help,
 .settings-processing .service-tier-field > .field-help {
   grid-column: 1 / -1;
 }
-.processing-region-details {
-  margin-top: 12px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.75;
-}
-.processing-region-details > summary {
-  cursor: pointer;
-  width: fit-content;
-}
-.processing-region-details > p {
-  margin-top: 12px;
+.processing-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
 }
 .privacy-facts p {
   max-width: 650px;
@@ -1180,9 +1173,6 @@
   }
   .settings-section-heading > div {
     min-width: 200px;
-  }
-  .connection-badge {
-    margin-left: 32px;
   }
   .history-findings {
     font-size: 0;
@@ -1402,7 +1392,7 @@
     margin-left: 0;
     padding: 17px;
   }
-  .settings-section > .small-button,
+  .connection-badge,
   .settings-section > .muted,
   .settings-section > .field-help,
   .privacy-facts,
@@ -1414,11 +1404,12 @@
     padding-left: 0;
     gap: 15px;
   }
-  .settings-processing-row,
+  .settings-processing > .processing-region-field,
   .settings-processing > .service-tier-field {
     grid-template-columns: minmax(0, 1fr);
     gap: 9px;
   }
+  .settings-processing .processing-region-field > .field-help,
   .settings-processing .service-tier-field > .field-help {
     margin-top: 3px;
   }

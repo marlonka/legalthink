@@ -143,7 +143,7 @@ Beide Texteingaben verwenden denselben sichtbaren Rahmen, Innenabstand, Radius u
 
 Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
 
-Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im geschlossenen Zustand knapp erkennbar. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
+Die Playbook-Auswahl steht direkt links neben dem Webrecherche-Globus in der Werkzeugleiste. Darunter öffnet „Erweiterte Einstellungen“ die Verarbeitungsregion und den Verarbeitungsmodus Standard/Flex. Die gewählte Verarbeitung bleibt geschlossen knapp erkennbar. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
 
 Webrecherche ist bei neuen Entwürfen und API-Anfragen standardmäßig aktiv. Sie nutzt das OpenAI-Suchwerkzeug. Bewusstes Abschalten bleibt für den jeweiligen Entwurf erhalten; ein Aufgabenwechsel überschreibt diese Wahl nicht.
 
@@ -176,9 +176,11 @@ Verwandte Werte in Gruppen zusammenfassen. Pro Zeile eine Einstellung mit Bezeic
 
 Technische Informationen nur dort, wo sie zur Einrichtung oder Diagnose nötig sind. Hostdetails und API-Anfrage-IDs gehören nicht in die Hauptnavigation. Kein Konto-, Abrechnungs- oder Berechtigungsbereich ohne entsprechende Funktion.
 
-Die API-Region lässt sich als Servervorgabe, Global oder Europa wählen. Der effektive Endpoint steht in den Einstellungen; Projektvoraussetzungen und Regionalaufschlag bleiben aufklappbar. Eine Endpoint-Auswahl bestätigt keine Freigabe durch OpenAI. Die Servervorgabe wird erst nach geladener Konfiguration als bekannte Region angezeigt.
+Die Verarbeitungsregion lässt sich als Servervorgabe, Global oder Europa wählen. Die Servervorgabe wird erst nach geladener Konfiguration als bekannte Region angezeigt. Ein Link führt zu OpenAIs Informationen zu Regionen und Datenkontrollen. Die Oberfläche übernimmt keine Preisangaben, Rabatte, Aufschläge oder Anbieter-Voraussetzungen.
 
-Standard oder Flex ist in Einstellungen und Prüfoptionen wählbar. Flex nennt die niedrigeren Tokenpreise, mögliche Wartezeit und zeitweise fehlende Kapazität. Der Hinweis reserviert seine Höhe, damit die Auswahl keine benachbarten Controls verschiebt. Angefragte und vom Anbieter gemeldete Verarbeitung bleiben in den Berichtsdetails getrennt.
+Standard oder Flex ist in Einstellungen und erweiterten Einstellungen wählbar. Links führen zu OpenAIs Flex-Beschreibung und Preisen; die Linkzeile bleibt bei der Auswahl gleich hoch. Angefragte und vom Anbieter gemeldete Verarbeitung bleiben in den Berichtsdetails getrennt.
+
+Im Abschnitt „OpenAI API“ steht „Status aktualisieren“ rechts neben der Überschrift. Der Schlüsselstatus folgt darunter. Der Status bestätigt lediglich, ob ein Schlüssel hinterlegt ist; er ist keine Verbindungs- oder Modellfreigabeprüfung. Technische Speicherparameter gehören in die Integrationsdokumentation, nicht in diese Oberfläche.
 
 Gespeicherte Dokumente zeigen nur eigene Quellen. Mitgelieferte Beispiele bleiben über Beispielberichte und Fundstellen erreichbar; sie erscheinen weder als löschbare Dateien noch in der Auswahl eigener Dokumente. Einzel- und Sammellöschung schützen sie auch serverseitig. Beispielberichte selbst dürfen aus dem Verlauf entfernt werden.
 
@@ -189,7 +191,7 @@ Gespeicherte Dokumente zeigen nur eigene Quellen. Mitgelieferte Beispiele bleibe
 - Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
 - Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
 - Standardauswahl: GPT-6 Luna mit Denkaufwand Sehr hoch (`xhigh`). Explizite Nutzerauswahl bleibt gespeichert.
-- Webrecherche sitzt als Globus-Schalter direkt vor der Modellwahl: feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip und ist am Schalter für Screenreader zugänglich. Unter den Prüfoptionen stehen Playbook und Verarbeitung; keine doppelte Webrecherche-Beschriftung. Unter 420 px stehen Prüfoptionen und Globus gemeinsam über Modellwahl und Startaktion.
+- Die Werkzeugleiste enthält Playbook, Webrecherche, Modell/Denkaufwand und Startaktion in dieser Reihenfolge. Die Playbook-Auswahl erhält feste Grenzen und kürzt lange Namen; vollständige Namen bleiben zugänglich. Der Globus-Schalter behält eine feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip und ist für Screenreader zugänglich. „Erweiterte Einstellungen“ steht darunter. Auf schmalen Flächen bilden Playbook und Globus gemeinsam die erste Werkzeugzeile.
 - Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
 - Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
 - Der Slider hat eine zugängliche Beschriftung, `aria-valuetext` für den benannten Wert und native Tastaturbedienung mit Pfeiltasten, Home und End. Ein knapper Kosten-/Zeithinweis bleibt dem Slider zugeordnet.
