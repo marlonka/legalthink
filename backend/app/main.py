@@ -187,10 +187,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not value:
                 raise HTTPException(404, "Ein ausgewähltes Dokument ist nicht mehr vorhanden.")
             documents.append(Document.model_validate(value))
-        if sum(d.char_count for d in documents) > 300_000:
+        if sum(len(d.text) for d in documents) + len(body.source_text) > 300_000:
             raise HTTPException(
                 422,
                 "Die Auswahl überschreitet 300.000 Zeichen. Bitte den Prüfungsumfang reduzieren.",
+            )
+        pasted_document = None
+        if body.source_text.strip():
+            pasted_document = Document(
+                id=new_id(),
+                name="Eingefügter Text.txt",
+                text=body.source_text,
+                page_count=1,
+                char_count=len(body.source_text),
             )
         playbook = None
         if body.playbook_id:
@@ -207,7 +216,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await asyncio.sleep(0.25)
 
         async with slots:
-            task = asyncio.create_task(service.run(body, documents, playbook))
+            task = asyncio.create_task(
+                service.run(body, documents, playbook, pasted_document=pasted_document)
+            )
             disconnect = asyncio.create_task(disconnected())
             try:
                 done, _ = await asyncio.wait(
@@ -216,7 +227,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if disconnect in done or await request.is_disconnected():
                     raise HTTPException(499, "Analyse abgebrochen.")
                 result = await task
-                await run_in_threadpool(app.state.store.put, "analyses", result.model_dump())
+                if pasted_document:
+                    pasted_document.name = f"Text · {result.title[:100]}.txt"
+                    result.source_text_document_name = pasted_document.name
+                    for finding in result.findings:
+                        if finding.source_document_id == pasted_document.id:
+                            finding.source_document_name = pasted_document.name
+                    for event in result.timeline:
+                        if event.source_document_id == pasted_document.id:
+                            event.source = pasted_document.name
+                await run_in_threadpool(
+                    app.state.store.save_analysis,
+                    result.model_dump(),
+                    pasted_document.model_dump() if pasted_document else None,
+                )
                 return result
             except AnalysisError as error:
                 raise HTTPException(error.status_code, error.detail) from None

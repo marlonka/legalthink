@@ -36,6 +36,8 @@ export interface Analysis {
   title: string;
   workflow: Workflow;
   document_ids?: string[];
+  source_text_document_id?: string | null;
+  source_text_document_name?: string | null;
   compliance_task?: ComplianceTask;
   demo_scenario?: DemoScenario | null;
   summary: string;

@@ -150,6 +150,7 @@ test('privacy task selection stays accessible and fits narrow screens in both th
     await choose(page, scenarios[5]);
     await expect(page.locator('.page-transition')).toHaveCSS('opacity', '1');
     await page.getByRole('button', { name: 'Prüfoptionen' }).click();
+    await expect(page.locator('#analysis-options')).toHaveCSS('opacity', '1');
     await page.screenshot({
       path: `artifacts/workflow-audit/dsfa-mobile-${theme}.png`,
       fullPage: true,

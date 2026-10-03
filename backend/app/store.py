@@ -55,6 +55,21 @@ class Store:
                 > 0
             )
 
+    def save_analysis(
+        self, analysis: dict[str, Any], pasted_document: dict[str, Any] | None = None
+    ) -> None:
+        """Commit a completed analysis and its optional pasted source together."""
+        with self.connection() as db:
+            if pasted_document is not None:
+                db.execute(
+                    "INSERT INTO documents (id,body) VALUES (?,?)",
+                    (pasted_document["id"], json.dumps(pasted_document, ensure_ascii=False)),
+                )
+            db.execute(
+                "INSERT INTO analyses (id,body) VALUES (?,?)",
+                (analysis["id"], json.dumps(analysis, ensure_ascii=False)),
+            )
+
     def get(self, table: str, item_id: str) -> dict[str, Any] | None:
         assert table in TABLES
         with self.connection() as db:

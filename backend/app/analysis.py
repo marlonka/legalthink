@@ -132,8 +132,14 @@ class AnalysisService:
         self.timeout = timeout
 
     async def run(
-        self, request: AnalysisRequest, documents: list[Document], playbook: Playbook | None = None
+        self,
+        request: AnalysisRequest,
+        documents: list[Document],
+        playbook: Playbook | None = None,
+        *,
+        pasted_document: Document | None = None,
     ) -> Analysis:
+        evidence_documents = [*documents, *([pasted_document] if pasted_document else [])]
         scope = WORKFLOW_PROMPTS[request.workflow]
         if request.workflow == "compliance":
             scope += "\n" + COMPLIANCE_TASK_PROMPTS[request.compliance_task]
@@ -151,6 +157,10 @@ class AnalysisService:
         }
         if request.workflow == "compliance":
             payload["compliance_task"] = request.compliance_task
+        if pasted_document:
+            payload["source_text_document"] = pasted_document.model_dump(
+                include={"id", "name", "text"}
+            )
         kwargs: dict[str, Any] = {
             "model": request.model,
             "input": [
@@ -267,7 +277,7 @@ class AnalysisService:
                 ),
             )
         sources = provider_sources(response) if request.research else []
-        findings = verify_findings(result, documents, {s.url for s in sources})
+        findings = verify_findings(result, evidence_documents, {s.url for s in sources})
         if request.workflow == "compare":
             for finding in findings:
                 # A proposed replacement must target the counterdraft. Original-only
@@ -280,7 +290,7 @@ class AnalysisService:
             workflow=request.workflow,
             summary=result.summary,
             findings=findings,
-            timeline=verify_timeline(result, documents),
+            timeline=verify_timeline(result, evidence_documents),
             questions=result.questions,
             created_at=now(),
             model=request.model,
@@ -292,5 +302,6 @@ class AnalysisService:
             provider_duration_ms=provider_duration_ms,
             prompt_version=PROMPT_VERSION,
             document_ids=list(request.document_ids),
+            source_text_document_id=pasted_document.id if pasted_document else None,
             compliance_task=request.compliance_task,
         )

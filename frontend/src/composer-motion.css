@@ -3,7 +3,62 @@
   font-weight: 400;
 }
 
-/* Every workflow reserves the same row before its input. */
+/* Pasted material scrolls within the field; typing never resizes the composer. */
+.composer-source-text {
+  margin: 0 23px 16px;
+  min-width: 0;
+}
+
+.composer-source-text .context-label {
+  margin: 0 0 10px;
+}
+
+.source-text-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 216px;
+  min-height: 176px;
+  max-height: 600px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+  resize: vertical;
+}
+
+.source-text-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.source-text-meta > span:last-child {
+  white-space: nowrap;
+}
+
+.source-text-input[aria-invalid='true'] {
+  border-color: var(--danger-border);
+}
+
+.source-text-input[aria-invalid='true'] + .source-text-meta {
+  color: var(--danger-text);
+}
+
+/* Every workflow reserves the same row before its instruction input. */
 .composer-context-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 156px;
@@ -206,6 +261,16 @@
 }
 
 @media (max-width: 700px) {
+  .composer-source-text {
+    margin-left: 19px;
+    margin-right: 19px;
+  }
+
+  .source-text-meta {
+    flex-direction: column;
+    gap: 0;
+  }
+
   .composer-context-header {
     grid-template-columns: minmax(0, 1fr) 128px;
     gap: 8px;

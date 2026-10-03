@@ -7,8 +7,8 @@ Stand: 3. Oktober 2026. Synthetische Unterlagen; keine echten OpenAI-Anfragen.
 | Prüfung | Ergebnis |
 | --- | --- |
 | TypeScript und Vite-Produktionsbuild | Erfolgreich |
-| Python-Tests | 66 bestanden |
-| Browserabläufe mit Chromium | 32 bestanden |
+| Python-Tests | 82 bestanden |
+| Browserabläufe mit Chromium | 36 bestanden |
 | Gebaute Oberfläche direkt über FastAPI | Bestanden; lokale Assets, CSP, Verlauf und Markdown-Export |
 | Ruff und Prettier | Erfolgreich |
 | Automatisierte WCAG-A/AA-Prüfungen mit axe | Keine gemeldeten Verstöße auf den geprüften Ansichten |
@@ -26,6 +26,12 @@ Die Oberfläche verwendet lokal ausgelieferte Inter-Schriften. Dateigrößen und
 Die fachliche Promptprüfung ergänzt Regressionen für unveränderte Cachepräfixe bei wechselnden Aufgaben und Mandatsdaten, separat erfasste Cache-Schreibtoken, unbekannte ältere Messwerte und erhaltene Quelldateinamen. Vergleichsvorschläge können serverseitig nur den Gegenentwurf ersetzen; Originalbelege bleiben für Streichungen erhalten. Word und Markdown enthalten bei Chronologien keine leeren Vertragsvorschläge. Der Zitatabgleich wird ausdrücklich vom Beweiswert des Inhalts getrennt. Die Verarbeitungshinweise bleiben eingeklappt; Nullwerte und fehlende Angaben werden in der Browserprüfung unterschieden.
 
 Das aktualisierte Chronologiebeispiel mit widersprechenden Lieferangaben wurde im lokalen Browser auf Desktop- und 390-px-Mobilbreite angesehen. Zusätzliche fachliche Kriterien für Streichungen, Rollentausch, AGB und Gegenbelege liegen im [Evaluationspaket](../evals/README.md); sie wurden nicht durch echte Modellantworten bewertet. Quellen und verbleibende Recherchegrenze: [Fachliche Prüfung](legal-prompt-review.md).
+
+## Eingefügte Texte
+
+Die zusätzliche Texteingabe wurde in allen sieben Aufgaben geprüft: getrennte Übermittlung von Quellenmaterial und Prüfauftrag, Textprüfung ohne Datei, Vergleich mit zwei festen Vertragsfassungen, erhaltene Eingaben nach Fehler und Abbruch sowie sofort verfügbare Quellenansicht. Backendtests prüfen unveränderte Textspeicherung, passende Quellennamen und den gemeinsamen Rollback bei Speicherfehlern. Die Grenze von 300.000 Zeichen wird auch für gemischte Eingaben geprüft; 300.001 Zeichen bleiben im Browser erhalten und verhindern den Start.
+
+Die Layoutmessung umfasst 100.000 eingefügte Zeichen bei 320, 390 und 1280 px in Hell und Dunkel. Tippen und Einfügen verändern die Positionen und Größen der Eingaben und Werkzeugleiste nicht; langer Text scrollt im Feld. Die Sichtprüfung erfolgte zusätzlich im lokalen Browser auf Desktop und 390-px-Mobilbreite. Bestehende Interaktionstests scrollen tiefere Bedienelemente vor ihrer Messung bewusst ins Bild; die Kontrastprüfung wartet das Einblenden der Optionen ab.
 
 ## Grenzen der Nachweise
 

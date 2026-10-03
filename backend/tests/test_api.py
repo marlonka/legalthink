@@ -1,9 +1,13 @@
+import asyncio
 import io
+import sqlite3
+import threading
 import zipfile
 from dataclasses import replace
 
 import pytest
 from docx import Document as WordDocument
+from fastapi import Request
 from fastapi.testclient import TestClient
 from lxml import etree
 from pypdf import PdfWriter
@@ -12,6 +16,7 @@ from app.analysis import AnalysisError
 from app.config import Settings
 from app.extraction import ExtractionError, extract
 from app.main import create_app
+from app.schemas import Analysis, Document, Finding, TimelineEntry, new_id, now
 
 
 @pytest.fixture
@@ -19,6 +24,32 @@ def client(tmp_path):
     app = create_app(Settings(data_dir=tmp_path, api_key=""))
     with TestClient(app, base_url="http://localhost", client=("127.0.0.1", 12345)) as client:
         yield client
+
+
+class CompletedService:
+    """Substitute the provider service, leaving API storage and validation intact."""
+
+    def __init__(self):
+        self.calls = []
+
+    async def run(self, body, documents, playbook, *, pasted_document=None):
+        self.calls.append((body, documents, pasted_document))
+        return Analysis(
+            id=new_id(),
+            title="Offline-Ergebnis",
+            workflow=body.workflow,
+            summary="Prüfung beendet.",
+            findings=[],
+            timeline=[],
+            questions=[],
+            created_at=now(),
+            model=body.model,
+            effort=body.effort,
+            is_demo=False,
+            document_ids=body.document_ids,
+            source_text_document_id=pasted_document.id if pasted_document else None,
+            compliance_task=body.compliance_task,
+        )
 
 
 def test_document_playbook_and_analysis_persistence(tmp_path):
@@ -58,6 +89,169 @@ def test_analysis_without_config_returns_explicit_error(client):
     response = client.post("/api/analyses", json={"workflow": "contract", "document_ids": ["doc"]})
     assert response.status_code == 503
     assert "nicht eingerichtet" in response.json()["detail"]
+    assert client.get("/api/analyses").json() == []
+
+
+@pytest.mark.parametrize("compare", [False, True])
+def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(client, compare):
+    quote = "Nachricht mit Umlauten: Rückfrage."
+
+    class QuotedService(CompletedService):
+        async def run(self, body, documents, playbook, *, pasted_document=None):
+            result = await super().run(body, documents, playbook, pasted_document=pasted_document)
+            result.title = "Ä" * 99 + "😀 weiterer Text" if compare else "Chronologie zur Lieferung"
+            result.findings = [
+                Finding(
+                    id=new_id(),
+                    title="Rückfrage",
+                    category="Zugang",
+                    severity="info",
+                    description="Die Nachricht enthält eine Rückfrage.",
+                    source_quote=quote,
+                    source_document_id=pasted_document.id,
+                    source_document_name=pasted_document.name,
+                    source_location="Textfundstelle",
+                    suggestion="",
+                    legal_basis="",
+                    source_urls=[],
+                    verified=True,
+                )
+            ]
+            result.timeline = [
+                TimelineEntry(
+                    date="Datum offen",
+                    event="Rückfrage in der Nachricht.",
+                    open_question="Datum?",
+                    source=pasted_document.name,
+                    source_document_id=pasted_document.id,
+                    source_quote=quote,
+                    verified=True,
+                )
+            ]
+            return result
+
+    service = QuotedService()
+    client.app.state.analysis_service = service
+    document_ids = []
+    if compare:
+        for name in ("Original.txt", "Gegenentwurf.txt"):
+            document = Document(
+                id=new_id(), name=name, text=name, page_count=1, char_count=len(name)
+            )
+            client.app.state.store.put("documents", document.model_dump())
+            document_ids.append(document.id)
+    text = "  E-Mail-Verlauf\n" + "Nachricht mit Umlauten: Rückfrage.\n" * 1_000
+    body = {
+        "workflow": "compare" if compare else "chronology",
+        "source_text": text,
+        "context": "Bitte Zugang und widersprechende Angaben prüfen.",
+    }
+    if compare:
+        body["document_ids"] = document_ids
+    response = client.post("/api/analyses", json=body)
+    assert response.status_code == 201, response.text
+    analysis = response.json()
+    assert analysis["document_ids"] == document_ids
+    pasted_id = analysis["source_text_document_id"]
+    assert pasted_id and pasted_id not in document_ids
+    documents = client.get("/api/documents").json()
+    assert len(documents) == len(document_ids) + 1
+    pasted = next(doc for doc in documents if doc["id"] == pasted_id)
+    expected_name = (
+        "Text · " + ("Ä" * 99 + "😀" if compare else "Chronologie zur Lieferung") + ".txt"
+    )
+    assert pasted["name"] == expected_name
+    assert analysis["source_text_document_name"] == expected_name
+    assert analysis["findings"][0]["source_document_name"] == expected_name
+    assert analysis["timeline"][0]["source"] == expected_name
+    assert analysis["findings"][0]["source_quote"] == quote
+    assert analysis["timeline"][0]["source_quote"] == quote
+    assert analysis["findings"][0]["verified"] and analysis["timeline"][0]["verified"]
+    assert pasted["text"] == text and pasted["char_count"] == len(text)
+    request, versions, passed_source = service.calls[0]
+    assert request.context == body["context"] and request.source_text == text
+    assert [doc.id for doc in versions] == document_ids
+    assert passed_source.id == pasted_id
+    assert client.get(f"/api/analyses/{analysis['id']}").json() == analysis
+
+
+@pytest.mark.parametrize("extra,expected_status", [(0, 201), (1, 422)])
+def test_mixed_document_and_pasted_text_limit_is_enforced_without_truncation(
+    client, extra, expected_status
+):
+    service = CompletedService()
+    client.app.state.analysis_service = service
+    text = "D" * 200_000
+    document = Document(
+        id=new_id(), name="Vertrag.txt", text=text, page_count=1, char_count=len(text)
+    )
+    client.app.state.store.put("documents", document.model_dump())
+    pasted_text = "P" * (100_000 + extra)
+    response = client.post(
+        "/api/analyses",
+        json={
+            "workflow": "contract",
+            "document_ids": [document.id],
+            "source_text": pasted_text,
+        },
+    )
+    assert response.status_code == expected_status, response.text
+    if extra:
+        assert not service.calls
+        assert client.get("/api/documents").json() == [document.model_dump()]
+        assert client.get("/api/analyses").json() == []
+    else:
+        assert service.calls[0][1][0].text == text
+        assert service.calls[0][2].text == pasted_text
+
+
+def test_analysis_and_pasted_source_transaction_rolls_back_together(client):
+    client.app.state.analysis_service = CompletedService()
+    analysis = client.post(
+        "/api/analyses",
+        json={
+            "workflow": "chronology",
+            "source_text": "Bereits gespeicherte Nachricht.",
+        },
+    ).json()
+    previous_documents = client.get("/api/documents").json()
+    pasted = Document(
+        id=new_id(), name="Eingefügter Text.txt", text="Neue Quelle", page_count=1, char_count=11
+    )
+    # Force the second INSERT to fail after inserting the new text source.
+    with pytest.raises(sqlite3.IntegrityError):
+        client.app.state.store.save_analysis(
+            {**analysis, "source_text_document_id": pasted.id}, pasted.model_dump()
+        )
+    assert client.get("/api/documents").json() == previous_documents
+    assert client.get(f"/api/analyses/{analysis['id']}").json() == analysis
+
+
+def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkeypatch):
+    cancelled = threading.Event()
+
+    class WaitingService:
+        async def run(self, *args, **kwargs):
+            try:
+                await asyncio.sleep(60)
+            finally:
+                cancelled.set()
+
+    async def disconnected(request):
+        return True
+
+    client.app.state.analysis_service = WaitingService()
+    monkeypatch.setattr(Request, "is_disconnected", disconnected)
+    response = client.post(
+        "/api/analyses",
+        json={
+            "workflow": "chronology",
+            "source_text": "Private eingefügte Nachricht.",
+        },
+    )
+    assert response.status_code == 499
+    assert cancelled.is_set()
+    assert client.get("/api/documents").json() == []
     assert client.get("/api/analyses").json() == []
 
 
@@ -115,6 +309,11 @@ def test_playbook_edit_cors_preflight_allows_configured_origin(client):
 @pytest.mark.parametrize(
     "body",
     [
+        {"workflow": "chronology", "source_text": " \n\t", "context": "Nur ein Prüfauftrag"},
+        {"workflow": "contract", "source_text": "PRIVATE" * 42_858},
+        {"workflow": "compare", "source_text": "Zusatzquelle ohne beide Vertragsfassungen"},
+        {"workflow": "compare", "document_ids": ["a"], "source_text": "Zusatzquelle"},
+        {"workflow": "compare", "document_ids": ["a", "b", "c"], "source_text": "Zusatzquelle"},
         {"workflow": "compare", "document_ids": ["a"]},
         {"workflow": "contract", "document_ids": ["a", "a"]},
         {"workflow": "contract", "document_ids": ["a"], "model": "gpt-6.1-sol", "effort": "none"},
@@ -203,7 +402,7 @@ def test_demo_scenarios_persist_matching_documents_and_confirmed_evidence(
     client, scenario, workflow, task, count
 ):
     class ForbiddenService:
-        async def run(self, *args):
+        async def run(self, *args, **kwargs):
             pytest.fail("Demo scenarios must never invoke the model service.")
 
     client.app.state.analysis_service = ForbiddenService()
@@ -259,13 +458,20 @@ def test_older_reports_recover_source_names_without_rewriting_saved_data(client)
     analysis = client.post("/api/demo").json()
     for finding in analysis["findings"]:
         finding.pop("source_document_name", None)
-    for field in ("prompt_version", "provider_duration_ms"):
+    for field in (
+        "prompt_version",
+        "provider_duration_ms",
+        "source_text_document_id",
+        "source_text_document_name",
+    ):
         analysis.pop(field, None)
     analysis["usage"] = {"input_tokens": 2000, "output_tokens": 400, "cached_tokens": 1000}
     client.app.state.store.put("analyses", analysis)
     loaded = client.get(f"/api/analyses/{analysis['id']}").json()
     assert loaded["usage"]["cache_write_tokens"] is None
     assert loaded["provider_duration_ms"] is None and loaded["prompt_version"] is None
+    assert loaded["source_text_document_id"] is None
+    assert loaded["source_text_document_name"] is None
     assert all(
         f["source_document_name"] == "Beispiel · Cloud-Vertrag.txt" for f in loaded["findings"]
     )
@@ -354,7 +560,7 @@ def test_docx_table_and_paragraph_order():
 
 def test_failed_upstream_analysis_is_not_persisted(client):
     class FailedService:
-        async def run(self, *args):
+        async def run(self, *args, **kwargs):
             raise AnalysisError("Die Modellantwort ist unvollständig.")
 
     client.app.state.analysis_service = FailedService()
@@ -362,15 +568,21 @@ def test_failed_upstream_analysis_is_not_persisted(client):
         "/api/documents", files={"file": ("x.txt", b"Some contract text.")}
     ).json()
     response = client.post(
-        "/api/analyses", json={"workflow": "contract", "document_ids": [document["id"]]}
+        "/api/analyses",
+        json={
+            "workflow": "contract",
+            "document_ids": [document["id"]],
+            "source_text": "Private zusätzliche Nachricht.",
+        },
     )
     assert response.status_code == 502
     assert client.get("/api/analyses").json() == []
+    assert client.get("/api/documents").json() == [document]
 
 
 def test_unexpected_exception_never_escapes_to_asgi_server_logging(client):
     class UnexpectedFailure:
-        async def run(self, *args):
+        async def run(self, *args, **kwargs):
             raise ValueError("SYNTHETIC PRIVATE DOCUMENT AND KEY")
 
     client.app.state.analysis_service = UnexpectedFailure()
