@@ -1,4 +1,5 @@
 import type { ServiceTier } from './types';
+import { ExternalLink } from './ui';
 
 export default function ServiceTierField({
   id,
@@ -14,7 +15,7 @@ export default function ServiceTierField({
   return (
     <div className="service-tier-field">
       <label className="field-label" htmlFor={id}>
-        Verarbeitung
+        Verarbeitungsmodus
       </label>
       <select
         id={id}
@@ -26,9 +27,13 @@ export default function ServiceTierField({
         <option value="default">Standard</option>
         <option value="flex">Flex</option>
       </select>
-      <p className="field-help" id={`${id}-help`}>
-        Flex: 50 % niedrigere Tokenpreise, längere Wartezeit und zeitweise nicht verfügbar.
-        Suchgebühren bleiben unverändert. Kein automatischer Wechsel zu Standard.
+      <p className="field-help processing-links" id={`${id}-help`}>
+        <ExternalLink url="https://developers.openai.com/api/docs/guides/flex-processing">
+          Flex bei OpenAI
+        </ExternalLink>
+        <ExternalLink url="https://developers.openai.com/api/docs/pricing">
+          Preise bei OpenAI
+        </ExternalLink>
       </p>
     </div>
   );

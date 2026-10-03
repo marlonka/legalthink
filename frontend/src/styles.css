@@ -497,15 +497,10 @@ code {
 .document-input-heading .library-button {
   font-size: 14px;
 }
-.comparison-order-note,
-.active-options {
+.comparison-order-note {
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-secondary);
-}
-.active-options {
-  padding: 0 23px 12px;
-  overflow-wrap: anywhere;
 }
 .context-label {
   display: block;
@@ -525,11 +520,11 @@ code {
   color: var(--text-muted);
 }
 .composer-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(132px, 1fr) 36px auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px 20px 18px;
+  gap: 12px;
+  padding: 14px 20px;
   border-top: 1px solid var(--border-subtle);
 }
 .options-toggle {
@@ -539,13 +534,6 @@ code {
   padding: 5px 3px;
   font-size: 14px;
   gap: 7px;
-}
-.composer-toolbar-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  min-width: 0;
 }
 .run-analysis-button {
   min-height: 40px;
@@ -826,14 +814,16 @@ code {
   font-size: 12px;
   line-height: 1.75;
 }
-.service-tier-field {
+.service-tier-field,
+.processing-region-field {
   min-width: 0;
 }
-.service-tier-field > .field-label {
+.service-tier-field > .field-label,
+.processing-region-field > .field-label {
   margin: 0 0 9px;
 }
 .service-tier-field > select,
-.settings-processing-row > select {
+.processing-region-field > select {
   width: 100%;
   min-width: 0;
   min-height: 42px;
@@ -891,12 +881,6 @@ code {
     font-size: 13px;
     flex: 1 0 auto;
   }
-  .composer-toolbar {
-    flex-wrap: wrap;
-  }
-  .composer-toolbar-right {
-    margin-left: auto;
-  }
   .composer-options {
     gap: 18px;
   }
@@ -908,14 +892,6 @@ code {
   }
   .topbar {
     padding: 0 20px;
-  }
-  .composer-toolbar-right {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    width: 100%;
-  }
-  .run-analysis-button {
-    margin-left: auto;
   }
   .composer-options {
     flex-direction: column;
@@ -1027,31 +1003,20 @@ code {
   .analysis-data-note {
     padding: 0 19px 15px;
   }
-  .active-options {
-    padding-left: 19px;
-    padding-right: 19px;
-  }
   .composer-toolbar {
-    padding: 12px 17px 18px;
-    gap: 7px;
+    grid-template-columns: minmax(132px, 1fr) 44px auto auto;
+    padding: 12px 17px;
+    gap: 10px;
   }
   .options-toggle {
     min-height: 42px;
-  }
-  .composer-toolbar-right {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    width: 100%;
-    gap: 9px;
   }
   .picker-button {
     min-height: 42px;
     font-size: 13px;
   }
   .run-analysis-button {
-    width: 100%;
     min-height: 44px;
-    margin-top: 2px;
   }
   .composer-options {
     flex-direction: column;
@@ -1062,7 +1027,7 @@ code {
   .field-label input,
   .field-label select,
   .service-tier-field > select,
-  .settings-processing-row > select {
+  .processing-region-field > select {
     min-height: 44px;
     font-size: 16px;
   }

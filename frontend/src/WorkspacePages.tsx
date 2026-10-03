@@ -3,7 +3,6 @@ import { AnimatePresence } from 'motion/react';
 import {
   ArrowUpRight,
   BookOpen,
-  Check,
   ChevronRight,
   Clock3,
   FileText,
@@ -12,6 +11,7 @@ import {
   Monitor,
   Moon,
   Plus,
+  RotateCw,
   Search,
   Server,
   ShieldCheck,
@@ -37,6 +37,7 @@ import { reviewCount } from './review-workflows';
 import { MotionButton } from './motion';
 import { useDocumentPreview } from './DocumentPreview';
 import ServiceTierField from './ServiceTierField';
+import ProcessingRegionField from './ProcessingRegionField';
 
 export function History({
   analyses,
@@ -455,13 +456,6 @@ export function Settings({
   refreshing: boolean;
 }) {
   const { openPreview } = useDocumentPreview();
-  const effectiveRegion = processingRegion ?? health?.default_processing_region;
-  const regionLabel =
-    effectiveRegion === 'eu'
-      ? 'Europa (EWR + Schweiz)'
-      : effectiveRegion === 'global'
-        ? 'Global'
-        : 'Nicht verfügbar';
   return (
     <div className="standard-page settings-page">
       <header className="standard-page-header">
@@ -512,21 +506,29 @@ export function Settings({
         </div>
       </section>
       <section className="settings-section">
-        <div className="settings-section-heading">
+        <div className="settings-section-heading settings-api-heading">
           <Server size={20} strokeWidth={1.4} />
           <div>
             <h2>OpenAI API</h2>
           </div>
-          <span className={`connection-badge ${health?.api_configured ? 'connected' : ''}`}>
-            <span className="status-dot" />
-            {health?.api_configured
-              ? 'Schlüssel hinterlegt'
-              : health
-                ? 'Nicht eingerichtet'
-                : 'Nicht erreichbar'}
-          </span>
+          <MotionButton
+            className="button secondary small-button"
+            onClick={onRefresh}
+            disabled={refreshing}
+          >
+            <RotateCw className={refreshing ? 'spin' : undefined} size={14} aria-hidden="true" />
+            Status aktualisieren
+          </MotionButton>
         </div>
-        {!health?.api_configured && (
+        <span className="connection-badge" role="status">
+          <span className="status-dot" aria-hidden="true" />
+          {health?.api_configured
+            ? 'Schlüssel hinterlegt'
+            : health
+              ? 'Nicht eingerichtet'
+              : 'Nicht erreichbar'}
+        </span>
+        {health?.api_configured === false && (
           <div className="setup-instructions">
             <p>Für Analysen wird ein OpenAI-API-Schlüssel benötigt.</p>
             <ol>
@@ -538,14 +540,6 @@ export function Settings({
             <p className="field-help">Das Beispiel funktioniert ohne API-Schlüssel.</p>
           </div>
         )}
-        <MotionButton
-          className="button secondary small-button"
-          onClick={onRefresh}
-          disabled={refreshing}
-        >
-          {refreshing ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}Status
-          aktualisieren
-        </MotionButton>
       </section>
       <section className="settings-section">
         <div className="settings-section-heading">
@@ -563,7 +557,6 @@ export function Settings({
             onModel={onModel}
             onEffort={onEffort}
           />
-          <span>Höherer Denkaufwand kann Dauer und Kosten erhöhen.</span>
         </div>
       </section>
       <section className="settings-section">
@@ -575,39 +568,12 @@ export function Settings({
           </div>
         </div>
         <div className="settings-processing">
-          <div className="settings-processing-row">
-            <label htmlFor="processing-region">API-Region</label>
-            <select
-              id="processing-region"
-              value={processingRegion ?? 'server'}
-              onChange={(event) =>
-                onProcessingRegion(
-                  event.target.value === 'server' ? null : (event.target.value as ProcessingRegion),
-                )
-              }
-              aria-describedby="processing-region-help"
-            >
-              <option value="server">
-                Servervorgabe
-                {health?.default_processing_region
-                  ? ` · ${health.default_processing_region === 'eu' ? 'Europa' : 'Global'}`
-                  : ''}
-              </option>
-              <option value="global">Global</option>
-              <option value="eu">Europa (EWR + Schweiz)</option>
-            </select>
-          </div>
-          <p className="field-help" id="processing-region-help">
-            Ziel für neue Anfragen: {regionLabel}.
-          </p>
-          <details className="processing-region-details">
-            <summary>Voraussetzungen für Europa</summary>
-            <p>
-              Das OpenAI-Projekt benötigt die Freigabe für regionale Verarbeitung und passende
-              Aufbewahrungskontrollen. OpenAI berechnet 10 % Regionsaufschlag für diese Modelle. Die
-              Auswahl prüft die Freigabe nicht; bei einem Fehler bleibt Europa ausgewählt.
-            </p>
-          </details>
+          <ProcessingRegionField
+            id="processing-region"
+            value={processingRegion}
+            serverDefaultRegion={health?.default_processing_region}
+            onChange={onProcessingRegion}
+          />
           <ServiceTierField
             id="settings-service-tier"
             value={serviceTier}
@@ -619,16 +585,11 @@ export function Settings({
             <p>Dokumente, Playbooks und Ergebnisse werden auf diesem Server gespeichert.</p>
           </div>
           <div>
-            <p>
-              Beim Analysestart werden die ausgewählten Inhalte an die OpenAI API übertragen.
-              API-Anfragen verwenden <code>store: false</code>; dies ist keine Zusage einer
-              vollständigen Löschung durch den Anbieter.
-            </p>
+            <p>Beim Analysestart werden die ausgewählten Inhalte an die OpenAI API übertragen.</p>
           </div>
           <div>
             <p>
               Aktivierte Webrecherche kann Inhalte aus Ihrem Auftrag in Suchanfragen einbeziehen.
-              Klären Sie die Zulässigkeit für Ihre Unterlagen vorab.
             </p>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
 import { ErrorMessage, ModelPicker } from './ui';
 import DocumentPicker from './DocumentPicker';
 import ServiceTierField from './ServiceTierField';
+import ProcessingRegionField from './ProcessingRegionField';
 import { useDocumentPreview } from './DocumentPreview';
 import { COMPLIANCE_TASKS, WORKFLOWS } from './workflows';
 import type {
@@ -53,6 +54,8 @@ interface Props {
   onModel: (value: string) => void;
   onEffort: (value: string) => void;
   processingRegion: ProcessingRegion | null;
+  serverDefaultRegion: ProcessingRegion | undefined;
+  onProcessingRegion: (value: ProcessingRegion | null) => void;
   serviceTier: ServiceTier;
   onServiceTier: (value: ServiceTier) => void;
   playbooks: Playbook[];
@@ -93,6 +96,8 @@ export default function Start(props: Props) {
     onModel,
     onEffort,
     processingRegion,
+    serverDefaultRegion,
+    onProcessingRegion,
     serviceTier,
     onServiceTier,
     playbooks,
@@ -117,6 +122,8 @@ export default function Start(props: Props) {
   const [options, setOptions] = useState(false);
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
   const { reduced, transition } = useMotionPreferences();
+  const effectiveRegion = processingRegion ?? serverDefaultRegion;
+  const selectedPlaybookName = playbooks.find((item) => item.id === playbookId)?.name;
   return (
     <div className="start-page">
       <header className="analysis-start-heading">
@@ -325,10 +332,69 @@ export default function Start(props: Props) {
         </div>
         <p className="analysis-data-note" id="analysis-data-note">
           Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
-          {processingRegion &&
-            ` API-Region: ${processingRegion === 'eu' ? 'Europa (EWR + Schweiz)' : 'Global'}.`}
         </p>
         <div className="composer-toolbar">
+          <div className="composer-playbook-field">
+            <select
+              id="analysis-playbook"
+              className="composer-playbook-select"
+              value={playbookId}
+              onChange={(event) => onPlaybook(event.target.value)}
+              disabled={running}
+              aria-label="Kanzlei-Playbook"
+              title={selectedPlaybookName ?? 'Ohne Playbook'}
+            >
+              <option value="">Ohne Playbook</option>
+              {playbooks.map((playbook) => (
+                <option key={playbook.id} value={playbook.id}>
+                  {playbook.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="composer-playbook-chevron" size={14} aria-hidden="true" />
+          </div>
+          <MotionButton
+            className="composer-research-toggle"
+            aria-label="Webrecherche"
+            aria-pressed={research}
+            aria-describedby="analysis-research-description"
+            title={`Webrecherche ${research ? 'aktiviert' : 'deaktiviert'}. Suchanfragen können Dokumentinhalte enthalten.`}
+            onClick={() => onResearch(!research)}
+            disabled={running}
+          >
+            <Globe2 size={18} strokeWidth={1.7} aria-hidden="true" />
+            <Check
+              className="composer-research-check"
+              size={10}
+              strokeWidth={3}
+              aria-hidden="true"
+            />
+          </MotionButton>
+          <span id="analysis-research-description" className="sr-only">
+            Suchanfragen können Dokumentinhalte enthalten.
+          </span>
+          <ModelPicker
+            models={models}
+            model={model}
+            effort={effort}
+            onModel={onModel}
+            onEffort={onEffort}
+            disabled={running}
+          />
+          <MotionButton
+            className="button primary run-analysis-button"
+            type="button"
+            aria-label="Analyse starten"
+            aria-describedby="analysis-data-note"
+            title="Analyse starten"
+            onClick={onRun}
+            disabled={uploading || running}
+          >
+            Analyse starten
+            {running ? <LoaderCircle className="spin" size={15} /> : <ArrowRight size={15} />}
+          </MotionButton>
+        </div>
+        <div className="composer-advanced-heading">
           <MotionButton
             className={`text-button options-toggle ${options ? 'active' : ''}`}
             onClick={() => setOptions(!options)}
@@ -336,7 +402,7 @@ export default function Start(props: Props) {
             aria-expanded={options}
             aria-controls="analysis-options"
           >
-            Prüfoptionen
+            Erweiterte Einstellungen
             <motion.span
               className="composer-disclosure-icon"
               initial={false}
@@ -347,78 +413,20 @@ export default function Start(props: Props) {
               <ChevronDown size={15} />
             </motion.span>
           </MotionButton>
-          <div className="composer-toolbar-right">
-            <MotionButton
-              className="composer-research-toggle"
-              aria-label="Webrecherche"
-              aria-pressed={research}
-              aria-describedby="analysis-research-description"
-              title={`Webrecherche ${research ? 'aktiviert' : 'deaktiviert'}. Suchanfragen können Dokumentinhalte enthalten.`}
-              onClick={() => onResearch(!research)}
-              disabled={running}
-            >
-              <Globe2 size={18} strokeWidth={1.7} aria-hidden="true" />
-              <Check
-                className="composer-research-check"
-                size={10}
-                strokeWidth={3}
-                aria-hidden="true"
-              />
-            </MotionButton>
-            <span id="analysis-research-description" className="sr-only">
-              Suchanfragen können Dokumentinhalte enthalten.
-            </span>
-            <ModelPicker
-              models={models}
-              model={model}
-              effort={effort}
-              onModel={onModel}
-              onEffort={onEffort}
-              disabled={running}
-            />
-            <MotionButton
-              className="button primary run-analysis-button"
-              type="button"
-              aria-label="Analyse starten"
-              aria-describedby="analysis-data-note"
-              title="Analyse starten"
-              onClick={onRun}
-              disabled={uploading || running}
-            >
-              Analyse starten
-              {running ? <LoaderCircle className="spin" size={15} /> : <ArrowRight size={15} />}
-            </MotionButton>
-          </div>
+          <span className="composer-processing-summary">
+            {effectiveRegion ? `${effectiveRegion === 'eu' ? 'Europa' : 'Global'} · ` : ''}
+            {serviceTier === 'flex' ? 'Flex' : 'Standard'}
+          </span>
         </div>
-        {!options && (playbookId || serviceTier === 'flex') && (
-          <p className="active-options" aria-live="polite">
-            {playbookId &&
-              `Playbook: ${playbooks.find((item) => item.id === playbookId)?.name ?? 'Ausgewählt'}`}
-            {playbookId && serviceTier === 'flex' && ' · '}
-            {serviceTier === 'flex' && 'Flex: längere Wartezeit möglich'}
-          </p>
-        )}
         <Collapse open={options} id="analysis-options" className="composer-options-collapse">
           <div className="composer-options aligned-composer-options">
-            <div className="composer-playbook-field">
-              <label className="field-label" htmlFor="analysis-playbook">
-                Kanzlei-Playbook
-              </label>
-              <select
-                id="analysis-playbook"
-                className="composer-playbook-select"
-                value={playbookId}
-                onChange={(event) => onPlaybook(event.target.value)}
-                disabled={running}
-              >
-                <option value="">Ohne Playbook</option>
-                {playbooks.map((playbook) => (
-                  <option key={playbook.id} value={playbook.id}>
-                    {playbook.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ProcessingRegionField
+              id="analysis-processing-region"
+              value={processingRegion}
+              serverDefaultRegion={serverDefaultRegion}
+              onChange={onProcessingRegion}
+              disabled={running}
+            />
             <ServiceTierField
               id="analysis-service-tier"
               value={serviceTier}
