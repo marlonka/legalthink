@@ -88,8 +88,8 @@ function Notification({ message, onClose }: { message: string; onClose: () => vo
       inert={!present}
       initial={reduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={transition('fade')}
+      exit={{ opacity: 0, transition: transition('exit') }}
+      transition={transition('enter')}
     >
       <Check size={16} />
       <span>{message}</span>
@@ -715,7 +715,7 @@ export default function App() {
           onClick={() => setMobileOpen(false)}
           initial={false}
           animate={{ opacity: mobileOpen ? 1 : 0 }}
-          transition={transition('fade')}
+          transition={transition(mobileOpen ? 'enter' : 'exit')}
           style={{ pointerEvents: mobileOpen ? 'auto' : 'none' }}
         />
         <motion.aside
@@ -731,8 +731,10 @@ export default function App() {
           data-motion-navigation="true"
           data-presented={drawerPresented}
           initial={false}
-          animate={{ x: mobileNavigation && !mobileOpen ? '-100%' : 0 }}
-          transition={mobileNavigation ? transition('panel') : { duration: 0 }}
+          animate={{ opacity: mobileNavigation && !mobileOpen ? 0 : 1 }}
+          transition={
+            mobileNavigation ? transition(mobileOpen ? 'enter' : 'exit') : { duration: 0 }
+          }
           onAnimationComplete={() => {
             if (!mobileOpenRef.current) setDrawerPresented(false);
           }}

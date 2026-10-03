@@ -26,6 +26,7 @@
   height: 2px;
   background: var(--text-primary);
   pointer-events: none;
+  animation: selection-reveal 160ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .review-motion .filter-pills > button {
@@ -44,6 +45,7 @@
   border-radius: inherit;
   background: var(--surface-hover);
   pointer-events: none;
+  animation: selection-reveal 160ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .review-motion .review-chevron,

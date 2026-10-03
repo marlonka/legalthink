@@ -1,6 +1,7 @@
-/* Motion owns drawer transforms. CSS retains layout and settled visibility. */
+/* Navigation fades at its final position; only the document preview slides. */
 .sidebar[data-motion-navigation] {
   transition: none;
+  transform: none;
 }
 
 .app-shell .navigation-backdrop {

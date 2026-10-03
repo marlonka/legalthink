@@ -752,8 +752,8 @@ function ExportPopover({
       aria-hidden={!present || undefined}
       initial={reduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={transition('fade')}
+      exit={{ opacity: 0, transition: transition('exit') }}
+      transition={transition('enter')}
     >
       <MotionButton ref={firstOption} onClick={() => onExport('docx')}>
         <FileText size={16} />

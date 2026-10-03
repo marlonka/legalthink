@@ -100,25 +100,12 @@
 .pdf-page {
   position: relative;
   margin: 0 auto;
-  background: var(--document-paper);
+  background: #ffffff;
+  color: #0d0d0d;
   box-shadow: 0 1px 6px #0002;
 }
 .pdf-page canvas {
   display: block;
-  filter: var(--document-filter);
-}
-.pdf-preview[data-original-colors] .pdf-page {
-  background: #fff;
-}
-.pdf-preview[data-original-colors] .pdf-page canvas {
-  filter: none;
-}
-.pdf-colors-toggle[aria-pressed='true'] {
-  background: var(--surface-selected);
-  color: var(--text-primary);
-}
-[data-theme='light'] .pdf-colors-toggle {
-  display: none;
 }
 .pdf-state {
   position: absolute;

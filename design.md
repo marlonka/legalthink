@@ -112,6 +112,8 @@ Radien folgen der Größe des Elements. Kleine Schaltflächen werden nicht zu Mi
 - Icons: vorhandene Lucide-Linienicons, meist 18–20 px, Strichstärke etwa 1,5–1,75. Nur eine Icon-Sprache.
 - Icons ergänzen vorhandene Aktionen. Kein Symbol muss freien Platz füllen. Reine Icon-Buttons erhalten einen zugänglichen Namen und bei Bedarf einen Tooltip.
 
+Das Markenzeichen ist ein eigenes gefülltes L mit einer diagonalen Abzweigung. Das L bleibt bei kleinen Größen erkennbar; die Abzweigung steht für das Prüfen verschiedener Gedankengänge. Die Rechtsanwendung benennt die Wortmarke. Keine zusätzliche Waage, Gehirn- oder Chipgrafik. `BrandMark.tsx`, SVG-Download und Favicon verwenden denselben Pfad; die Oberfläche reserviert dafür 28 × 28 px.
+
 ## Navigation und Seiten
 
 ### Navigation
@@ -179,7 +181,7 @@ Technische Informationen nur dort, wo sie zur Einrichtung oder Diagnose nötig s
 - Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
 - Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
 - Standardauswahl: GPT-6 Luna mit Denkaufwand Hoch. Explizite Nutzerauswahl bleibt gespeichert.
-- Playbook-Auswahl und Webrecherche-Aktion stehen am Desktop auf einer gemeinsamen Zeile; Feldbeschriftung darüber, Hinweis darunter. Auf schmalen Ansichten stehen die Felder untereinander.
+- Webrecherche sitzt als Globus-Schalter direkt vor der Modellwahl: feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Kein alleinstehender Aktiv-Text unter der Werkzeugleiste. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip, zugänglich am Schalter und sichtbar in den Prüfoptionen. Dort bleibt die Playbook-Auswahl. Unter 420 px stehen Prüfoptionen und Globus gemeinsam über Modellwahl und Startaktion.
 - Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
 - Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
 - Der Slider hat eine zugängliche Beschriftung, `aria-valuetext` für den benannten Wert und native Tastaturbedienung mit Pfeiltasten, Home und End. Ein knapper Kosten-/Zeithinweis bleibt dem Slider zugeordnet.
@@ -213,10 +215,13 @@ Die Screenshots belegen keine Dauer oder Physik von ChatGPT. Die folgenden Werte
 | Preset | Steifigkeit | Dämpfung | Masse | Verwendung |
 | --- | --- | --- | --- | --- |
 | `control` | 500 | 38 | 0,8 | Rotation kleiner Statusicons innerhalb einer festen Fläche |
-| `panel` | 400 | 38 | 0,9 | Eintritt und Austritt der mobilen Navigation |
+| `panel` | 400 | 38 | 0,9 | Eintritt der Dokumentvorschau |
 | `fade` | — | — | — | Deckkraft: 120 ms, `easeOut` |
+| `enter` / `exit` | — | — | — | Overlays: 160 ms hinein, 100 ms hinaus |
+| `page` | — | — | — | Seitenwechsel: 180 ms |
+| `press` / `release` | — | — | — | Klickfeedback: 60 ms drücken, 140 ms zurück |
 
-Layoutstabilität hat Vorrang. Die mobile Navigation darf räumlich ein- und ausfahren; ihre Bewegung liegt über dem Seiteninhalt. Kleine Icons dürfen sich innerhalb einer festen Fläche drehen. Neue Eingaben dürfen laufende Übergänge umkehren; niemals Animationen abwarten, bevor sich der Zustand ändert. [Motion: physikalische Übergänge](https://motion.dev/docs/react-transitions)
+Layoutstabilität hat Vorrang. Die mobile Navigation blendet an ihrer endgültigen Position ein und aus. Kleine Icons dürfen sich innerhalb einer festen Fläche drehen. Neue Eingaben dürfen laufende Übergänge umkehren; niemals Animationen abwarten, bevor sich der Zustand ändert. Dialoge erhalten nur eine Deckkraftanimation, nicht zusätzlich eine zweite auf ihrem Inhalt. [Motion: physikalische Übergänge](https://motion.dev/docs/react-transitions)
 
 #### Interaktionen
 
@@ -229,10 +234,12 @@ Layoutstabilität hat Vorrang. Die mobile Navigation darf räumlich ein- und aus
 - In der Dokumentauswahl bleiben Zeile, Dialog und Fußzeile beim An- und Abwählen stabil. Vergleichsreihenfolge und wechselnde Zähler dürfen oberhalb der Zeilen keinen neuen Platz beanspruchen.
 - Aufklappen ändert die benötigte Fläche einmal direkt unter dem Auslöser, ohne federnde Höhenänderung. Eine Befundauswahl klappt nicht gleichzeitig einen anderen Befund oberhalb zu. Quellenwahl und geöffnete Befunde sind getrennte Zustände.
 - Der native Denkaufwand-Slider aktualisiert Wert, Beschriftung und Übermittlung unmittelbar. Sein Auslöser bleibt bei allen Werten gleich breit.
+- Modellmenüs fokussieren die aktuelle Auswahl. Pfeiltasten sowie Home/End bewegen den Fokus; Escape schließt und fokussiert den Auslöser. Ein Tabwechsel aus dem Picker schließt das Menü.
 
 #### Unterbrechung und Barrierefreiheit
 
 - `useMotionPreferences()` beobachtet die Betriebssystempräferenz auch während einer geöffneten Sitzung. Bei `prefers-reduced-motion: reduce` sind Übergänge sofort; räumliche Bewegung und Ladespinner entfallen. Status bleibt als Text erkennbar.
+- `MotionConfig reducedMotion="user"` sichert neue Motion-Komponenten zusätzlich ab. Zustandsicons zeigen weiterhin die richtige Endstellung. [Motion: Barrierefreiheit](https://motion.dev/docs/react-accessibility)
 - Mit `AnimatePresence` ausblendende Overlays werden sofort `inert` und `aria-hidden`. Sie dürfen während des sichtbaren Nachlaufs keine Klicks, Tabstopps oder doppelten Screenreader-Inhalte behalten. Inhalte im normalen Dokumentfluss werden beim Schließen sofort entfernt. [Motion: Anwesenheit während des Entfernens](https://motion.dev/docs/react-animate-presence)
 - Beim Schließen eines Dialogs wird die Fokusführung sofort freigegeben und der Auslöser fokussiert. Der Hintergrund ist während des offenen Dialogs gesperrt. Erneutes Öffnen darf keinen zweiten Dialog oder veralteten Fokus erzeugen.
 - Fundstellen scrollen nur auf ausdrückliche Auswahl und nur, wenn der Bereich außerhalb der sichtbaren Fläche liegt. Bei reduzierter Bewegung erfolgt der Sprung direkt.
@@ -307,7 +314,7 @@ Sind Original, Gegenentwurf, Zitat, Modellbewertung und Formulierungsvorschlag k
 - Originaldateien bleiben als Download verfügbar. Alte PDF-/Word-Quellen ohne Original zeigen ihren ausgelesenen Text; eine passende Datei kann ergänzt werden. Der Textabgleich bestätigt den Wortlaut, keine Dateiauthentizität. Gespeicherte Originalbytes werden nicht ersetzt.
 - PDF und Word starten bei 100 %; weitere Zoomstufen sind 25, 50, 75, 125, 150 und 200 %. Keine automatische Seitenbreite. Bei 100 % entsprechen Seitenmaße CSS-Druckmaßen (96 px pro Zoll); breite Seiten scrollen innerhalb der Vorschau.
 - Word übernimmt gespeicherte Umbrüche und ergänzt Vorschauseiten anhand der DOCX-Seitenmaße. Lange Absätze und einfache Tabellen werden ohne Textverlust aufgeteilt; Seitenwahl und Zitatsprung beziehen sich auf diese Vorschauseiten. Die Seitenzahlen sind keine garantierten Word-Fundstellen. Mehrspaltige Abschnitte, übergroße unteilbare Objekte und Fußnoten bleiben vollständig sichtbar und können längere Seiten benötigen.
-- Im dunklen Modus erscheinen Dokumentseiten in neutralen Graustufen: Papier `#242424`, schwarze Originalschrift als `#DBDBDB`, Umgebung `#171717`. Die Aktion „Originalfarben“ schaltet diese reine Anzeigeanpassung ab. Im hellen Modus bleiben Originalfarben erhalten. Downloads ändern sich dadurch nicht. Gemeinsame Tokens `--document-canvas`, `--document-paper`, `--document-ink` und `--document-filter` steuern beide Viewer.
+- PDF-Seiten erscheinen immer in Originalfarben: keine Filter, Invertierung oder Graustufen auf Canvas, Fotos oder Dokumentinhalt. Nur die Umgebung folgt dem Theme. Für die Word-Leseansicht bleibt die umschaltbare Graustufendarstellung bestehen: Papier `#242424`, schwarze Originalschrift als `#DBDBDB`, Umgebung `#171717`. „Originalfarben“ schaltet dort die Anzeigeanpassung ab. Downloads ändern sich nicht.
 - Mobil stehen Vergleichsfassungen untereinander: Original, Gegenentwurf, Bewertung. Keine horizontale Seitenverschiebung. Leere Nebenansichten entfallen.
 
 ### Interface-Design

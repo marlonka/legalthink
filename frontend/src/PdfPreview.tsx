@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, LoaderCircle, Palette, Quote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, Quote } from 'lucide-react';
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -220,7 +220,6 @@ export default function PdfPreview({
   const [page, setPage] = useState(initialPage);
   const [pageInput, setPageInput] = useState(String(initialPage));
   const [zoom, setZoom] = useState('1');
-  const [originalColors, setOriginalColors] = useState(false);
   const [width, setWidth] = useState(0);
   const [error, setError] = useState('');
   const [markedPage, setMarkedPage] = useState<number | null>(null);
@@ -484,11 +483,7 @@ export default function PdfPreview({
                 : `Seite ${page} von ${pdf.numPages}`;
 
   return (
-    <section
-      className="pdf-preview pdf-continuous-preview"
-      aria-label="PDF-Vorschau"
-      data-original-colors={originalColors || undefined}
-    >
+    <section className="pdf-preview pdf-continuous-preview" aria-label="PDF-Vorschau">
       <div className="pdf-toolbar">
         <div className="pdf-pagination">
           <button
@@ -524,15 +519,6 @@ export default function PdfPreview({
           </button>
         </div>
         <div className="pdf-view-actions">
-          <button
-            className="icon-button pdf-colors-toggle"
-            aria-label="Originalfarben"
-            aria-pressed={originalColors}
-            title={originalColors ? 'Originalfarben ausblenden' : 'Originalfarben anzeigen'}
-            onClick={() => setOriginalColors(!originalColors)}
-          >
-            <Palette size={17} />
-          </button>
           {quote && (
             <button
               className="icon-button"

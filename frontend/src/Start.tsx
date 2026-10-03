@@ -3,8 +3,10 @@ import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowDown,
   ArrowRight,
+  Check,
   ChevronDown,
   FileText,
+  Globe2,
   LoaderCircle,
   Paperclip,
   Plus,
@@ -329,6 +331,26 @@ export default function Start(props: Props) {
             </motion.span>
           </MotionButton>
           <div className="composer-toolbar-right">
+            <MotionButton
+              className="composer-research-toggle"
+              aria-label="Webrecherche"
+              aria-pressed={research}
+              aria-describedby="analysis-research-description"
+              title={`Webrecherche ${research ? 'aktiviert' : 'deaktiviert'}. Suchanfragen können Dokumentinhalte enthalten.`}
+              onClick={() => onResearch(!research)}
+              disabled={running}
+            >
+              <Globe2 size={18} strokeWidth={1.7} aria-hidden="true" />
+              <Check
+                className="composer-research-check"
+                size={10}
+                strokeWidth={3}
+                aria-hidden="true"
+              />
+            </MotionButton>
+            <span id="analysis-research-description" className="sr-only">
+              Suchanfragen können Dokumentinhalte enthalten.
+            </span>
             <ModelPicker
               models={models}
               model={model}
@@ -351,16 +373,9 @@ export default function Start(props: Props) {
             </MotionButton>
           </div>
         </div>
-        {!options && (research || playbookId) && (
+        {!options && playbookId && (
           <p className="active-options" aria-live="polite">
-            {[
-              playbookId
-                ? `Playbook: ${playbooks.find((item) => item.id === playbookId)?.name ?? 'Ausgewählt'}`
-                : '',
-              research ? 'Webrecherche aktiv' : '',
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+            Playbook: {playbooks.find((item) => item.id === playbookId)?.name ?? 'Ausgewählt'}
           </p>
         )}
         <Collapse open={options} id="analysis-options" className="composer-options-collapse">
@@ -382,17 +397,8 @@ export default function Start(props: Props) {
                 </option>
               ))}
             </select>
-            <label className="research-option">
-              <input
-                type="checkbox"
-                checked={research}
-                onChange={(event) => onResearch(event.target.checked)}
-                disabled={running}
-                aria-describedby="analysis-research-note"
-              />
-              <strong>Webrecherche einbeziehen</strong>
-            </label>
-            <small className="composer-research-note" id="analysis-research-note">
+            <span className="field-label composer-research-label">Webrecherche</span>
+            <small className="composer-research-note">
               Suchanfragen können Dokumentinhalte enthalten.
             </small>
           </div>
