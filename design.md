@@ -112,7 +112,7 @@ Radien folgen der Größe des Elements. Kleine Schaltflächen werden nicht zu Mi
 - Icons: vorhandene Lucide-Linienicons, meist 18–20 px, Strichstärke etwa 1,5–1,75. Nur eine Icon-Sprache.
 - Icons ergänzen vorhandene Aktionen. Kein Symbol muss freien Platz füllen. Reine Icon-Buttons erhalten einen zugänglichen Namen und bei Bedarf einen Tooltip.
 
-Das Markenzeichen ist ein eigenes gefülltes L mit einer diagonalen Abzweigung. Das L bleibt bei kleinen Größen erkennbar; die Abzweigung steht für das Prüfen verschiedener Gedankengänge. Die Rechtsanwendung benennt die Wortmarke. Keine zusätzliche Waage, Gehirn- oder Chipgrafik. `BrandMark.tsx`, SVG-Download und Favicon verwenden denselben Pfad; die Oberfläche reserviert dafür 28 × 28 px.
+Das Markenzeichen ist ein gezeichnetes LT-Monogramm: ein aufrechtes L mit breitem Fuß und ein eingerücktes T. Beide Buchstaben bleiben durch einen durchgehenden Abstand getrennt. Auf dem 32er-Raster sind die Striche 6 Einheiten stark und die Abstände mindestens 3 Einheiten breit. Die gegenüberliegenden Außenecken sind gerundet. Das Zeichen bleibt einfarbig; L und T müssen auch bei 16 px lesbar sein. `BrandMark.tsx`, SVG-Download und Favicon verwenden dieselben zwei Pfade; die Oberfläche reserviert dafür 28 × 28 px.
 
 ## Navigation und Seiten
 
