@@ -1,0 +1,142 @@
+/* The native range owns input, focus and thumb; decoration sits behind it. */
+.effort-control {
+  padding: 15px 15px 17px;
+}
+.effort-current {
+  display: block;
+  margin-bottom: 17px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.effort-track {
+  position: relative;
+  height: 26px;
+}
+.effort-rail {
+  position: absolute;
+  inset: 2px 0;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--border-selected);
+  pointer-events: none;
+}
+.effort-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--action-background);
+  clip-path: inset(0 calc(13px + (100% - 26px) * (1 - var(--effort-fraction))) 0 0);
+}
+.effort-particles {
+  position: absolute;
+  inset: 0;
+  color: var(--action-foreground);
+}
+.effort-particle {
+  position: absolute;
+  inset: 0;
+  animation: effort-flow 6s linear infinite;
+  animation-delay: var(--particle-delay);
+  animation-play-state: paused;
+}
+.effort-particles[data-flow-running='true'] .effort-particle {
+  animation-play-state: running;
+}
+.effort-particle::before {
+  content: '';
+  position: absolute;
+  top: var(--particle-lane);
+  left: -4px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: var(--particle-opacity);
+}
+.effort-particle-star::before {
+  width: 4px;
+  height: 4px;
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+}
+@keyframes effort-flow {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(100% + 4px));
+  }
+}
+.effort-range {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.effort-range::-webkit-slider-runnable-track {
+  height: 22px;
+  background: transparent;
+}
+.effort-range::-moz-range-track {
+  height: 22px;
+  background: transparent;
+}
+.effort-range::-moz-range-progress {
+  background: transparent;
+}
+.effort-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -2px;
+  border: 2px solid var(--surface-popover);
+  border-radius: 50%;
+  background: var(--action-background);
+  box-shadow: 0 0 0 1px var(--border-selected);
+}
+.effort-range::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border: 2px solid var(--surface-popover);
+  border-radius: 50%;
+  background: var(--action-background);
+  box-shadow: 0 0 0 1px var(--border-selected);
+}
+.effort-range:focus-visible {
+  outline-offset: 6px;
+}
+.effort-ticks {
+  position: absolute;
+  inset: 0 13px;
+}
+.effort-ticks span {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.effort-ticks span[data-filled='true'] {
+  background: var(--action-foreground);
+  opacity: 0.4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .effort-particle {
+    animation: none !important;
+    transform: translateX(var(--particle-rest-x));
+  }
+}
