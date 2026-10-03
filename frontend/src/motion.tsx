@@ -1,12 +1,12 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { motion, type HTMLMotionProps, type Transition } from 'motion/react';
 
-export const SPRING = {
+const SPRING = {
   control: { type: 'spring', stiffness: 500, damping: 38, mass: 0.8 },
   panel: { type: 'spring', stiffness: 400, damping: 38, mass: 0.9 },
 } satisfies Record<string, Transition>;
 
-export const FADE = { duration: 0.12, ease: 'easeOut' } satisfies Transition;
+const FADE = { duration: 0.12, ease: 'easeOut' } satisfies Transition;
 const INSTANT = { duration: 0 } satisfies Transition;
 type Preset = keyof typeof SPRING | 'fade';
 
@@ -59,11 +59,10 @@ type CollapseProps = {
   children: ReactNode;
   id?: string;
   className?: string;
-  innerClassName?: string;
 };
 
 // Apply the requested disclosure once. Height springs move every following control.
-export function Collapse({ open, children, id, className, innerClassName }: CollapseProps) {
+export function Collapse({ open, children, id, className }: CollapseProps) {
   const { reduced, transition } = useMotionPreferences();
   if (!open) return null;
   return (
@@ -74,9 +73,7 @@ export function Collapse({ open, children, id, className, innerClassName }: Coll
       animate={{ opacity: 1 }}
       transition={transition('fade')}
     >
-      <div className={innerClassName} style={{ display: 'flow-root' }}>
-        {children}
-      </div>
+      <div style={{ display: 'flow-root' }}>{children}</div>
     </motion.div>
   );
 }

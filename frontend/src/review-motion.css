@@ -81,14 +81,8 @@
   overflow-wrap: anywhere;
 }
 
-.review-motion .suggestion-card,
-.review-motion .source-panel {
+.review-motion .suggestion-card {
   scroll-margin-top: 16px;
-}
-
-.review-motion .source-panel:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 4px;
 }
 
 .review-motion .timeline-source-action {

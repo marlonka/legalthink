@@ -384,20 +384,15 @@ export default function PdfPreview({
     };
     void (async () => {
       try {
-        // The backend page is derived from the extracted quote, not taken on trust from
-        // the model. Search elsewhere only when that page has no unique exact match.
+        // A saved page reference may predate unique-page verification. Check the whole
+        // document before marking a quote that may repeat in headers or appendices.
         const count = occurrences(mappedText(await text(targetPage)).value, needle);
         if (!live) return;
-        if (count === 1) {
-          pendingCitation.current = !userNavigated.current;
-          setCitation({ state: 'found', page: targetPage });
-          return;
-        }
         if (count > 1) {
           setCitation({ state: 'multiple', page: targetPage });
           return;
         }
-        let found = 0;
+        let found = count === 1 ? targetPage : 0;
         for (let number = 1; number <= pdf.numPages; number++) {
           if (number === targetPage) continue;
           const matches = occurrences(mappedText(await text(number)).value, needle);

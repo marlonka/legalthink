@@ -355,7 +355,7 @@ export default function Review({
           role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-findings"
           aria-labelledby="tab-findings"
-          className="review-workspace source-hidden"
+          className="review-workspace"
         >
           <section className="findings-column" aria-label={labels.findings}>
             <div className="findings-toolbar">
@@ -481,7 +481,7 @@ export default function Review({
           role={views.length > 1 ? 'tabpanel' : 'region'}
           id="panel-suggestions"
           aria-labelledby="tab-suggestions"
-          className="review-workspace source-hidden"
+          className="review-workspace"
         >
           <section className="suggestions-column">
             {suggestions.map((finding, index) => (

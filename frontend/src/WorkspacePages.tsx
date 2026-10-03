@@ -552,11 +552,9 @@ export function Settings({
         </div>
         <div className="privacy-facts">
           <div>
-            <span>01</span>
             <p>Dokumente, Playbooks und Ergebnisse werden auf diesem Server gespeichert.</p>
           </div>
           <div>
-            <span>02</span>
             <p>
               Beim Analysestart werden die ausgewählten Inhalte an die OpenAI API übertragen.
               API-Anfragen verwenden <code>store: false</code>; dies ist keine Zusage einer
@@ -564,7 +562,6 @@ export function Settings({
             </p>
           </div>
           <div>
-            <span>03</span>
             <p>
               Aktivierte Webrecherche kann Inhalte aus Ihrem Auftrag in Suchanfragen einbeziehen.
               Klären Sie die Zulässigkeit für Ihre Unterlagen vorab.

@@ -419,7 +419,6 @@ export default function Start(props: Props) {
             <span />
             <div>
               <strong>Analyse läuft …</strong>
-              <small>Das Ergebnis wird nach Abschluss gespeichert.</small>
             </div>
             <MotionButton className="text-button" onClick={onCancel}>
               Warten abbrechen
@@ -487,7 +486,9 @@ function ComposerDocument({
               : index === 1
                 ? '02 · Gegenentwurf'
                 : 'Zusätzliches Dokument'
-            : `${document.page_count ? `${document.page_count} ${document.page_count === 1 ? 'Seite' : 'Seiten'}` : `${document.char_count.toLocaleString('de-DE')} Zeichen`} · bereit`}
+            : document.page_count
+              ? `${document.page_count} ${document.page_count === 1 ? 'Seite' : 'Seiten'}`
+              : `${document.char_count.toLocaleString('de-DE')} Zeichen`}
         </small>
       </div>
       <MotionButton

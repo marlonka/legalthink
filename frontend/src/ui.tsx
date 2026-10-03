@@ -32,17 +32,15 @@ export const EFFORT_NAMES: Record<string, string> = {
   max: 'Maximum',
 };
 
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand() {
   return (
     <span className="brand">
       <svg className="brand-symbol" viewBox="0 0 32 32" aria-hidden="true">
         <path d="M7 5v22h19M14 5v15h12" />
       </svg>
-      {!compact && (
-        <span>
-          LegalThink<span className="brand-suffix">GPT</span>
-        </span>
-      )}
+      <span>
+        LegalThink<span className="brand-suffix">GPT</span>
+      </span>
     </span>
   );
 }
