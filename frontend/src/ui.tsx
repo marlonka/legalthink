@@ -20,7 +20,7 @@ export const DEFAULT_MODELS: Model[] = [
     id: 'gpt-6.1-sol',
     name: 'GPT-6.1 Sol',
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-    default_effort: 'medium',
+    default_effort: 'xhigh',
   },
 ];
 export const EFFORT_NAMES: Record<string, string> = {

@@ -12,7 +12,8 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { ErrorMessage, ModelPicker } from './ui';
+import { ErrorMessage, Modal, ModelPicker } from './ui';
+import { INSTRUCTION_TEMPLATES } from './instruction-templates';
 import DocumentPicker from './DocumentPicker';
 import ServiceTierField from './ServiceTierField';
 import ProcessingRegionField from './ProcessingRegionField';
@@ -30,6 +31,8 @@ import type {
 import { MAX_MATERIAL_CHARS } from './types';
 import { Collapse, MotionButton, useMotionPreferences } from './motion';
 import './composer-motion.css';
+
+const MAX_INSTRUCTION_CHARS = 20_000;
 
 interface Props {
   workflow: Workflow;
@@ -121,8 +124,25 @@ export default function Start(props: Props) {
   const [dragging, setDragging] = useState(false);
   const [options, setOptions] = useState(false);
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [templateNotice, setTemplateNotice] = useState('');
   const { reduced, transition } = useMotionPreferences();
   const selectedPlaybookName = playbooks.find((item) => item.id === playbookId)?.name;
+  const templateScenario =
+    workflow === 'compliance' && complianceTask !== 'general' ? complianceTask : workflow;
+  const instructionTemplate = INSTRUCTION_TEMPLATES[templateScenario];
+  const templateIncluded = context.includes(instructionTemplate);
+  const hasInstruction = Boolean(context.trim());
+  const templateInstruction = hasInstruction
+    ? `${context}\n\n${instructionTemplate}`
+    : instructionTemplate;
+  const templateTooLong = templateInstruction.length > MAX_INSTRUCTION_CHARS;
+  function applyTemplate() {
+    if (running || templateIncluded || templateTooLong) return;
+    onContext(templateInstruction);
+    setTemplateNotice(hasInstruction ? 'Vorlage ergänzt.' : 'Vorlage übernommen.');
+    setTemplateOpen(false);
+  }
   return (
     <div className="start-page">
       <header className="analysis-start-heading">
@@ -325,9 +345,26 @@ export default function Start(props: Props) {
             onChange={(event) => onContext(event.target.value)}
             placeholder={workflow === 'compliance' ? currentCompliance.prompt : current.prompt}
             disabled={running}
-            maxLength={20000}
+            maxLength={MAX_INSTRUCTION_CHARS}
             rows={4}
           />
+          <div className="composer-instruction-actions">
+            <MotionButton
+              className="text-button"
+              aria-haspopup="dialog"
+              onClick={() => {
+                setTemplateNotice('');
+                setTemplateOpen(true);
+              }}
+              disabled={running}
+            >
+              <FileText size={14} aria-hidden="true" />
+              Vorlage ansehen
+            </MotionButton>
+            <span className="sr-only" role="status">
+              {templateNotice}
+            </span>
+          </div>
         </div>
         <p className="analysis-data-note" id="analysis-data-note">
           Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
@@ -465,6 +502,39 @@ export default function Start(props: Props) {
         )}
       </section>
       <AnimatePresence initial={false}>
+        {templateOpen && (
+          <Modal
+            key="instruction-template"
+            title={`Prüfauftrag-Vorlage · ${workflow === 'compliance' ? currentCompliance.short : current.label}`}
+            onClose={() => setTemplateOpen(false)}
+          >
+            <div className="modal-body">
+              <div className="instruction-template-preview">{instructionTemplate}</div>
+              {templateIncluded ? (
+                <p className="field-help">Diese Vorlage ist bereits im Prüfauftrag enthalten.</p>
+              ) : templateTooLong ? (
+                <ErrorMessage>
+                  Die Vorlage überschreitet zusammen mit Ihrem Text die Grenze von 20.000 Zeichen.
+                  Kürzen Sie zuerst den Prüfauftrag.
+                </ErrorMessage>
+              ) : hasInstruction ? (
+                <p className="field-help">Die Vorlage wird am Ende Ihres Prüfauftrags ergänzt.</p>
+              ) : null}
+            </div>
+            <div className="modal-footer">
+              <MotionButton className="button secondary" onClick={() => setTemplateOpen(false)}>
+                Schließen
+              </MotionButton>
+              <MotionButton
+                className="button primary"
+                onClick={applyTemplate}
+                disabled={running || templateIncluded || templateTooLong}
+              >
+                {hasInstruction ? 'Vorlage ergänzen' : 'Vorlage übernehmen'}
+              </MotionButton>
+            </div>
+          </Modal>
+        )}
         {documentPickerOpen && (
           <DocumentPicker
             key="document-picker"

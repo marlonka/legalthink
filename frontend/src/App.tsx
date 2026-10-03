@@ -32,6 +32,7 @@ import type {
   Workflow,
 } from './types';
 import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
+import { INSTRUCTION_TEMPLATES } from './instruction-templates';
 import './polish.css';
 import './navigation-motion.css';
 
@@ -68,9 +69,9 @@ type Draft = {
   playbookId: string;
   research: boolean;
 };
-function emptyDraft(scenario: DemoScenario): Draft {
+function initialDraft(scenario: DemoScenario): Draft {
   return {
-    context: '',
+    context: INSTRUCTION_TEMPLATES[scenario],
     sourceText: '',
     selectedIds: scenario === 'compare' ? ['', ''] : [],
     playbookId: '',
@@ -138,7 +139,7 @@ export default function App() {
     workflow === 'compliance' && complianceTask !== 'general' ? complianceTask : workflow;
   const [drafts, setDrafts] = useState<Partial<Record<DemoScenario, Draft>>>({});
   const { context, sourceText, selectedIds, playbookId, research } =
-    drafts[scenario] ?? emptyDraft(scenario);
+    drafts[scenario] ?? initialDraft(scenario);
   const sourceTextCharCount = useMemo(() => Array.from(sourceText).length, [sourceText]);
   const selectedDocumentIds = selectedIds.filter(Boolean);
   const materialCharCount =
@@ -148,7 +149,7 @@ export default function App() {
       .reduce((total, document) => total + document.char_count, 0);
   function updateDraft(patch: Partial<Draft> | ((previous: Draft) => Partial<Draft>)) {
     setDrafts((previous) => {
-      const current = previous[scenario] ?? emptyDraft(scenario);
+      const current = previous[scenario] ?? initialDraft(scenario);
       return {
         ...previous,
         [scenario]: { ...current, ...(typeof patch === 'function' ? patch(current) : patch) },

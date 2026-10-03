@@ -30,7 +30,7 @@ MODELS = [
         "name": "GPT-6.1 Sol",
         "description": "Für anspruchsvolle Prüfungen und komplexe Abwägungen.",
         "efforts": ["low", "medium", "high", "xhigh", "max"],
-        "default_effort": "medium",
+        "default_effort": "xhigh",
     },
 ]
 
