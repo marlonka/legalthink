@@ -1,0 +1,17 @@
+FIKTIVER TESTFALL — KEIN MANDAT
+Softwarebereitstellungsvertrag, Entwurf A
+
+§ 1 Leistung
+Der Anbieter stellt dem Kunden die Software zur internen Nutzung bereit.
+
+§ 2 Vergütung
+Die monatliche Vergütung beträgt 200 EUR. Die Anzahl der Nutzer ist nicht festgelegt.
+
+§ 3 Laufzeit
+Die Laufzeit beträgt zwölf Monate. Ohne Kündigung verlängert sie sich um einen Monat.
+
+§ 4 Haftung
+Die Haftung des Anbieters ist in allen Fällen ausgeschlossen.
+
+§ 5 Anlagen
+Die Leistungsbeschreibung und die Datenschutzvereinbarung sollen als Anlagen beigefügt werden. Die Anlagen liegen diesem Testfall nicht bei.

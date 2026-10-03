@@ -1,0 +1,17 @@
+FIKTIVER TESTFALL — KEIN MANDAT
+Softwarebereitstellungsvertrag, Gegenentwurf B
+
+§ 1 Leistung
+Der Anbieter stellt dem Kunden die Software zur internen Nutzung bereit.
+
+§ 2 Vergütung
+Die monatliche Vergütung beträgt 200 EUR. Die Anzahl der Nutzer ist nicht festgelegt.
+
+§ 3 Laufzeit
+Die Laufzeit beträgt zwölf Monate. Ohne Kündigung verlängert sie sich um zwölf Monate.
+
+§ 4 Haftung
+Die Haftung für vorsätzlich verursachte Schäden bleibt unbeschränkt. Für alle übrigen Schäden ist die Haftung auf eine Monatsvergütung begrenzt.
+
+§ 5 Anlagen
+Die Leistungsbeschreibung und die Datenschutzvereinbarung sollen als Anlagen beigefügt werden. Die Anlagen liegen diesem Testfall nicht bei.

@@ -1,0 +1,6 @@
+FIKTIVER TESTFALL — KEIN MANDAT
+
+Eine Organisation plant die automatische Auswertung interner Gesprächsnotizen.
+Es ist unklar, ob Beschäftigten-, Gesundheits- oder Kundendaten enthalten sind.
+Verantwortlicher, Dienstleister, Speicherfristen, Empfänger, Regionen und technische Maßnahmen sind noch nicht festgelegt.
+Bitte einen DSFA-Arbeitsentwurf vorbereiten, der die fehlenden Angaben deutlich markiert.
