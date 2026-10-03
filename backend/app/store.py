@@ -82,6 +82,11 @@ class Store:
             rows = db.execute(f"SELECT body FROM {table} ORDER BY created_at DESC, rowid DESC")
             return [json.loads(row[0]) for row in rows]
 
+    def delete_documents(self, document_ids: list[str]) -> None:
+        # Delete the confirmed selection atomically; newer uploads stay untouched.
+        with self.connection() as db:
+            db.executemany("DELETE FROM documents WHERE id=?", [(item,) for item in document_ids])
+
     def delete(self, table: str, item_id: str) -> bool:
         assert table in TABLES
         with self.connection() as db:

@@ -25,6 +25,7 @@ from .schemas import (
     AnalysisRequest,
     DemoRequest,
     Document,
+    DocumentDeleteRequest,
     Playbook,
     PlaybookInput,
     new_id,
@@ -138,6 +139,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         await run_in_threadpool(app.state.store.put, "documents", document.model_dump())
         return document
+
+    @app.delete("/api/documents", status_code=204)
+    def delete_documents(body: DocumentDeleteRequest):
+        app.state.store.delete_documents(body.document_ids)
 
     @app.delete("/api/documents/{document_id}", status_code=204)
     def delete_document(document_id: str):

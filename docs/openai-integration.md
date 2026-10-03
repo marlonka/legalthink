@@ -1,6 +1,6 @@
 # OpenAI integration decisions
 
-Verified against official OpenAI documentation on **3 October 2026**. This records the API contract and implementation rationale. No live model request was made during development; project access, billing, model output quality, latency, and regional configuration require a later live check.
+Verified against official OpenAI documentation on **3 October 2026**. This records the API contract and implementation rationale. An authorized diagnostic request with synthetic input and `gpt-6-luna` / `high` was rejected with HTTP 403 (`model_not_found`): the configured project lacked model access. Its model catalog also omitted both configured models. No successful live model response or legal-quality evaluation was obtained; billing, output quality, latency and regional configuration remain unverified.
 
 ## Models and reasoning
 
@@ -19,6 +19,7 @@ Use the Responses API. Omit `temperature`, `top_p`, and log-probability options 
 - Place stable, versioned legal-review instructions first, followed by a separate developer block with the selected workflow, privacy task, and research permission. Keep documents, playbook content, and the user's task in a JSON user message. The user's task controls the mandate; playbooks supply negotiation preferences. Embedded source instructions cannot override the developer rules or authorize tools.
 - Request a strict JSON Schema through Responses `text.format`, or the Python SDK's `responses.parse(text_format=...)` helper. Validate the returned content against application models before rendering it.
 - Handle refusal, incomplete output, malformed output, and missing parsed content explicitly. A schema validates shape, not evidence or legal correctness. Keep gaps and uncertainty in the result contract.
+- A configured key is only a presence check. Surface `model_not_found` as model unavailability for the configured API project and distinguish other 403 permission failures. Never echo raw provider messages, project identifiers or credentials to the browser, and never silently switch models.
 - Require exact document quotes and document identifiers. Check quotes against supplied text before calling them verified. Verification of a quotation is distinct from verification of its legal interpretation.
 - Use bounded input/output sizes, an explicit timeout, bounded retries, and sanitized provider errors. Avoid automatically retrying a semantically invalid result with the same request.
 

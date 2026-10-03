@@ -400,6 +400,35 @@ async def test_provider_errors_hide_raw_content(status, expected):
     assert len(calls) == 1  # No automatic duplicate billable analyses.
 
 
+@pytest.mark.parametrize(
+    "status,code", [(403, "model_not_found"), (404, "model_not_found"), (403, "permission_denied")]
+)
+async def test_model_access_error_is_actionable_without_exposing_provider_details(status, code):
+    service, client = service_with_handler(
+        lambda request: httpx.Response(
+            status,
+            json={
+                "error": {
+                    "code": code,
+                    "message": "Project PRIVATE_PROJECT cannot access model; PRIVATE API KEY",
+                    "type": "invalid_request_error",
+                }
+            },
+        )
+    )
+    try:
+        with pytest.raises(AnalysisError) as error:
+            await service.run(AnalysisRequest(workflow="contract", document_ids=[DOC.id]), [DOC])
+    finally:
+        await client.close()
+    assert error.value.status_code == 503
+    assert "PRIVATE" not in error.value.detail
+    if code == "model_not_found":
+        assert "gpt-6-luna" in error.value.detail and "Modellzugriff" in error.value.detail
+    else:
+        assert "Berechtigungen" in error.value.detail
+
+
 async def test_timeout_and_cancellation_stop_provider_work():
     finished = asyncio.Event()
 

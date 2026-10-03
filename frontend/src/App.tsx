@@ -8,6 +8,7 @@ import {
   Menu,
   Plus,
   Settings2,
+  Trash2,
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
@@ -54,7 +55,8 @@ function message(error: unknown) {
 type DeleteTarget =
   | { type: 'analysis'; item: Analysis }
   | { type: 'playbook'; item: Playbook }
-  | { type: 'document'; item: DocumentRecord };
+  | { type: 'document'; item: DocumentRecord }
+  | { type: 'documents'; items: DocumentRecord[] };
 
 type Draft = {
   context: string;
@@ -578,7 +580,14 @@ export default function App() {
           : deleteTarget.type === 'playbook'
             ? 'playbooks'
             : 'documents';
-      await api(`/${path}/${encodeURIComponent(deleteTarget.item.id)}`, { method: 'DELETE' });
+      if (deleteTarget.type === 'documents') {
+        await api('/documents', {
+          method: 'DELETE',
+          body: JSON.stringify({ document_ids: deleteTarget.items.map((item) => item.id) }),
+        });
+      } else {
+        await api(`/${path}/${encodeURIComponent(deleteTarget.item.id)}`, { method: 'DELETE' });
+      }
       if (deleteTarget.type === 'analysis')
         setAnalyses((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
       else if (deleteTarget.type === 'playbook') {
@@ -595,7 +604,12 @@ export default function App() {
           ),
         );
       } else {
-        setDocuments((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
+        const removedIds = new Set(
+          deleteTarget.type === 'documents'
+            ? deleteTarget.items.map((item) => item.id)
+            : [deleteTarget.item.id],
+        );
+        setDocuments((previous) => previous.filter((item) => !removedIds.has(item.id)));
         setDrafts((previous) =>
           Object.fromEntries(
             Object.entries(previous).map(([key, draft]) => [
@@ -604,8 +618,8 @@ export default function App() {
                 ...draft,
                 selectedIds:
                   key === 'compare'
-                    ? draft.selectedIds.map((id) => (id === deleteTarget.item.id ? '' : id))
-                    : draft.selectedIds.filter((id) => id !== deleteTarget.item.id),
+                    ? draft.selectedIds.map((id) => (removedIds.has(id) ? '' : id))
+                    : draft.selectedIds.filter((id) => !removedIds.has(id)),
               },
             ]),
           ),
@@ -888,6 +902,9 @@ export default function App() {
                   onEffort={setEffort}
                   documents={documents}
                   onDeleteDocument={(item) => askDelete({ type: 'document', item })}
+                  onDeleteAllDocuments={() =>
+                    askDelete({ type: 'documents', items: [...documents] })
+                  }
                   onRefresh={() => void refresh()}
                   refreshing={refreshing || loading}
                 />
@@ -969,22 +986,33 @@ export default function App() {
                   ? 'Analyse löschen?'
                   : deleteTarget.type === 'playbook'
                     ? 'Playbook löschen?'
-                    : 'Dokument löschen?'
+                    : deleteTarget.type === 'documents'
+                      ? 'Alle Dokumente löschen?'
+                      : 'Dokument löschen?'
               }
               onClose={() => {
                 if (!deleting) setDeleteTarget(null);
               }}
             >
               <div className="modal-body">
-                <p>
-                  <strong>
-                    {'title' in deleteTarget.item
-                      ? deleteTarget.item.title
-                      : deleteTarget.item.name}
-                  </strong>{' '}
-                  wird dauerhaft von diesem Server gelöscht.
-                </p>
-                {deleteTarget.type === 'document' && (
+                {deleteTarget.type === 'documents' ? (
+                  <p>
+                    {deleteTarget.items.length === 1
+                      ? 'Das gespeicherte Dokument wird'
+                      : `Alle ${deleteTarget.items.length} gespeicherten Dokumente werden`}{' '}
+                    dauerhaft von diesem Server gelöscht.
+                  </p>
+                ) : (
+                  <p>
+                    <strong>
+                      {'title' in deleteTarget.item
+                        ? deleteTarget.item.title
+                        : deleteTarget.item.name}
+                    </strong>{' '}
+                    wird dauerhaft von diesem Server gelöscht.
+                  </p>
+                )}
+                {(deleteTarget.type === 'document' || deleteTarget.type === 'documents') && (
                   <p className="field-help">
                     Fundstellen in bestehenden Analysen können danach nicht mehr mit dem
                     vollständigen Dokument abgeglichen werden. Gespeicherte Zitate in
@@ -1005,8 +1033,14 @@ export default function App() {
                   className="button danger"
                   onClick={() => void confirmDelete()}
                   disabled={deleting}
+                  aria-busy={deleting}
                 >
-                  {deleting && <LoaderCircle className="spin" size={15} />}Endgültig löschen
+                  {deleting ? (
+                    <LoaderCircle className="spin" size={15} aria-hidden="true" />
+                  ) : (
+                    <Trash2 size={15} aria-hidden="true" />
+                  )}
+                  Endgültig löschen
                 </button>
               </div>
             </Modal>
