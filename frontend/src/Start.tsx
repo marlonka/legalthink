@@ -31,6 +31,9 @@ interface Props {
   onReorder: () => void;
   context: string;
   onContext: (value: string) => void;
+  sourceText: string;
+  onSourceText: (value: string) => void;
+  materialCharCount: number;
   model: string;
   effort: string;
   models: Model[];
@@ -65,6 +68,9 @@ export default function Start(props: Props) {
     onReorder,
     context,
     onContext,
+    sourceText,
+    onSourceText,
+    materialCharCount,
     model,
     effort,
     models,
@@ -125,12 +131,16 @@ export default function Start(props: Props) {
           setDragging(true);
         }}
         onDragLeave={(event) => {
+          if (!event.dataTransfer.types.includes('Files')) return;
           event.preventDefault();
           dragCounter.current = Math.max(0, dragCounter.current - 1);
           if (dragCounter.current === 0) setDragging(false);
         }}
-        onDragOver={(event) => event.preventDefault()}
+        onDragOver={(event) => {
+          if (event.dataTransfer.types.includes('Files')) event.preventDefault();
+        }}
         onDrop={(event) => {
+          if (!event.dataTransfer.types.includes('Files')) return;
           event.preventDefault();
           dragCounter.current = 0;
           setDragging(false);
@@ -228,6 +238,31 @@ export default function Start(props: Props) {
             )}
           </div>
         )}
+        <div className="composer-source-text">
+          <label className="context-label" htmlFor="analysis-source-text">
+            Text oder E-Mail-Verlauf <span>(optional)</span>
+          </label>
+          <textarea
+            id="analysis-source-text"
+            className="source-text-input"
+            value={sourceText}
+            onChange={(event) => onSourceText(event.target.value)}
+            placeholder={
+              workflow === 'compare'
+                ? 'Begleitende Korrespondenz oder weitere Angaben einfügen. Verglichen werden die beiden Dokumente.'
+                : 'E-Mail-Verlauf, Vertragstext oder weitere Unterlagen hier einfügen.'
+            }
+            rows={8}
+            disabled={running}
+            spellCheck={false}
+            aria-describedby="analysis-source-limit"
+            aria-invalid={materialCharCount > 300_000 || undefined}
+          />
+          <div className="source-text-meta" id="analysis-source-limit">
+            <span>Text und Dokumente zusammen</span>
+            <span>{materialCharCount.toLocaleString('de-DE')} / 300.000 Zeichen</span>
+          </div>
+        </div>
         <div className="composer-context-header">
           <label className="context-label" htmlFor="analysis-context">
             Prüfauftrag <span>(optional)</span>

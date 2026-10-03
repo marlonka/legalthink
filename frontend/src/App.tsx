@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   Check,
@@ -56,10 +56,17 @@ type DeleteTarget =
   | { type: 'playbook'; item: Playbook }
   | { type: 'document'; item: DocumentRecord };
 
-type Draft = { context: string; selectedIds: string[]; playbookId: string; research: boolean };
+type Draft = {
+  context: string;
+  sourceText: string;
+  selectedIds: string[];
+  playbookId: string;
+  research: boolean;
+};
 function emptyDraft(scenario: DemoScenario): Draft {
   return {
     context: '',
+    sourceText: '',
     selectedIds: scenario === 'compare' ? ['', ''] : [],
     playbookId: '',
     research: false,
@@ -114,8 +121,15 @@ export default function App() {
   const scenario: DemoScenario =
     workflow === 'compliance' && complianceTask !== 'general' ? complianceTask : workflow;
   const [drafts, setDrafts] = useState<Partial<Record<DemoScenario, Draft>>>({});
-  const { context, selectedIds, playbookId, research } = drafts[scenario] ?? emptyDraft(scenario);
+  const { context, sourceText, selectedIds, playbookId, research } =
+    drafts[scenario] ?? emptyDraft(scenario);
+  const sourceTextCharCount = useMemo(() => Array.from(sourceText).length, [sourceText]);
   const selectedDocumentIds = selectedIds.filter(Boolean);
+  const materialCharCount =
+    sourceTextCharCount +
+    documents
+      .filter((document) => selectedDocumentIds.includes(document.id))
+      .reduce((total, document) => total + document.char_count, 0);
   function updateDraft(patch: Partial<Draft> | ((previous: Draft) => Partial<Draft>)) {
     setDrafts((previous) => {
       const current = previous[scenario] ?? emptyDraft(scenario);
@@ -406,8 +420,9 @@ export default function App() {
   async function runAnalysis() {
     if (running) return;
     setError('');
-    if (!selectedDocumentIds.length) {
-      setError('Fügen Sie mindestens ein Dokument hinzu, um die Prüfung zu beginnen.');
+    if (workflow !== 'compare' && !selectedDocumentIds.length && !sourceText.trim()) {
+      setError('Fügen Sie ein Dokument hinzu oder geben Sie einen Text zur Prüfung ein.');
+      document.getElementById('analysis-source-text')?.focus();
       return;
     }
     if (selectedDocumentIds.length > 12) {
@@ -418,6 +433,13 @@ export default function App() {
       setError(
         'Für den Versionsvergleich benötigen Sie genau zwei Dokumente: zuerst das Original, dann den Gegenentwurf.',
       );
+      return;
+    }
+    if (materialCharCount > 300_000) {
+      setError(
+        'Text und Dokumente dürfen zusammen höchstens 300.000 Zeichen enthalten. Bitte den Umfang reduzieren.',
+      );
+      document.getElementById('analysis-source-text')?.focus();
       return;
     }
     if (!health?.api_configured) {
@@ -438,6 +460,7 @@ export default function App() {
           document_ids: selectedDocumentIds,
           compliance_task: workflow === 'compliance' ? complianceTask : 'general',
           context,
+          source_text: sourceText,
           model,
           effort,
           playbook_id: playbookId || null,
@@ -445,6 +468,21 @@ export default function App() {
         }),
       });
       setAnalysis(result);
+      if (result.source_text_document_id) {
+        // The server preserves the submitted text and returns its saved source ID.
+        // Populate the local source view immediately without another loading state.
+        const sourceDocument: DocumentRecord = {
+          id: result.source_text_document_id,
+          name: result.source_text_document_name || 'Eingefügter Text.txt',
+          text: sourceText,
+          page_count: 1,
+          char_count: sourceTextCharCount,
+        };
+        setDocuments((previous) => [
+          sourceDocument,
+          ...previous.filter((document) => document.id !== sourceDocument.id),
+        ]);
+      }
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
       navigate(`analysis/${result.id}`);
     } catch (error) {
@@ -893,6 +931,9 @@ export default function App() {
                   onReorder={() => setSelectedIds((previous) => [...previous].reverse())}
                   context={context}
                   onContext={(value) => updateDraft({ context: value })}
+                  sourceText={sourceText}
+                  onSourceText={(value) => updateDraft({ sourceText: value })}
+                  materialCharCount={materialCharCount}
                   model={model}
                   effort={effort}
                   models={models}

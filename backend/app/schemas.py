@@ -54,7 +54,8 @@ class Document(StrictModel):
 
 class AnalysisRequest(StrictModel):
     workflow: Workflow
-    document_ids: list[str] = Field(min_length=1, max_length=12)
+    document_ids: list[str] = Field(default_factory=list, max_length=12)
+    source_text: str = Field(default="", max_length=300_000)
     context: str = Field(default="", max_length=20000)
     model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
     effort: Effort = "high"
@@ -71,6 +72,8 @@ class AnalysisRequest(StrictModel):
             raise ValueError("Dokumente dürfen nur einmal ausgewählt werden.")
         if self.workflow == "compare" and len(self.document_ids) != 2:
             raise ValueError("Die Synopse benötigt genau zwei Dokumente: Entwurf und Gegenentwurf.")
+        if not self.document_ids and not self.source_text.strip():
+            raise ValueError("Bitte ein Dokument auswählen oder Text zur Prüfung einfügen.")
         if self.workflow != "compliance" and self.compliance_task != "general":
             raise ValueError("AVV und DSFA sind nur im Datenschutz-Workflow verfügbar.")
         return self
@@ -159,6 +162,8 @@ class Analysis(StrictModel):
     provider_duration_ms: int | None = None
     prompt_version: str | None = None
     document_ids: list[str] = Field(default_factory=list)
+    source_text_document_id: str | None = None
+    source_text_document_name: str | None = None
     compliance_task: ComplianceTask = "general"
     demo_scenario: DemoScenario | None = None
 

@@ -141,10 +141,17 @@ for (const width of [390, 768, 1280]) {
       for (const frame of await frames(input)) sameBox(frame, inputBefore);
       sameBox(await box(toolbar), toolbarBefore);
     }
-    await page.getByRole('button', { name: 'Prüfoptionen', exact: true }).click();
-    sameBox(await box(input), inputBefore);
-    sameBox(await box(toolbar), toolbarBefore);
+    // The source field makes the form taller. Scroll controls into view before
+    // measuring their interaction, so intentional scrolling is not a layout shift.
+    const options = page.getByRole('button', { name: 'Prüfoptionen', exact: true });
+    await options.scrollIntoViewIfNeeded();
+    const optionsInputBefore = await box(input);
+    const optionsToolbarBefore = await box(toolbar);
+    await options.click();
+    sameBox(await box(input), optionsInputBefore);
+    sameBox(await box(toolbar), optionsToolbarBefore);
     const research = page.getByRole('checkbox', { name: 'Webrecherche einbeziehen' });
+    await research.scrollIntoViewIfNeeded();
     const researchBefore = await box(research);
     const playbook = page.getByRole('combobox', { name: 'Kanzlei-Playbook' });
     const playbookBefore = await box(playbook);
@@ -153,9 +160,11 @@ for (const width of [390, 768, 1280]) {
     sameBox(await box(playbook), playbookBefore);
     await research.uncheck();
     await page.screenshot({ path: `artifacts/options-${width}.png`, fullPage: true });
-    await page.getByRole('button', { name: 'Prüfoptionen', exact: true }).click();
+    await options.click();
     const picker = page.locator('.model-picker');
+    await picker.scrollIntoViewIfNeeded();
     const pickerBefore = await box(picker);
+    const modelToolbarBefore = await box(toolbar);
     await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
     await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
     sameBox(await box(picker), pickerBefore);
@@ -165,7 +174,7 @@ for (const width of [390, 768, 1280]) {
     for (const key of ['Home', 'End', 'Home', 'ArrowRight']) {
       await page.keyboard.press(key);
       sameBox(await box(picker), pickerBefore);
-      sameBox(await box(toolbar), toolbarBefore);
+      sameBox(await box(toolbar), modelToolbarBefore);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

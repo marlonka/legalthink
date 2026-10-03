@@ -125,13 +125,15 @@ Lange Namen werden in der Navigation gekürzt; vollständige Namen bleiben im ge
 Der Prüfauftrag und seine Dokumente bilden den Schwerpunkt. Die Seite braucht keinen einleitenden Nutzenabsatz.
 
 1. Prüfungsart wählen.
-2. Dokumente hinzufügen oder gespeicherte Dokumente auswählen.
-3. Optionalen Prüfauftrag eingeben; Modell und Denkaufwand bleiben am Composer erreichbar.
+2. Dokumente hinzufügen, gespeicherte Dokumente auswählen oder Text einfügen.
+3. Darunter den optionalen Prüfauftrag eingeben; Modell und Denkaufwand bleiben am Composer erreichbar.
 4. Analyse starten.
 
 Diese Reihenfolge beschreibt den Ablauf; sie wird nicht als erklärender Vier-Schritte-Text in die Oberfläche kopiert.
 
-Der Composer darf höher werden, wenn Dokumente, Optionen oder längerer Text hinzukommen. Eine juristische Prüfaufgabe wird nicht auf die Höhe einer Chatzeile gezwungen. Dokumentnamen, Original/Gegenentwurf und Entfernen müssen in der Auswahl lesbar bleiben.
+Der Composer darf höher werden, wenn Dokumente oder Optionen hinzukommen. Eingefügter Text scrollt innerhalb seines Feldes; Tippen verändert die Höhe nicht. Das Quellenfeld steht in allen Aufgaben über dem Prüfauftrag, ist anfangs 216 px hoch und lässt sich vertikal vergrößern. Dokumentnamen, Original/Gegenentwurf und Entfernen müssen in der Auswahl lesbar bleiben.
+
+„Text oder E-Mail-Verlauf“ nimmt Quellenmaterial auf; „Prüfauftrag“ enthält die Arbeitsanweisung. Text allein genügt außer beim Versionsvergleich: Dort bleiben zwei Dokumente erforderlich, eingefügte Korrespondenz ergänzt sie. Ein gemeinsamer Zähler zeigt die Grenze von 300.000 Zeichen für Text und Dokumente. Zu lange Eingaben bleiben vollständig erhalten; der Start nennt die Überschreitung, statt Text still abzuschneiden.
 
 Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
 
@@ -258,7 +260,7 @@ Die Beispiele sind Muster für vorhandene Funktionen, keine zusätzlichen Textel
 ### Aufgaben und Eingaben
 
 - Vertrag, Vergleich, Chronologie, Datenschutz und Werbung verwenden ein gemeinsames Eingaberaster. Datenschutz hat eine kompakte Auswahl für Allgemein, AVV und DSFA in der reservierten Zeile neben dem Prüfauftrag.
-- Jede der sieben Aufgaben hat einen eigenen Entwurf: Dokumentauswahl, Prüfauftrag, Playbook und Webrecherche bleiben beim Wechsel erhalten. Diese Entwürfe bestehen für die geöffnete Sitzung; ein Neuladen setzt sie zurück.
+- Jede der sieben Aufgaben hat einen eigenen Entwurf: Dokumentauswahl, eingefügter Text, Prüfauftrag, Playbook und Webrecherche bleiben beim Wechsel erhalten. Diese Entwürfe bestehen für die geöffnete Sitzung; ein Neuladen setzt sie zurück.
 - Platzhalter zeigen kurze Beispiele mit „z. B.“. Sie werden niemals als tatsächlicher Prüfauftrag übermittelt. Die fachlichen Prüfanweisungen stammen aus den ausgewählten Aufgaben im Backend; das Textfeld ergänzt Mandantenrolle und konkreten Schwerpunkt.
 - „Beispiel öffnen“ öffnet passende synthetische Unterlagen mit vorgegebenem Ergebnis. Es ersetzt weder Dokumentauswahl noch Prüfauftrag des Nutzers.
 - Im Vergleich bleiben Original und Gegenentwurf festen Plätzen zugeordnet. Entfernen einer Fassung benennt die andere nicht um. Mehr als zwei Dateien werden vor dem Upload abgewiesen. Gespeicherte Ergebnisse nennen beide Eingabedokumente in ihrer ursprünglichen Reihenfolge.

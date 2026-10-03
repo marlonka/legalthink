@@ -30,6 +30,10 @@ Use direct task instructions and explicit evidence requirements. Do not request 
 
 The legal review tightened contract roles, deleted comparison clauses, statement attribution, privacy review scope, and publication-dependent advertising checks. Evidence and limits: [German legal workflow review](legal-prompt-review.md). No new mandatory fields or additional model calls were introduced.
 
+### Pasted evidence, version `legal-review-v5`
+
+The request accepts optional `source_text` separately from the user's analysis instructions in `context`. The provider receives it as a `source_text_document` with its own ID, name and unchanged text in the JSON user message. It follows the same quote-verification rules and source-instruction boundary as uploaded documents. For comparison, only the two entries in `documents` define the original and counterdraft; pasted correspondence cannot become a third version or a replacement target. Private source text remains after the cache breakpoint. This addition uses the existing single model request.
+
 ## Prompt caching
 
 For GPT-6, use `prompt_cache_options`; the older `prompt_cache_retention` field is not the migration target. A suitable single-analysis policy is:
