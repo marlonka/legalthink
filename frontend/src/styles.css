@@ -358,9 +358,6 @@ code {
   flex-shrink: 0;
   background: var(--text-muted);
 }
-.status-dot.connected {
-  background: var(--text-secondary);
-}
 .sidebar-bottom {
   margin-top: auto;
   padding: 20px 0 18px;

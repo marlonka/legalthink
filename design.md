@@ -120,6 +120,8 @@ Das Markenzeichen ist ein gezeichnetes LT-Monogramm: ein aufrechtes L mit breite
 
 Logo als Identität, dann reale Funktionen. Aktuelle Seite durch Hintergrund und `aria-current` bzw. den bestehenden semantischen Auswahlzustand erkennbar machen. Hover, Tastaturfokus und Auswahl dürfen nicht identisch aussehen.
 
+Die Kopfzeile zeigt „API einrichten“ nur bei bestätigt fehlendem API-Schlüssel. Bei hinterlegtem Schlüssel und während der Statusabfrage bleibt der Hinweis ausgeblendet. Verbindungsfehler erscheinen bei den Ladefehlern; Details zum Schlüssel stehen in den Einstellungen.
+
 Lange Namen werden in der Navigation gekürzt; vollständige Namen bleiben im geöffneten Inhalt verfügbar. Löschaktionen erscheinen beim Hover und beim Tastaturfokus. Sie dürfen auf Touchgeräten nicht ausschließlich vom Hover abhängen.
 
 ### Neue Analyse
