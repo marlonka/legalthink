@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from openai import AsyncOpenAI
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import export
 from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
@@ -35,6 +35,7 @@ from .schemas import (
     now,
 )
 from .security import RequestTooLarge, SecurityBoundary
+from .static_assets import BuildAssets
 from .store import ProtectedDocumentError, Store
 
 DOCUMENT_MEDIA_TYPES = {
@@ -92,6 +93,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         # Pydantic's default response may echo confidential input. Return safe field names only.
+        for error in exc.errors():
+            if error["type"] == "model_configuration":
+                return JSONResponse({"detail": error["msg"]}, status_code=422)
+            if error["loc"] == ("body", "model"):
+                return JSONResponse(
+                    {
+                        "detail": "Ungültige OpenAI-Modell-ID. Erlaubt sind höchstens 120 Zeichen "
+                        "aus Buchstaben, Zahlen, Punkt, Bindestrich, Unterstrich und Doppelpunkt. "
+                        "Keine URL und keinen API-Schlüssel eingeben."
+                    },
+                    status_code=422,
+                )
         if any(
             error["loc"] == ("body", "context") and error["type"] == "string_too_long"
             for error in exc.errors()
@@ -436,15 +449,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             data,
             media_type=mime,
             headers={
-                "Content-Disposition": f'attachment; filename="LegalThink-'
-                f'{analysis.id}.{format}"'
+                "Content-Disposition": f'attachment; filename="LegalThink-{analysis.id}.{format}"'
             },
         )
 
     if config.frontend_dir.is_dir():
         assets = config.frontend_dir / "assets"
         if assets.is_dir():
-            app.mount("/assets", StaticFiles(directory=assets), name="assets")
+            app.mount(
+                "/assets",
+                GZipMiddleware(BuildAssets(directory=assets), minimum_size=1000, compresslevel=6),
+                name="assets",
+            )
 
         @app.get("/{path:path}")
         def frontend(path: str):
@@ -452,8 +468,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 raise HTTPException(404, "API-Endpunkt nicht gefunden.")
             target = (config.frontend_dir / path).resolve()
             if target.is_relative_to(config.frontend_dir.resolve()) and target.is_file():
-                return FileResponse(target)
-            return FileResponse(config.frontend_dir / "index.html")
+                return FileResponse(target, headers={"Cache-Control": "no-cache"})
+            return FileResponse(
+                config.frontend_dir / "index.html", headers={"Cache-Control": "no-cache"}
+            )
 
     return app
 

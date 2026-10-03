@@ -5,13 +5,14 @@ from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 Workflow = Literal["contract", "compare", "chronology", "compliance", "advertising"]
 ComplianceTask = Literal["general", "avv", "dsfa"]
 DemoScenario = Literal[
     "contract", "compare", "chronology", "compliance", "avv", "dsfa", "advertising"
 ]
-Effort = Literal["none", "low", "medium", "high", "xhigh", "max"]
+Effort = Literal["auto", "none", "minimal", "low", "medium", "high", "xhigh", "max"]
 ProcessingRegion = Literal["global", "eu"]
 ServiceTier = Literal["default", "flex"]
 Severity = Literal["high", "medium", "low", "info"]
@@ -62,12 +63,20 @@ class DocumentDeleteRequest(StrictModel):
     document_ids: list[str] = Field(min_length=1, max_length=10_000)
 
 
+class CustomModelOptions(StrictModel):
+    efforts: list[Effort] = Field(default_factory=lambda: ["auto"], min_length=1, max_length=8)
+    supports_web_search: bool = False
+
+
 class AnalysisRequest(StrictModel):
     workflow: Workflow
     document_ids: list[str] = Field(default_factory=list, max_length=12)
     source_text: str = Field(default="", max_length=MAX_MATERIAL_CHARS)
     context: str = Field(default="", max_length=MAX_INSTRUCTION_CHARS)
-    model: Literal["gpt-6.1-sol", "gpt-6-luna"] = "gpt-6-luna"
+    model: str = Field(
+        default="gpt-6-luna", min_length=1, max_length=120, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    )
+    custom_model: CustomModelOptions | None = None
     effort: Effort = "xhigh"
     playbook_id: str | None = None
     research: bool = True
@@ -75,11 +84,42 @@ class AnalysisRequest(StrictModel):
     service_tier: ServiceTier = "default"
     compliance_task: ComplianceTask = "general"
 
+    @field_validator("model")
+    @classmethod
+    def validate_model_id(cls, value: str) -> str:
+        if value.lower().startswith(("sk-", "http:", "https:")):
+            raise ValueError("Bitte eine OpenAI-Modell-ID eingeben, keinen Schlüssel oder URL.")
+        return value
+
     @model_validator(mode="after")
     def validate_selection(self) -> AnalysisRequest:
-        selected = next(m for m in MODELS if m["id"] == self.model)
-        if self.effort not in selected["efforts"]:
-            raise ValueError("Diese Denktiefe wird vom gewählten Modell nicht unterstützt.")
+        selected = next((m for m in MODELS if m["id"] == self.model), None)
+        if selected:
+            if self.custom_model is not None:
+                raise PydanticCustomError(
+                    "model_configuration",
+                    "Die Konfiguration eines mitgelieferten Modells ist festgelegt.",
+                )
+            efforts = selected["efforts"]
+        elif self.custom_model is not None:
+            efforts = self.custom_model.efforts
+            if self.research and not self.custom_model.supports_web_search:
+                raise PydanticCustomError(
+                    "model_configuration",
+                    "Webrecherche ist für dieses eigene Modell nicht freigegeben. "
+                    "Deaktivieren Sie die Webrecherche oder prüfen Sie die Modellkonfiguration.",
+                )
+        else:
+            raise PydanticCustomError(
+                "model_configuration",
+                "Bitte das eigene Modell zuerst in den Einstellungen hinzufügen.",
+            )
+        if self.effort not in efforts:
+            raise PydanticCustomError(
+                "model_configuration",
+                "Diese Denktiefe ist für das gewählte Modell nicht konfiguriert. "
+                "Prüfen Sie die Modell-Einstellungen.",
+            )
         if len(set(self.document_ids)) != len(self.document_ids):
             raise ValueError("Dokumente dürfen nur einmal ausgewählt werden.")
         if self.workflow == "compare" and len(self.document_ids) != 2:
@@ -204,6 +244,7 @@ class Analysis(StrictModel):
     created_at: str
     model: str
     effort: Effort
+    custom_model: CustomModelOptions | None = None
     is_demo: bool
     usage: Usage | None = None
     sources: list[Source] = Field(default_factory=list)

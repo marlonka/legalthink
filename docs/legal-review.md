@@ -8,7 +8,6 @@ Ein Hinweis „auf eigene Verantwortung“ verhindert weder Ansprüche noch Klag
 
 | Befund | Maßnahme / verbleibende Entscheidung |
 | --- | --- |
-| Der bisherige Name „LegalThinkGPT“ enthält „GPT“. OpenAI untersagt die Verwendung dieser Marke in eigenen Produktnamen. | Sichtbar auf „LegalThink“ umbenannt. Bestehende technische Speicher- und Paketnamen bleiben zur Kompatibilität erhalten. Eine Markenrecherche für den neuen Namen bleibt offen. [OpenAI-Markenrichtlinien](https://openai.com/brand/) |
 | Keine Lizenz für den eigenen Projektcode vorhanden. | Unveränderte [MIT-Lizenz](../LICENSE) mit Copyright „2026 Marlon Kaulich“ ergänzt. Herkunft und Nutzungsrechte aller Beiträge, Grafiken und übernommenen Texte bleiben vor Veröffentlichung zu prüfen. |
 | Lizenzhinweise von Frontend-Bibliotheken fehlten teilweise im Build. | Der Build liefert vollständige Hinweise unter `/third-party-licenses.txt`; PDF-Ressourcen behalten zusätzlich ihre jeweiligen Lizenzdateien. Python-Pakete behalten die Lizenzdateien ihrer Distributionen. Bei eigenen Installationspaketen/Containern müssen diese mitgeliefert werden. |
 | Nutzer konnten Verantwortung für eingegebene Daten und Ergebnisverwendung nur aus verstreuten Hinweisen erkennen. | Einstellungen und README benennen Übermittlungsberechtigung, Verschwiegenheit, Datenschutz, Betriebsschutz und eigene Ergebnisprüfung. Diese Informationen sind kein pauschaler Haftungsausschluss. |
@@ -30,7 +29,6 @@ Die [OpenAI-Vertragsbedingungen](https://openai.com/policies/services-agreement/
 
 ## Grenzen dieser Prüfung
 
-- Keine Markenregister- oder Ähnlichkeitsrecherche für Name und LT-Zeichen; die Eigenzeichnung beweist keine Rechtefreiheit.
 - Keine vollständige Prüfung der Rechtekette früherer Beiträge, Referenzen und KI-generierter Bestandteile.
 - Keine Freigabe eines gehosteten oder kostenpflichtigen Angebots. Anbieterpflichten, Datenschutzhinweise, Vertragsgestaltung und eine mögliche Einordnung nach RDG und KI-Verordnung hängen vom tatsächlichen Angebot und Einsatz ab.
 - Keine Zertifizierung der Ausgabequalität. Zitatabgleich bestätigt Textfundstellen; Rechtslage, Tatsachen, Fristen und Handlungsempfehlungen müssen fachlich geprüft werden.

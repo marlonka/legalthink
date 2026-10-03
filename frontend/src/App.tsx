@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   Check,
@@ -13,9 +13,8 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
-import Review from './Review';
 import { DocumentPreviewProvider } from './DocumentPreview';
-import { History, Playbooks, Settings } from './WorkspacePages';
+import { RouteContent } from './RouteContent';
 import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
 import { useThemePreference } from './theme';
 import { MotionButton, useMotionPreferences } from './motion';
@@ -33,8 +32,20 @@ import type {
 } from './types';
 import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
 import { INSTRUCTION_TEMPLATES } from './instruction-templates';
+import { CUSTOM_MODELS_KEY, MAX_CUSTOM_MODELS, readCustomModels } from './custom-models';
 import './polish.css';
 import './navigation-motion.css';
+
+const Review = lazy(() => import('./Review'));
+const History = lazy(() =>
+  import('./WorkspacePages').then((pages) => ({ default: pages.History })),
+);
+const Playbooks = lazy(() =>
+  import('./WorkspacePages').then((pages) => ({ default: pages.Playbooks })),
+);
+const Settings = lazy(() =>
+  import('./WorkspacePages').then((pages) => ({ default: pages.Settings })),
+);
 
 function stored(key: string, fallback: string) {
   try {
@@ -115,7 +126,15 @@ export default function App() {
   const mobileOpenRef = useRef(mobileOpen);
   mobileOpenRef.current = mobileOpen;
   const [health, setHealth] = useState<Health | null>(null);
-  const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
+  const [defaultModels, setModels] = useState<Model[]>(DEFAULT_MODELS);
+  const [customModels, setCustomModels] = useState(readCustomModels);
+  const models = useMemo(
+    () => [
+      ...defaultModels,
+      ...customModels.filter((custom) => !defaultModels.some((model) => model.id === custom.id)),
+    ],
+    [defaultModels, customModels],
+  );
   const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6-luna'));
   const [effort, setEffortState] = useState(() => stored('legalthink-effort', 'xhigh'));
   const [processingRegion, setProcessingRegionState] = useState<ProcessingRegion | null>(() => {
@@ -212,6 +231,32 @@ export default function App() {
   function setEffort(value: string) {
     setEffortState(value);
     savePreference('legalthink-effort', value);
+  }
+  function saveCustomModels(next: Model[]) {
+    try {
+      localStorage.setItem(CUSTOM_MODELS_KEY, JSON.stringify(next));
+    } catch {
+      throw new Error(
+        'Die Modellkonfiguration konnte nicht im Browser gespeichert werden. Prüfen Sie die Speichereinstellungen.',
+      );
+    }
+    setCustomModels(next);
+  }
+  function saveCustomModel(value: Model) {
+    if (defaultModels.some((model) => model.id === value.id))
+      throw new Error('Mitgelieferte Modelle können nicht überschrieben werden.');
+    const exists = customModels.some((model) => model.id === value.id);
+    if (!exists && customModels.length >= MAX_CUSTOM_MODELS)
+      throw new Error(`Sie können höchstens ${MAX_CUSTOM_MODELS} eigene Modelle speichern.`);
+    saveCustomModels(
+      exists
+        ? customModels.map((model) => (model.id === value.id ? value : model))
+        : [...customModels, value],
+    );
+  }
+  function removeCustomModel(id: string) {
+    if (id === model) throw new Error('Wählen Sie zuerst ein anderes Modell.');
+    saveCustomModels(customModels.filter((item) => item.id !== id));
   }
   function setProcessingRegion(value: ProcessingRegion | null) {
     setProcessingRegionState(value);
@@ -475,6 +520,13 @@ export default function App() {
       document.getElementById('analysis-context')?.focus();
       return;
     }
+    const selectedModel = models.find((item) => item.id === model);
+    if (selectedModel?.custom && research && !selectedModel.supports_web_search) {
+      setError(
+        'Webrecherche ist für dieses eigene Modell nicht freigegeben. Deaktivieren Sie die Webrecherche oder prüfen Sie die Modellkonfiguration in den Einstellungen.',
+      );
+      return;
+    }
     if (!health?.api_configured) {
       setError(
         'API-Schlüssel fehlt. Hinterlegen Sie OPENAI_API_KEY in backend/.env und starten Sie den Server neu.',
@@ -496,6 +548,12 @@ export default function App() {
           source_text: sourceText,
           model,
           effort,
+          custom_model: selectedModel?.custom
+            ? {
+                efforts: selectedModel.efforts,
+                supports_web_search: selectedModel.supports_web_search === true,
+              }
+            : null,
           playbook_id: playbookId || null,
           research,
           processing_region: processingRegion,
@@ -880,141 +938,145 @@ export default function App() {
               </section>
             )}
             <PageTransition key={route}>
-              {unavailablePage ? (
-                <section className="standard-page">
-                  <h1>{pageName}</h1>
-                  <p className="muted">
-                    Diese Ansicht steht nach dem erneuten Laden wieder zur Verfügung.
-                  </p>
-                </section>
-              ) : loading && route === 'playbooks' ? (
-                <div className="loading-state" role="status">
-                  <LoaderCircle className="spin" size={22} />
-                  Playbooks werden geladen …
-                </div>
-              ) : pageError ? (
-                <div className="standard-page">
-                  <ErrorMessage>{pageError}</ErrorMessage>
-                  <button className="button secondary" onClick={() => navigate('new')}>
-                    Neue Analyse
-                  </button>
-                </div>
-              ) : route === 'history' ? (
-                <History
-                  analyses={analyses}
-                  loading={loading}
-                  onOpen={(item) => {
-                    setAnalysis(item);
-                    navigate(`analysis/${item.id}`);
-                  }}
-                  onNew={() => navigate('new')}
-                  onDelete={(item) => askDelete({ type: 'analysis', item })}
-                />
-              ) : route === 'playbooks' ? (
-                <Playbooks
-                  playbooks={playbooks}
-                  onCreate={createPlaybook}
-                  onUpdate={updatePlaybook}
-                  onDocumentImported={(document) =>
-                    setDocuments((previous) => [
-                      document,
-                      ...previous.filter((item) => item.id !== document.id),
-                    ])
-                  }
-                  onDelete={(item) => askDelete({ type: 'playbook', item })}
-                />
-              ) : route === 'settings' ? (
-                <Settings
-                  themePreference={themePreference}
-                  onThemePreference={setThemePreference}
-                  health={health}
-                  models={models}
-                  model={model}
-                  effort={effort}
-                  onModel={setModel}
-                  onEffort={setEffort}
-                  processingRegion={processingRegion}
-                  onProcessingRegion={setProcessingRegion}
-                  serviceTier={serviceTier}
-                  onServiceTier={setServiceTier}
-                  documents={userDocuments}
-                  onDeleteDocument={(item) => askDelete({ type: 'document', item })}
-                  onDeleteAllDocuments={() =>
-                    askDelete({ type: 'documents', items: [...userDocuments] })
-                  }
-                  onRefresh={() => void refresh()}
-                  refreshing={refreshing || loading}
-                />
-              ) : isReview ? (
-                analysis?.id === route.split('/')[1] ? (
-                  <Review
-                    analysis={analysis}
-                    documents={documents}
-                    onBack={() => navigate('new')}
-                    onExport={(format) => void exportAnalysis(format)}
-                    exporting={exporting}
-                    onCopy={(text) => void copy(text)}
-                  />
-                ) : (
+              <RouteContent onReturn={() => navigate('new')}>
+                {unavailablePage ? (
+                  <section className="standard-page">
+                    <h1>{pageName}</h1>
+                    <p className="muted">
+                      Diese Ansicht steht nach dem erneuten Laden wieder zur Verfügung.
+                    </p>
+                  </section>
+                ) : loading && route === 'playbooks' ? (
                   <div className="loading-state" role="status">
                     <LoaderCircle className="spin" size={22} />
-                    Analyse wird geöffnet …
+                    Playbooks werden geladen …
                   </div>
-                )
-              ) : (
-                <Start
-                  workflow={workflow}
-                  onWorkflow={changeWorkflow}
-                  complianceTask={complianceTask}
-                  onComplianceTask={changeComplianceTask}
-                  comparisonIds={drafts.compare?.selectedIds ?? ['', '']}
-                  documents={selectedDocuments}
-                  libraryDocuments={userDocuments}
-                  onSelectDocuments={(ids) => {
-                    setSelectedIds(ids);
-                    setError('');
-                  }}
-                  onUpload={(files) => void upload(files)}
-                  onRemove={(id) =>
-                    setSelectedIds((previous) =>
-                      workflow === 'compare'
-                        ? previous.map((item) => (item === id ? '' : item))
-                        : previous.filter((item) => item !== id),
-                    )
-                  }
-                  onReorder={() => setSelectedIds((previous) => [...previous].reverse())}
-                  context={context}
-                  onContext={(value) => {
-                    updateDraft({ context: value });
-                    setError('');
-                  }}
-                  sourceText={sourceText}
-                  onSourceText={(value) => updateDraft({ sourceText: value })}
-                  materialCharCount={materialCharCount}
-                  model={model}
-                  effort={effort}
-                  models={models}
-                  onModel={setModel}
-                  onEffort={setEffort}
-                  processingRegion={processingRegion}
-                  serverDefaultRegion={health?.default_processing_region}
-                  onProcessingRegion={setProcessingRegion}
-                  serviceTier={serviceTier}
-                  onServiceTier={setServiceTier}
-                  playbooks={playbooks}
-                  playbookId={playbookId}
-                  onPlaybook={(value) => updateDraft({ playbookId: value })}
-                  research={research}
-                  onResearch={(value) => updateDraft({ research: value })}
-                  onRun={() => void runAnalysis()}
-                  onCancel={() => requestController.current?.abort()}
-                  onDemo={() => void openDemo()}
-                  uploading={uploading}
-                  running={running}
-                  demoLoading={demoLoading}
-                  error={error}
-                />
-              )}
+                ) : pageError ? (
+                  <div className="standard-page">
+                    <ErrorMessage>{pageError}</ErrorMessage>
+                    <button className="button secondary" onClick={() => navigate('new')}>
+                      Neue Analyse
+                    </button>
+                  </div>
+                ) : route === 'history' ? (
+                  <History
+                    analyses={analyses}
+                    loading={loading}
+                    onOpen={(item) => {
+                      setAnalysis(item);
+                      navigate(`analysis/${item.id}`);
+                    }}
+                    onNew={() => navigate('new')}
+                    onDelete={(item) => askDelete({ type: 'analysis', item })}
+                  />
+                ) : route === 'playbooks' ? (
+                  <Playbooks
+                    playbooks={playbooks}
+                    onCreate={createPlaybook}
+                    onUpdate={updatePlaybook}
+                    onDocumentImported={(document) =>
+                      setDocuments((previous) => [
+                        document,
+                        ...previous.filter((item) => item.id !== document.id),
+                      ])
+                    }
+                    onDelete={(item) => askDelete({ type: 'playbook', item })}
+                  />
+                ) : route === 'settings' ? (
+                  <Settings
+                    themePreference={themePreference}
+                    onThemePreference={setThemePreference}
+                    health={health}
+                    models={models}
+                    model={model}
+                    effort={effort}
+                    onModel={setModel}
+                    onEffort={setEffort}
+                    onSaveCustomModel={saveCustomModel}
+                    onRemoveCustomModel={removeCustomModel}
+                    processingRegion={processingRegion}
+                    onProcessingRegion={setProcessingRegion}
+                    serviceTier={serviceTier}
+                    onServiceTier={setServiceTier}
+                    documents={userDocuments}
+                    onDeleteDocument={(item) => askDelete({ type: 'document', item })}
+                    onDeleteAllDocuments={() =>
+                      askDelete({ type: 'documents', items: [...userDocuments] })
+                    }
+                    onRefresh={() => void refresh()}
+                    refreshing={refreshing || loading}
+                  />
+                ) : isReview ? (
+                  analysis?.id === route.split('/')[1] ? (
+                    <Review
+                      analysis={analysis}
+                      documents={documents}
+                      onBack={() => navigate('new')}
+                      onExport={(format) => void exportAnalysis(format)}
+                      exporting={exporting}
+                      onCopy={(text) => void copy(text)}
+                    />
+                  ) : (
+                    <div className="loading-state" role="status">
+                      <LoaderCircle className="spin" size={22} />
+                      Analyse wird geöffnet …
+                    </div>
+                  )
+                ) : (
+                  <Start
+                    workflow={workflow}
+                    onWorkflow={changeWorkflow}
+                    complianceTask={complianceTask}
+                    onComplianceTask={changeComplianceTask}
+                    comparisonIds={drafts.compare?.selectedIds ?? ['', '']}
+                    documents={selectedDocuments}
+                    libraryDocuments={userDocuments}
+                    onSelectDocuments={(ids) => {
+                      setSelectedIds(ids);
+                      setError('');
+                    }}
+                    onUpload={(files) => void upload(files)}
+                    onRemove={(id) =>
+                      setSelectedIds((previous) =>
+                        workflow === 'compare'
+                          ? previous.map((item) => (item === id ? '' : item))
+                          : previous.filter((item) => item !== id),
+                      )
+                    }
+                    onReorder={() => setSelectedIds((previous) => [...previous].reverse())}
+                    context={context}
+                    onContext={(value) => {
+                      updateDraft({ context: value });
+                      setError('');
+                    }}
+                    sourceText={sourceText}
+                    onSourceText={(value) => updateDraft({ sourceText: value })}
+                    materialCharCount={materialCharCount}
+                    model={model}
+                    effort={effort}
+                    models={models}
+                    onModel={setModel}
+                    onEffort={setEffort}
+                    processingRegion={processingRegion}
+                    serverDefaultRegion={health?.default_processing_region}
+                    onProcessingRegion={setProcessingRegion}
+                    serviceTier={serviceTier}
+                    onServiceTier={setServiceTier}
+                    playbooks={playbooks}
+                    playbookId={playbookId}
+                    onPlaybook={(value) => updateDraft({ playbookId: value })}
+                    research={research}
+                    onResearch={(value) => updateDraft({ research: value })}
+                    onRun={() => void runAnalysis()}
+                    onCancel={() => requestController.current?.abort()}
+                    onDemo={() => void openDemo()}
+                    uploading={uploading}
+                    running={running}
+                    demoLoading={demoLoading}
+                    error={error}
+                  />
+                )}
+              </RouteContent>
             </PageTransition>
           </main>
         </div>

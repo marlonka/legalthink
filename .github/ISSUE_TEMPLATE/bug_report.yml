@@ -1,0 +1,32 @@
+name: Fehler melden
+description: Reproduzierbaren Fehler in LegalThink beschreiben.
+body:
+  - type: markdown
+    attributes:
+      value: Verwende synthetische Beispiele. Keine Mandatsdaten, API-Schlüssel, `.env`-Dateien oder Datenbanken hochladen.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Erwartetes und tatsächliches Verhalten
+      description: Was sollte passieren, was passiert stattdessen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Reproduzieren
+      description: Prüfungsart, Eingaben und Klickfolge; Dateibeispiele nur mit erfundenen Inhalten.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Umgebung
+      description: Betriebssystem, Browser und Version; Entwicklungsserver oder gebauter Stand.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Fehlermeldung oder Screenshot
+      description: Entferne vertrauliche Inhalte vor dem Hochladen.

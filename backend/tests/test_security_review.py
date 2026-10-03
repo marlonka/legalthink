@@ -168,6 +168,8 @@ def test_original_roundtrip_legacy_attachment_and_deletion(local_client, suffix,
     assert uploaded["original_available"] is True
     downloaded = local_client.get(original_url)
     assert downloaded.content == original
+    assert downloaded.headers["cache-control"] == "no-store"
+    assert "content-encoding" not in downloaded.headers
     assert downloaded.headers["content-type"].startswith(media_type)
     assert name in downloaded.headers["content-disposition"]
     legacy = {**uploaded, "id": "legacy-source", "original_available": False}

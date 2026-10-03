@@ -4,7 +4,7 @@
 
 Grundlage sind die 13 vom Nutzer bereitgestellten Referenz-Screenshots: dunkle und helle Oberfläche, Navigation, Dokumentkarten, Eingabe, Menüs, Denkaufwand und Darstellungseinstellungen. Die Referenzen bleiben außerhalb des Repositories. Private Gesprächsinhalte, Namen und Verlaufstitel werden nicht übernommen.
 
-Die Screenshots zeigen die visuelle Richtung. LegalThinkGPT behält seine vorhandenen Arbeitsabläufe: Dokumente auswählen, Prüfauftrag eingeben, Analyse starten, Befunde und Zitate prüfen, Berichte exportieren und Playbooks verwalten.
+Die Screenshots zeigen die visuelle Richtung. LegalThink behält seine vorhandenen Arbeitsabläufe: Dokumente auswählen, Prüfauftrag eingeben, Analyse starten, Befunde und Zitate prüfen, Berichte exportieren und Playbooks verwalten.
 
 ### Was die Referenzen belegen
 
@@ -16,11 +16,11 @@ Die Screenshots zeigen die visuelle Richtung. LegalThinkGPT behält seine vorhan
 - Menüs verwenden volle, gut anklickbare Zeilen. Zusatzinformationen sind dem Aktionsnamen untergeordnet.
 - Einstellungen verwenden beschriftete Gruppen, zeilenweise angeordnete Werte und dünne Trennlinien.
 - Die helle Darstellung nennt in den sichtbaren Einstellungen `#FCFCFC` als Hintergrund und `#0D0D0D` als Vordergrund.
-- Blau ist in mehreren Bildern als Akzent sichtbar. Die letzte Referenz zeigt die Bedienung monochrom. Blau ist deshalb keine feste Markenfarbe für LegalThinkGPT.
+- Blau ist in mehreren Bildern als Akzent sichtbar. Die letzte Referenz zeigt die Bedienung monochrom. Blau ist deshalb keine feste Markenfarbe für LegalThink.
 
 ### Was aus Screenshots nicht feststeht
 
-Schriftfamilie, CSS-Maße, Breakpoints, Hover-Verhalten, Fokusführung und Animationsparameter lassen sich daraus nicht zuverlässig bestimmen. Die folgenden Maße sind umsetzbare Festlegungen für LegalThinkGPT. Sie sind keine Behauptung über den Originalcode von der Referenz.
+Schriftfamilie, CSS-Maße, Breakpoints, Hover-Verhalten, Fokusführung und Animationsparameter lassen sich daraus nicht zuverlässig bestimmen. Die folgenden Maße sind umsetzbare Festlegungen für LegalThink. Sie sind keine Behauptung über den Originalcode von der Referenz.
 
 ### Gemessene Bildwerte
 
@@ -55,7 +55,7 @@ Monochrome Bedienoberfläche. Farbe bleibt für Zustände und die Priorität ein
 
 Die Palette übernimmt gemessene Flächenwerte; Nebeninformationen und Primäraktionen sind daraus abgeleitete Implementierungswerte. Transparenz darf Text nicht unlesbar machen. Kontrast wird am gerenderten Ergebnis geprüft: mindestens 4,5:1 für normalen Text und 3:1 für große Schrift sowie relevante Bedienelemente. Rahmen zur rein dekorativen Trennung müssen nicht künstlich verstärkt werden.
 
-Die einzelne LegalThinkGPT-Navigation übernimmt die Hauptnavigation der Referenz. Schwarz beziehungsweise `#F9F9F9` gehören zur dortigen äußeren App-Leiste, die hier entfällt.
+Die einzelne LegalThink-Navigation übernimmt die Hauptnavigation der Referenz. Schwarz beziehungsweise `#F9F9F9` gehören zur dortigen äußeren App-Leiste, die hier entfällt.
 
 ### Darstellung wählen
 
@@ -69,7 +69,7 @@ Priorität wird durch Text und ein kleines Farbsignal vermittelt. Ein roter Punk
 
 ### Desktop
 
-- Eine echte Navigation für LegalThinkGPT. Die zusätzliche App-Leiste aus der Referenz wird nicht nachgebaut; ihre Funktionen existieren hier nicht.
+- Eine echte Navigation für LegalThink. Die zusätzliche App-Leiste aus der Referenz wird nicht nachgebaut; ihre Funktionen existieren hier nicht.
 - Zielbreite der Navigation: 288 px. Neue Analyse, Analysen, Playbooks und Einstellungen bleiben direkt erreichbar.
 - Keine erfundenen Projekte, Nutzerprofile, Aktivitätszahlen oder Verlaufseinträge.
 - Hauptinhalt mit 24–48 px seitlichem Abstand. Die sichtbare Breite bestimmt den Abstand, nicht ein großer fester Außenrand.
@@ -141,11 +141,11 @@ Der Composer darf höher werden, wenn Dokumente oder Optionen hinzukommen. Einge
 
 Beide Texteingaben verwenden denselben sichtbaren Rahmen, Innenabstand, Radius und Fokuszustand. Ihre unterschiedlichen Anfangshöhen richten sich nach dem erwarteten Inhalt.
 
-Der Prüfauftrag ist anfangs 224 px hoch und enthält eine bearbeitbare, auf die Aufgabe zugeschnittene Vorlage. Die Kopfzeile mit AVV-/DSFA-Auswahl hält 12 px Abstand zum Eingabefeld. „Vorlage ansehen“ steht unter dem Feld und öffnet die vollständige Vorlage. Bei vorhandenem Text ergänzt die Übernahme ausschließlich am Ende; leere Felder werden gefüllt. Bereits enthaltene Vorlagen und Überschreitungen des Zeichenlimits sperren die Übernahme. Keine automatische Ersetzung eigener Eingaben.
+Der Prüfauftrag ist anfangs 224 px hoch und enthält eine bearbeitbare, auf die Aufgabe zugeschnittene Vorlage. Die Kopfzeile mit AVV-/DSFA-Auswahl hält 12 px Abstand zum Eingabefeld. Unter dem Feld steht „Vorlage ansehen“ links, der Zeichenzähler rechts. Die Aktion öffnet die vollständige Vorlage. Bei vorhandenem Text ergänzt die Übernahme ausschließlich am Ende; leere Felder werden gefüllt. Bereits enthaltene Vorlagen und Überschreitungen des Zeichenlimits sperren die Übernahme. Keine automatische Ersetzung eigener Eingaben.
 
 Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
 
-Die Playbook-Auswahl steht mit der sichtbaren Beschriftung „Playbook:“ direkt links neben dem Webrecherche-Globus in der Werkzeugleiste. Darunter öffnet „Erweiterte Einstellungen“ die Verarbeitungsregion und den Verarbeitungsmodus Standard/Flex. Ihre Werte stehen ausschließlich in den geöffneten Einstellungen. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
+Die Playbook-Auswahl steht mit der sichtbaren Beschriftung „Playbook:“ direkt links neben dem Webrecherche-Globus in der Werkzeugleiste. Darunter öffnet „Erweiterte Einstellungen“ die Verarbeitungsregion und den Verarbeitungsmodus Standard/Flex. Der Übertragungshinweis steht rechts daneben, auf schmalen Flächen darunter. Die Werte von Region und Verarbeitungsmodus stehen ausschließlich in den geöffneten Einstellungen. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
 
 Webrecherche ist bei neuen Entwürfen und API-Anfragen standardmäßig aktiv. Sie nutzt das OpenAI-Suchwerkzeug. Bewusstes Abschalten bleibt für den jeweiligen Entwurf erhalten; ein Aufgabenwechsel überschreibt diese Wahl nicht.
 
@@ -224,7 +224,7 @@ Tastaturfokus erhält eine sichtbare, kontrastreiche Kontur mit Abstand zur Elem
 
 ### Bewegung
 
-Die Screenshots belegen keine Dauer oder Physik von der Referenz. Die folgenden Werte sind die abgestimmte Implementierung von LegalThinkGPT. Sie stehen zentral in `frontend/src/motion.tsx`. Verwendet wird `motion/react` (Motion, vormals Framer Motion).
+Die Screenshots belegen keine Dauer oder Physik von der Referenz. Die folgenden Werte sind die abgestimmte Implementierung von LegalThink. Sie stehen zentral in `frontend/src/motion.tsx`. Verwendet wird `motion/react` (Motion, vormals Framer Motion).
 
 | Preset | Steifigkeit | Dämpfung | Masse | Verwendung |
 | --- | --- | --- | --- | --- |

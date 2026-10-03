@@ -111,6 +111,17 @@ async def test_serialized_openai_request_and_verified_evidence():
             [DOC],
             book,
         )
+        custom_result = await service.run(
+            AnalysisRequest(
+                workflow="contract",
+                document_ids=[DOC.id],
+                model="ft:example-model:workspace:review:snapshot",
+                effort="auto",
+                custom_model={"efforts": ["auto"]},
+                research=False,
+            ),
+            [DOC],
+        )
     finally:
         await client.close()
     body = captured[0]
@@ -141,6 +152,17 @@ async def test_serialized_openai_request_and_verified_evidence():
     assert result.processing_region == "global"
     assert result.requested_service_tier == "default"
     assert result.service_tier is None
+    custom_body = captured[1]
+    assert len(captured) == 2
+    assert custom_body["model"] == "ft:example-model:workspace:review:snapshot"
+    assert "reasoning" not in custom_body and "tools" not in custom_body
+    assert "prompt_cache_options" not in custom_body
+    assert "prompt_cache_breakpoint" not in json.dumps(custom_body["input"])
+    assert custom_body["text"]["format"]["strict"] is True
+    assert custom_body["prompt_cache_key"] != body["prompt_cache_key"]
+    restored = Analysis.model_validate_json(custom_result.model_dump_json())
+    assert restored.model == custom_body["model"] and restored.effort == "auto"
+    assert restored.custom_model.efforts == ["auto"]
 
 
 @pytest.mark.parametrize(

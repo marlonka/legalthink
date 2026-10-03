@@ -1,7 +1,8 @@
 [project]
-name = "legalthinkgpt-api"
+name = "legalthink-api"
 version = "0.1.0"
-description = "Local legal document workspace with evidence-linked OpenAI analysis"
+description = "LegalThink document review API with source-linked analysis"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.142.2,<1",

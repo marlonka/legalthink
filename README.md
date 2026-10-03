@@ -1,14 +1,20 @@
+<img src="frontend/public/favicon.svg" width="48" height="48" alt="">
+
 # LegalThink
 
 Lokale Anwendung für Vertragsprüfung, Versionsvergleich, Chronologie, Datenschutz- und Werbeprüfung. Ergebnisse enthalten Fundstellen und Formulierungsvorschläge; Export als Word oder Markdown.
 
 React und TypeScript im Browser. FastAPI, SQLite und die OpenAI Responses API im Python-Backend. Keine API-Schlüssel im Frontend.
 
+[Lokal starten](#lokal-starten) · [Werkzeuge](#werkzeuge) · [Daten und Betrieb](#daten-und-betrieb) · [Architektur](docs/architecture.md) · [Mitwirken](CONTRIBUTING.md)
+
 ## Lokal starten
 
 Voraussetzungen: Node.js 22.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/) und Python 3.12+. `uv` kann Python bei Bedarf installieren.
 
 ```sh
+git clone https://github.com/marlonka/legalthink.git
+cd legalthink
 npm ci
 npm --prefix frontend ci
 uv sync --project backend --extra dev
@@ -52,6 +58,8 @@ Ergebnisansichten und Vorschlagsbezeichnungen richten sich nach der Aufgabe. Lee
 
 Standard für neue Browserprofile und API-Anfragen ohne Modellauswahl: `gpt-6-luna` mit Denktiefe `xhigh`, auch bei eigener Installation. Eine ausdrücklich gewählte Alternative wird im jeweiligen Browser gespeichert. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
 
+Weitere OpenAI-Modelle lassen sich unter **Einstellungen → Modell und Denkaufwand → Eigenes Modell hinzufügen** mit ihrer exakten Modell-ID ergänzen. Das Modell muss die Responses API und Structured Outputs unterstützen. Denkstufen und Websuche werden ausdrücklich nach den dokumentierten Fähigkeiten konfiguriert; „Modellstandard“ übermittelt keine Denkstufe. Hinzufügen löst keinen API-Aufruf aus, prüft keinen Modellzugang und ändert die aktuelle Auswahl nicht. Eigene Modelle bleiben im jeweiligen Browser gespeichert.
+
 ## API-Region und Flex
 
 Die Einstellungen zeigen die gewählte API-Region. Ohne eigene Browserauswahl gilt die Servervorgabe: `OPENAI_PROCESSING_REGION=global` verwendet `api.openai.com`; `eu` verwendet `eu.api.openai.com`. Für eine geeignete EU-Konfiguration setzen Sie `OPENAI_PROCESSING_REGION=eu` in `backend/.env` und starten den Server neu. Neue Browserprofile und API-Anfragen ohne Regionsauswahl übernehmen diese Vorgabe. Global bleibt der Standard ohne diese Konfiguration.
@@ -86,7 +94,8 @@ Das Projekt ist unabhängig von OpenAI. OpenAI-Verträge und API-Datenkontrollen
 
 Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE), Copyright © 2026 Marlon Kaulich. Bibliotheken und Fonts behalten ihre eigenen Lizenzen; der Frontend-Build liefert die vollständigen Hinweise unter `/third-party-licenses.txt` aus. Bei Weitergabe einer Python-Installation müssen auch deren Paketlizenzen erhalten bleiben.
 
-Der frühere sichtbare Name „LegalThinkGPT“ wurde auf „LegalThink“ geändert. Vor Veröffentlichung bleiben insbesondere Namensrechte und Rechte an allen Beiträgen zu prüfen. Befunde, Quellen und Grenzen: [rechtliche Bestandsaufnahme](docs/legal-review.md).
+Befunde zu Namensrechten, Lizenzbestand und Datenverarbeitung: [rechtliche Bestandsaufnahme](docs/legal-review.md).
+
 
 ## Qualität prüfen
 
@@ -100,6 +109,12 @@ npm run test:built
 Die automatisierten Tests verwenden lokale, synthetische Daten und simulierte Providerantworten. Sie lösen keine echten OpenAI-Anfragen aus. Echte Modellqualität, Projektzugriff, Kosten und Latenz müssen anschließend mit freigegebenen Testdaten bewertet werden.
 
 `test:built` prüft die gebaute Oberfläche direkt über FastAPI, einschließlich Sicherheitsrichtlinie und Export. [Prüfprotokoll](docs/validation.md).
+
+[Lighthouse-Messung](docs/performance.md): Performance 97 mobil / 100 Desktop, Best Practices 100 und CLS 0 in den beschriebenen lokalen Abschlussläufen.
+
+## Mitwirken
+
+Fehlerberichte brauchen reproduzierbare Schritte und synthetische Beispieldaten. Keine Mandatsunterlagen, Zugangsdaten oder ungekürzten Providerantworten in Issues und Pull Requests veröffentlichen. Einrichtung, Prüfungen und Beitragsumfang: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Gebaute Oberfläche starten
 

@@ -24,7 +24,9 @@ export const DEFAULT_MODELS: Model[] = [
   },
 ];
 export const EFFORT_NAMES: Record<string, string> = {
+  auto: 'Modellstandard',
   none: 'Ohne',
+  minimal: 'Minimal',
   low: 'Niedrig',
   medium: 'Mittel',
   high: 'Hoch',
@@ -368,7 +370,7 @@ export function ModelPicker({
   }, [open]);
   return (
     <div
-      className="model-picker"
+      className={`model-picker${models.some((item) => item.custom) ? ' has-custom-models' : ''}`}
       ref={ref}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(null);
@@ -450,6 +452,25 @@ export function ModelPicker({
                   {model === item.id && <Check size={16} />}
                 </MotionButton>
               ))
+            ) : current.custom ? (
+              <label className="custom-effort-select">
+                Denkaufwand
+                <select
+                  value={effort}
+                  onChange={(event) => onEffort(event.target.value)}
+                  disabled={disabled}
+                >
+                  {current.efforts.map((value) => (
+                    <option key={value} value={value}>
+                      {EFFORT_NAMES[value] ?? value}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-help">
+                  Modellstandard übermittelt keinen Denkaufwand. Weitere Werte stammen aus Ihrer
+                  Modellkonfiguration.
+                </span>
+              </label>
             ) : (
               <div className="effort-control">
                 <output className="effort-current" htmlFor={`${menuId}-range`}>

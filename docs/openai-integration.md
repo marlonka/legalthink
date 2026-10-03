@@ -13,6 +13,14 @@ Keep the requested model identifiers. Validate the model/effort pair on the serv
 
 Use the Responses API. Omit `temperature`, `top_p`, and log-probability options for reasoning requests. Higher effort needs workload evaluation; it does not establish that a legal conclusion is correct. Source: [GPT-6 guide](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra).
 
+### User-defined model IDs
+
+Settings can save additional OpenAI model profiles in the browser. The `model` parameter is an exact ID, but Responses, strict Structured Outputs, reasoning levels and hosted web search remain model-specific capabilities. Adding a profile makes no provider request and does not validate project access. It does not change the selected model.
+
+Custom profiles default to `auto`: the app omits `reasoning` and uses the provider's model default. Users may enable documented effort values and web-search support explicitly. Server validation rejects malformed IDs, missing profiles and incompatible configured selections before the paid request. Built-in model profiles cannot be overridden. OpenAI can still reject a claimed capability; the app reports the relevant error without switching model, region or processing tier. Sources: [Responses create](https://developers.openai.com/api/reference/resources/responses/methods/create), [Reasoning](https://developers.openai.com/api/docs/guides/reasoning), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), [Web search](https://developers.openai.com/api/docs/guides/tools-web-search).
+
+Custom models receive the common cache key but no GPT-6-specific cache options or breakpoints. Their provider-default cache behavior applies; the built-in models' explicit-prefix-only caching policy below must not be assumed for custom models.
+
 ## Request and output contract
 
 - Keep the API key on the Python server. No key in frontend source, build variables, browser storage, or client responses.
@@ -65,7 +73,7 @@ The explicit breakpoint belongs on a supported content block; top-level `instruc
 
 Keep tool ordering and schema stable. For future multi-turn work, append history rather than rewriting it. GPT-6 `configuration_update` can change effort while preserving the prefix, subject to documented compatibility; independent analysis requests do not need it. Source: [Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching).
 
-The application places one breakpoint after the common review rules. Changing matter data, workflow instructions, and playbooks remain after it. The key depends on the prompt version, never on document IDs, filenames, timestamps, or user context. Model, reasoning effort, schema, and tool configuration can still separate cache reuse. Research-off requests continue to omit tools; they do not acquire tools merely for cache reuse.
+For built-in models, the application places one breakpoint after the common review rules. Changing matter data, workflow instructions, and playbooks remain after it. The key depends on the prompt version and model ID, never on document IDs, filenames, timestamps, or user context. Reasoning effort, schema, and tool configuration can still separate cache reuse. Research-off requests continue to omit tools; they do not acquire tools merely for cache reuse.
 
 Successful reports save input, output, cached-read and cache-write tokens, provider-call duration, and prompt version. Missing write-token counts remain unknown (`null`), including older saved reports. These values appear only inside the existing processing details. Saved duration covers the provider request, not import or later review work. No automatic prewarming, extra calls, or cost estimates are added.
 
