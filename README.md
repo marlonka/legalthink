@@ -2,141 +2,132 @@
 
 # LegalThink
 
-Lokale Anwendung für Vertragsprüfung, Versionsvergleich, Chronologie, Datenschutz- und Werbeprüfung. Ergebnisse enthalten Fundstellen und Formulierungsvorschläge; Export als Word oder Markdown.
+Lokal betriebene Webanwendung für juristische Dokumentarbeit: Verträge prüfen, Fassungen vergleichen, Sachverhalte ordnen und Datenschutz- oder Werbefragen bearbeiten. Dokumente und eingefügte Texte bilden die Quellen der Analyse; Fundstellen lassen sich neben dem Ergebnis öffnen. Die KI-Analyse nutzt die OpenAI Responses API.
 
-React und TypeScript im Browser. FastAPI, SQLite und die OpenAI Responses API im Python-Backend. Keine API-Schlüssel im Frontend.
+[Lokal starten](#lokal-starten) · [Aufgaben](#aufgaben) · [Konfiguration](#konfiguration) · [Daten und Grenzen](#daten-und-grenzen) · [Mitwirken](CONTRIBUTING.md)
 
-[Lokal starten](#lokal-starten) · [Werkzeuge](#werkzeuge) · [Daten und Betrieb](#daten-und-betrieb) · [Architektur](docs/architecture.md) · [Mitwirken](CONTRIBUTING.md)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/analysis-dark.jpg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/analysis-light.jpg">
+  <img src="docs/images/analysis-light.jpg" alt="LegalThink: Vertragsanalyse mit Zusammenfassung, Prioritätsfiltern und geöffnetem Haftungsbefund." width="1280">
+</picture>
+
+Die Screenshots zeigen die Anwendung mit synthetischen Beispieldaten.
+
+## Aufgaben
+
+| Aufgabe | Eingabe und Ergebnis |
+| --- | --- |
+| **Vertrag** | Vertrag und optional Mandantenrolle oder Prüfschwerpunkt; Befunde mit Klauselbelegen und getrennten Formulierungsvorschlägen. |
+| **Vergleich** | Eigener Entwurf und Gegenentwurf; Wortlaut beider Fassungen, Bewertung der Änderungen und Verhandlungsvorschläge. |
+| **Chronologie** | Unterlagen, E-Mails und Notizen; Ereignisse mit Datierung, Belegen und offenen Sachverhaltsfragen. |
+| **Datenschutz** | Allgemeine Prüfung, Auftragsverarbeitungsvertrag (AVV) oder Vorbereitung einer Datenschutz-Folgenabschätzung (DSFA); Prüfpunkte und fehlende Angaben passend zur Aufgabe. |
+| **Werbung** | Aussagen, Medium, Zielgruppe und Nachweise; Prüfbedarf und rechtliche Anknüpfungspunkte. |
+
+**Kanzlei-Playbooks** ergänzen eigene Prüfmaßstäbe und Formulierungsvorgaben. Jede Aufgabe hat ein Beispiel ohne API-Aufruf; Datenschutz bietet separate Beispiele für Allgemein, AVV und DSFA. Berichte lassen sich als Word oder Markdown exportieren. Bestätigte Originalzitate und Änderungsvorschläge erscheinen im Word-Prüfbericht als nachverfolgte Änderungen; die Quelldatei wird nicht umgeschrieben.
+
+## Fundstellen prüfen
+
+Ein Klick auf den Dokumentnamen oder **Fundstelle ansehen** öffnet die Quelle rechts neben der Analyse. Auf schmalen Bildschirmen nutzt die Vorschau das ganze Fenster.
+
+![Gespeicherter Vertragstext mit hervorgehobener Fundstelle zur Haftung.](docs/images/source-preview.jpg)
+
+- **PDF:** Originalseiten, Seitenwahl, Zoom und Markierung eines eindeutig zugeordneten Zitats. Die Dokumentfarben bleiben auch im Dark Mode erhalten.
+- **DOCX:** formatierte Vorschau mit Tabellen und Bildern. Seitenumbrüche und Layout können von Microsoft Word abweichen.
+- **TXT und Markdown:** vollständiger Quelltext mit Zitatmarkierung; Markdown zusätzlich als Leseansicht.
+- **Eingefügter Text:** wird nach erfolgreicher Analyse als eigene TXT-Quelle gespeichert, etwa für kopierte E-Mail-Verläufe.
+
+Originaldateien bleiben zum Download erhalten. Eine bestätigte Fundstelle belegt den Wortlaut im Dokument, nicht die rechtliche Bewertung oder die Wahrheit der darin beschriebenen Tatsachen.
 
 ## Lokal starten
 
-Voraussetzungen: Node.js 22.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/) und Python 3.12+. `uv` kann Python bei Bedarf installieren.
+Voraussetzungen: **Node.js 22.12+** und [uv](https://docs.astral.sh/uv/getting-started/installation/). Python 3.12 wird empfohlen und in CI verwendet; das Backend unterstützt Python ab 3.11.
 
 ```sh
 git clone https://github.com/marlonka/legalthink.git
 cd legalthink
 npm ci
 npm --prefix frontend ci
-uv sync --project backend --extra dev
+uv sync --project backend --extra dev --frozen
 npm run dev
 ```
 
-Öffnen: [localhost:5175](http://localhost:5175). **Beispiel öffnen** zeigt einen fiktiven Fall zur gewählten Prüfungsart ohne API-Aufruf. Datenschutz bietet eigene Beispiele für Allgemein, AVV und DSFA.
+Unter [localhost:5175](http://localhost:5175) eine Aufgabe wählen und **Beispiel öffnen** anklicken. Dafür ist kein API-Schlüssel nötig. Der Startbefehl führt Vite auf Port 5175 und FastAPI auf Port 8000 aus; beide binden an `127.0.0.1`.
 
-## Eigene Dokumente analysieren
+### Eigene Unterlagen analysieren
 
-Kopieren Sie `backend/.env.example` nach `backend/.env`. Tragen Sie Ihren OpenAI-Projektschlüssel ausschließlich dort als `OPENAI_API_KEY` ein. Starten Sie den Server neu. Die Datei ist von Git ausgeschlossen.
+1. [backend/.env.example](backend/.env.example) als `backend/.env` kopieren, `OPENAI_API_KEY` eintragen und den Server neu starten. Der Schlüssel bleibt im Backend; `.env` ist von Git ausgeschlossen.
+2. Aufgabe wählen. PDF, DOCX, TXT oder Markdown hinzufügen oder Text direkt einfügen. Ein Vergleich benötigt genau zwei Dateien: zuerst den eigenen Entwurf, dann den Gegenentwurf.
+3. Bei Bedarf den **Prüfauftrag** ergänzen oder eine Vorlage übernehmen. Ein Playbook kann eigene Vorgaben hinzufügen.
+4. Modell, Webrecherche und weitere Einstellungen prüfen. **Analyse starten** überträgt die ausgewählten Inhalte an OpenAI und kann API-Kosten auslösen.
+5. Ergebnisse und Quellen prüfen; den Bericht bei Bedarf exportieren.
 
-1. Arbeitsweise wählen und Dokumente hinzufügen: PDF mit Textebene, DOCX, TXT oder Markdown.
-2. Zusätzlichen Kontext ergänzen, etwa E-Mails oder Gesprächsnotizen. Prüfauftrag bei Bedarf anpassen (maximal 10.000 Zeichen); optional ein Kanzlei-Playbook auswählen.
-3. Modell und Denktiefe wählen. Die Analyse beginnt erst nach dem ausdrücklichen Start.
-4. Befunde, Originalstellen und Formulierungsvorschläge prüfen. Ergebnis als Word oder Markdown exportieren.
+<details>
+<summary>Gebaute Anwendung ohne Vite starten</summary>
 
-Für den Vergleich zuerst den eigenen Entwurf, dann den Gegenentwurf wählen. Gescannte PDFs benötigen vorher OCR. Der Import verarbeitet Text; er ersetzt keine Prüfung von Tabellen, Anhängen oder visuellen Vertragsbestandteilen.
-
-DOCX-Dateien mit offenen Textänderungen werden beim Import abgewiesen. Nehmen Sie die Änderungen in einer Kopie zuerst an oder lehnen Sie sie ab; sonst würde der Textimport geänderte Passagen übergehen. Das Original bleibt unverändert.
-
-## Werkzeuge
-
-| Werkzeug | Ergebnis |
-| --- | --- |
-| Vertragsprüfung | Vertragspunkte, Klauselbelege und separate Klauselvorschläge |
-| Versionsvergleich | Original und Gegenentwurf nebeneinander, Bewertung und separate Verhandlungsvorschläge |
-| Chronologie | Ereignisse, Quellen und offene Sachverhaltsfragen |
-| Datenschutz | Datenschutzfragen, AVV-Vertragspunkte oder DSFA-Risiken und Prüfpunkte; jeweils mit offenen Angaben |
-| Werbeprüfung | Aussagen, Prüfbedarf und rechtliche Anknüpfungspunkte |
-| Kanzlei-Playbooks | Eigene Prüfmaßstäbe und Formulierungsvorgaben |
-
-Ergebnisansichten und Vorschlagsbezeichnungen richten sich nach der Aufgabe. Leere Nebenansichten entfallen. Fundstellen öffnen rechts neben der Analyse, auf schmaleren Fenstern bildschirmfüllend. Weitere Quellen lassen sich direkt aus der Ergebnisliste öffnen. Neue Vergleiche speichern und prüfen den Wortlaut beider Fassungen getrennt; ältere Ergebnisse behalten ihre vorhandenen Belege. Für die Gegenüberstellung alter Vergleiche ist eine neue Analyse nötig.
-
-## Modelle
-
-| Modell | Denktiefe |
-| --- | --- |
-| `gpt-6.1-sol` | `low`, `medium`, `high`, `xhigh`, `max` |
-| `gpt-6-luna` | `none`, `low`, `medium`, `high`, `xhigh`, `max` |
-
-Standard für neue Browserprofile und API-Anfragen ohne Modellauswahl: `gpt-6-luna` mit Denktiefe `xhigh`, auch bei eigener Installation. Eine ausdrücklich gewählte Alternative wird im jeweiligen Browser gespeichert. Mehr Denktiefe kann Wartezeit und Kosten erhöhen. Modellzugang hängt vom OpenAI-Projekt ab. Die verfügbaren API-Werte sind in der Oberfläche abgebildet; Codex-spezifische Einstellungen werden nicht als API-Funktionen ausgegeben.
-
-Weitere OpenAI-Modelle lassen sich unter **Einstellungen → Modell und Denkaufwand → Eigenes Modell hinzufügen** mit ihrer exakten Modell-ID ergänzen. Das Modell muss die Responses API und Structured Outputs unterstützen. Denkstufen und Websuche werden ausdrücklich nach den dokumentierten Fähigkeiten konfiguriert; „Modellstandard“ übermittelt keine Denkstufe. Hinzufügen löst keinen API-Aufruf aus, prüft keinen Modellzugang und ändert die aktuelle Auswahl nicht. Eigene Modelle bleiben im jeweiligen Browser gespeichert.
-
-## API-Region und Flex
-
-Die Einstellungen zeigen die gewählte API-Region. Ohne eigene Browserauswahl gilt die Servervorgabe: `OPENAI_PROCESSING_REGION=global` verwendet `api.openai.com`; `eu` verwendet `eu.api.openai.com`. Für eine geeignete EU-Konfiguration setzen Sie `OPENAI_PROCESSING_REGION=eu` in `backend/.env` und starten den Server neu. Neue Browserprofile und API-Anfragen ohne Regionsauswahl übernehmen diese Vorgabe. Global bleibt der Standard ohne diese Konfiguration.
-
-Die Auswahl legt den Endpoint fest; sie prüft keine Projektfreigabe. Bei Fehlern erfolgt kein automatischer Wechsel auf Global. Aktuelle Regionen, Voraussetzungen und Datenkontrollen: [OpenAI: Data controls](https://developers.openai.com/api/docs/guides/your-data).
-
-**Standard/Flex** und die Verarbeitungsregion sind in „Erweiterte Einstellungen“ direkt unter der Analyse-Werkzeugleiste wählbar. Das Playbook steht links neben der Webrecherche. Flex-Anfragen dürfen in dieser App bis zu 15 Minuten laufen; es gibt keinen automatischen erneuten Aufruf mit Standard. Informationen zu Verfügbarkeit, Verarbeitung und Preisen bleiben bei OpenAI: [Flex processing](https://developers.openai.com/api/docs/guides/flex-processing), [Preise](https://developers.openai.com/api/docs/pricing).
-
-## Daten und Betrieb
-
-Dies ist ein lokal betriebener Einzelbenutzer-Arbeitsraum. Dokumenttexte, Originaldateien (PDF, DOCX, TXT und Markdown), Playbooks und Analysen werden in einer lokalen SQLite-Datenbank gespeichert. Keine integrierte Anmeldung, Mandantentrennung oder Verschlüsselung der Datenbank. Der Entwicklungsserver bindet standardmäßig an die Loopback-Adresse.
-
-Eingefügter Text wird mit der abgeschlossenen Analyse als TXT-Quelle gespeichert. Dokumentnamen und „Fundstelle ansehen“ öffnen eine gemeinsame Vorschau:
-
-- PDF: fortlaufende Originalseiten, Seitenwahl, Zoom und Markierung eines eindeutigen Zitats.
-- Word: formatierte DOCX-Vorschau mit Tabellen, Rasterbildern und Änderungsverfolgung. Layout und Seitenumbrüche können von Word abweichen; Makros, externe Ressourcen und eingebettete aktive Inhalte werden nicht ausgeführt.
-- TXT und Markdown: vollständiger Text mit Zitatmarkierung. Markdown bietet zusätzlich eine Leseansicht; externe Bilder und eingebettetes HTML werden nicht geladen.
-
-Alle neuen Uploads behalten ihre ursprünglichen Bytes für den Download. Alte PDF-/Word-Quellen ohne Original zeigen den ausgelesenen Text. Eine Datei lässt sich nachträglich zuordnen, wenn ihr ausgelesener Text übereinstimmt; ein vorhandenes Original wird nicht überschrieben. Das Löschen eines Dokuments entfernt auch die gespeicherten Originalbytes.
-
-Mitgelieferte Beispielquellen gehören nicht zur Liste eigener Dokumente und sind gegen Einzel- und Sammellöschung geschützt. Beispielberichte dürfen aus dem Verlauf entfernt und über „Beispiel öffnen“ erneut aufgerufen werden. Fehlende Quellen noch gespeicherter Beispielberichte werden beim Serverstart wiederhergestellt; eigene Uploads bleiben löschbar, auch bei gleichem Dateinamen.
-
-Bei einer gestarteten KI-Analyse werden die ausgewählten Dokumenttexte, der Prüfauftrag und das ausgewählte Playbook an OpenAI übertragen. `store=false` verhindert die Speicherung der Response als abrufbares API-Objekt. Es ist **keine** Zusage zu Zero Data Retention oder EU-Verarbeitung. Projektverträge, Aufbewahrungsregeln und freigegebene Verarbeitung müssen zur Kanzlei passen. Details: [OpenAI-Integration](docs/openai-integration.md).
-
-Fundstellenprüfung bedeutet, dass ein Zitat im ausgewählten Dokument gefunden wurde. Sie bestätigt weder die Richtigkeit einer Rechtsauffassung noch die Aktualität einer Norm. Ergebnisse sind Arbeitsentwürfe für die anwaltliche Prüfung. Die Beispieldaten belegen keine Modellqualität.
-
-## Nutzung, Verantwortung und Lizenz
-
-Betreiber verantworten ihre Installation, OpenAI-Konfiguration, Datenübermittlung und Verwendung der Ergebnisse. Vor dem Übermitteln von Mandatsdaten sind Berechtigung zur Weitergabe, anwaltliche Verschwiegenheit, Datenschutz und erforderliche Verträge zu prüfen. Nur erforderliche Inhalte übermitteln; Quellen, Rechtslage und Fristen vor Verwendung der Ergebnisse selbst prüfen. Zugriffsschutz, Datensicherung und Löschung bleiben Aufgaben des Betreibers. Diese Hinweise lassen gesetzliche Rechte und Haftung unberührt.
-
-Das Projekt ist unabhängig von OpenAI. OpenAI-Verträge und API-Datenkontrollen gelten gesondert: [Vertragsbedingungen](https://openai.com/policies/services-agreement/), [Datenverarbeitung](https://developers.openai.com/api/docs/guides/your-data).
-
-Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE), Copyright © 2026 Marlon Kaulich. Bibliotheken und Fonts behalten ihre eigenen Lizenzen; der Frontend-Build liefert die vollständigen Hinweise unter `/third-party-licenses.txt` aus. Bei Weitergabe einer Python-Installation müssen auch deren Paketlizenzen erhalten bleiben.
-
-Befunde zu Namensrechten, Lizenzbestand und Datenverarbeitung: [rechtliche Bestandsaufnahme](docs/legal-review.md).
-
-Die [Namensvorprüfung](docs/name-check.md) dokumentiert Registerabfragen und gleichnamige Rechtsanbieter. Sie bestätigt keine Markenfreiheit.
-
-## Qualität prüfen
+Nach der Installation:
 
 ```sh
 npm run build
-npm run test:api
-npx playwright install chromium
-npm run test:built
-```
-
-Die automatisierten Tests verwenden lokale, synthetische Daten und simulierte Providerantworten. Sie lösen keine echten OpenAI-Anfragen aus. Echte Modellqualität, Projektzugriff, Kosten und Latenz müssen anschließend mit freigegebenen Testdaten bewertet werden.
-
-`test:built` prüft die gebaute Oberfläche direkt über FastAPI, einschließlich Sicherheitsrichtlinie und Export. [Prüfprotokoll](docs/validation.md).
-
-[Lighthouse-Messung](docs/performance.md): Performance 97 mobil / 100 Desktop, Best Practices 100 und CLS 0 in den beschriebenen lokalen Abschlussläufen.
-
-## Mitwirken
-
-Fehlerberichte brauchen reproduzierbare Schritte und synthetische Beispieldaten. Keine Mandatsunterlagen, Zugangsdaten oder ungekürzten Providerantworten in Issues und Pull Requests veröffentlichen. Einrichtung, Prüfungen und Beitragsumfang: [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Gebaute Oberfläche starten
-
-Nach `npm run build` liefert FastAPI die gebaute Oberfläche und API auf derselben Adresse aus:
-
-```sh
 uv run --project backend uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Öffnen: [localhost:8000](http://localhost:8000). Für diesen lokalen Betrieb wird kein Vite-Entwicklungsserver benötigt. Der Arbeitsraum ist nicht für eine ungeschützte Veröffentlichung im Internet ausgelegt.
+Öffnen: [localhost:8000](http://localhost:8000). FastAPI liefert Oberfläche und API auf derselben Adresse aus. Einen bereits laufenden Entwicklungsserver auf Port 8000 vorher beenden.
 
-Unter [evals/](evals/README.md) liegen synthetische Fälle und Bewertungskriterien für die anschließende Prüfung der Modellqualität.
+</details>
 
-## Projektstruktur
+## Konfiguration
 
-```text
-backend/       FastAPI, Dokumentimport, SQLite, OpenAI, Exporte, Tests
-frontend/      React-Arbeitsraum und Gestaltungssystem
-tests/         Ein Start-/Exporttest des Produktionsbuilds
-docs/          Architektur und verifizierte API-Entscheidungen
-scripts/       Lokaler Start
-```
+Die Serverkonfiguration liegt in `backend/.env`. Änderungen erfordern einen Neustart.
 
-Die frühere Gemini-Anwendung diente als Funktionsreferenz. LegalThink wurde neu implementiert. Designreferenz: [OpenAI UI Skills](https://github.com/ihlamury/design-skills/blob/main/skills/openai/SKILL.md), mit Anpassungen für nutzbare Eingaben, Kontrast und responsive Dokumentarbeit.
+| Variable | Zweck |
+| --- | --- |
+| `OPENAI_API_KEY` | OpenAI-Projektschlüssel für gestartete Analysen. Niemals als `VITE_`-Variable hinterlegen. |
+| `OPENAI_PROCESSING_REGION` | Vorgabe `global` oder `eu`; ohne Angabe `global`. EU setzt ein dafür geeignetes OpenAI-Projekt voraus. |
+| `LEGALTHINK_DATA_DIR` | Speicherverzeichnis; standardmäßig `backend/data`. |
+
+Weitere Betriebsoptionen stehen in der [Konfigurationsvorlage](backend/.env.example) und der [Architektur](docs/architecture.md#operational-scope).
+
+**Modell:** Neue Installationen und Browserprofile starten mit `gpt-6-luna` und **Sehr hoch** (`xhigh`). `gpt-6.1-sol` steht zur Auswahl; eine eigene Auswahl bleibt im jeweiligen Browser gespeichert. Weitere Modell-IDs lassen sich in den Einstellungen ergänzen, sofern sie Responses API und Structured Outputs unterstützen. Das Hinzufügen prüft keinen Modellzugang und löst keinen API-Aufruf aus.
+
+**Webrecherche:** standardmäßig aktiviert; über das Globussymbol neben der Modellauswahl abschaltbar. Nutzt OpenAIs gehostete Websuche; Suchanfragen können Dokumentinhalte enthalten.
+
+**Region und Verarbeitung:** Global/EU sowie Standard/Flex sind in den erweiterten Einstellungen wählbar. Die Regionsauswahl bestimmt den Endpoint, bestätigt aber keine Projektfreigabe oder Datenresidenz. Bei Fehlern gibt es keinen automatischen Wechsel zu Global oder Standard und keine automatische Wiederholung. Details zu Modellen, Verarbeitung und Prompt-Caching: [OpenAI-Integration](docs/openai-integration.md).
+
+## Daten und Grenzen
+
+- **Lokaler Einzelbenutzerbetrieb:** Dokumenttexte, Originaldateien, Playbooks und Analysen liegen in SQLite, standardmäßig unter `backend/data/workspace.sqlite3`. Keine integrierte Benutzeranmeldung, Mandantentrennung oder Datenbankverschlüsselung. Die Anwendung nicht ungeschützt ins Internet stellen.
+- **Übertragung:** Beim Analysestart gehen ausgewählte Dokumenttexte, eingefügter Text, Prüfauftrag und gegebenenfalls Playbook an OpenAI. `store=false` verhindert die Speicherung als abrufbares Response-Objekt; es garantiert weder Zero Data Retention noch EU-Verarbeitung.
+- **Löschung:** Ein Dokument zu löschen entfernt seinen gespeicherten Text und seine Originaldatei. Bereits gespeicherte Berichte können weiterhin Zitate daraus enthalten und müssen bei Bedarf zusätzlich gelöscht werden.
+- **Import:** PDFs benötigen eine Textebene; integrierte OCR gibt es nicht. Offene Textänderungen in DOCX müssen vor dem Import in einer Kopie angenommen oder abgelehnt werden. Die Analyse verarbeitet ausgelesenen Text und erfasst visuelle Inhalte nicht vollständig.
+- **Ergebnisqualität:** Berichte sind Arbeitsentwürfe. Quellen, Rechtslage und Fristen müssen vor ihrer Verwendung geprüft werden. Die mitgelieferten Beispiele und simulierten Tests belegen keine Modellqualität.
+
+| Eingabegrenze | Umfang |
+| --- | --- |
+| Einzeldatei | 12 MiB; bis zu 200.000 ausgelesene Zeichen; PDF zusätzlich höchstens 120 Seiten |
+| Material einer Analyse | Bis zu 1.000.000 Zeichen aus ausgewählten Dokumenten und eingefügtem Text zusammen |
+| Prüfauftrag | Separat bis zu 10.000 Zeichen |
+
+Vor dem Übermitteln von Mandatsdaten müssen Übermittlungsberechtigung, anwaltliche Verschwiegenheit, Datenschutz und erforderliche Verträge geklärt sein. Zugriffsschutz, Datensicherung und die Verwendung der Ergebnisse liegen beim Betreiber. Ausführliche Einordnung: [rechtliche Bestandsaufnahme](docs/legal-review.md) und [API-Datenverarbeitung](docs/openai-integration.md#data-handling-claims).
+
+## Entwicklung und Dokumentation
+
+React und TypeScript bilden die Oberfläche; FastAPI und SQLite das Backend. API-Schlüssel werden nicht an den Browser ausgeliefert. Die automatisierten Tests nutzen synthetische Daten und simulierte Providerantworten.
+
+| Dokument | Inhalt |
+| --- | --- |
+| [Architektur](docs/architecture.md) | Komponenten, Speicherung, Quellenmodell und Betriebsgrenzen |
+| [OpenAI-Integration](docs/openai-integration.md) | API-Vertrag, Modelle, Prompt-Caching, Webrecherche und Regionen |
+| [Gestaltung](design.md) | Themes, Komponenten, Barrierefreiheit und Bewegung |
+| [Prüfprotokoll](docs/validation.md) | Ausgeführte Prüfungen und verbleibende Grenzen |
+| [Performance](docs/performance.md) | Messbedingungen und Ergebnisse |
+| [Modellbewertung](evals/README.md) | Synthetische Fälle und Bewertungskriterien |
+| [Sicherheit](SECURITY.md) | Sicherheitsprobleme melden und Schutzgrenzen der Anwendung |
+
+## Mitwirken und Lizenz
+
+Fehlerberichte brauchen reproduzierbare Schritte und synthetische Beispieldaten. Keine Mandatsunterlagen, Zugangsdaten oder lokalen Datenbanken in Issues und Pull Requests veröffentlichen. Einrichtung, relevante Prüfungen und Beitragsregeln: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Der Projektcode steht unter der [MIT-Lizenz](LICENSE), Copyright © 2026 Marlon Kaulich. Bibliotheken und Fonts behalten ihre eigenen Lizenzen; der Frontend-Build liefert die Hinweise unter `/third-party-licenses.txt` aus. Das Projekt ist unabhängig von OpenAI.
+
+Die [Namensvorprüfung](docs/name-check.md) dokumentiert den bisherigen Rechercheumfang und offene Fragen; sie bestätigt keine Markenfreiheit.

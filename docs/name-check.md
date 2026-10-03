@@ -10,6 +10,7 @@ Stand: 3. Oktober 2026. Gesucht wurde die Zeichenfolge `legalthink` in den unten
 | [EUIPO eSearch](https://euipo.europa.eu/eSearch/#basic/1+1+1+1/100+100+100+100/legalthink): einfache Suche `legalthink` | „Trade marks (0)“, keine Ergebnisse. |
 | [WIPO Madrid Monitor](https://www3.wipo.int/madrid/monitor/en/index.jsp): einfache Suche `legalthink`, automatisch zugeordnet zu `MARK_ALL,HOL` | „No documents match your query“; keine Länder- oder Klassenfilter. |
 | [INAPI Chile, amtlicher Tagesbericht vom 7. Januar 2026](https://tramites.inapi.cl/Trademark/TrademarkDailyStatus/DownloadFile?dailyStatesTypeId=1&filedate=07%2F01%2F2026+12%3A00%3A00+a.+m.&stream_id=d74fc662-d1eb-f011-894c-040973dcfef1), Seite 20 | Antrag **1634289**, Wortzeichen **legalthink**, Servicios Legales e Inversiones Efezeta SpA, Abschnitt „Aceptación a Registro“. Das belegt diesen Verfahrensstand; aktueller Schutzstatus, Klassen und territoriale Reichweite wurden nicht abschließend geprüft. |
+| [INAPI Chile, amtlicher Tagesbericht vom 11. Mai 2026](https://tramites.inapi.cl/Trademark/TrademarkDailyStatus/DownloadFile?dailyStatesTypeId=1&filedate=11%2F05%2F2026+12%3A00%3A00+a.+m.&stream_id=14475266-4a4d-f111-8950-040973dcfef1), Seite 39 | Derselbe Antrag **1634289**: „Resolución de abandono por falta de pago de concesión (marca nueva)“. Der Bericht nennt die Aufgabe wegen nicht gezahlter Eintragungsgebühr. Der Januar-Eintrag belegt somit keine heute wirksame Registrierung; spätere Verfahrensschritte oder andere Rechte sind nicht abschließend geprüft. |
 
 Die drei Registeroberflächen wurden direkt bedient und ihre Ergebnisse gelesen. Lokale Screenshots liegen unter `artifacts/name-dpma.png`, `artifacts/name-euipo.png` und `artifacts/name-wipo.png`; diese Arbeitsartefakte werden nicht veröffentlicht. Suchergebnisse und Registerstände können sich ändern.
 
@@ -19,6 +20,8 @@ Die drei Registeroberflächen wurden direkt bedient und ihre Ergebnisse gelesen.
 - [LegalThink Argentinien](https://legalthink.com.ar/): Rechtsanbieter in Buenos Aires.
 
 Diese Namen überschneiden sich sachlich mit Rechtsarbeit. Die Fundstellen allein belegen weder ein Verbot der Nutzung in Deutschland noch eine weltweite Verfügbarkeit. Die vorhandenen Projekte und älteren Repositories von Marlon Kaulich sind ebenfalls keine Aussage über fremde Rechte.
+
+Der Projektinhaber hat am 3. Oktober 2026 entschieden, den Namen LegalThink beizubehalten. Das Repository bleibt zunächst privat. Die Entscheidung ersetzt keine Prüfung älterer Rechte vor einem größeren kommerziellen Ausbau.
 
 ## Verbleibender Prüfbedarf
 

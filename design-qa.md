@@ -10,14 +10,14 @@ Keine offenen P0-, P1- oder P2-Befunde. Geprüft wurde die Übertragung der sich
 
 ## Referenzen und Browserbilder
 
-Referenzdateien liegen unter `C:/Users/Marlon/AppData/Local/Temp/`. Die Bilder und privaten Gesprächsinhalte werden nicht eingecheckt.
+Referenzbilder wurden vom Projektinhaber bereitgestellt und bleiben außerhalb des Repositories. Private Gesprächsinhalte werden nicht eingecheckt.
 
 | Vergleich                           | Referenzdatei                                              | Implementierung                                         | Größe                                                          |
 | ----------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
-| Einstellungen, dunkel, Seitenanfang | `codex-clipboard-fd6acb4e-43cf-408a-baa3-6ad45a123b2a.png` | `artifacts/settings-dark.png`                           | jeweils 1233 × 1017 px                                         |
-| Einstellungen, hell, Seitenanfang   | `codex-clipboard-d728ca19-ce3e-4b41-a728-c1e62b42d1d2.png` | `artifacts/settings-light.png`                          | jeweils 1242 × 1061 px                                         |
-| Denkaufwand, geöffnet               | `codex-clipboard-73f69650-2e12-4913-9a5c-f1b65ba289cb.png` | `artifacts/effort-dark-detail.png`                      | Referenz 483 × 191 px, Popover 275 × 177 px                    |
-| Monochrome Akzente und Karten       | `codex-clipboard-01af327a-848d-4640-baf1-6ee29f68e107.png` | `artifacts/start-dark.png`, `artifacts/review-dark.png` | verschiedene Arbeitsabläufe; Flächen und Hierarchie verglichen |
+| Einstellungen, dunkel, Seitenanfang | Dunkle Einstellungsansicht | `artifacts/settings-dark.png`                           | jeweils 1233 × 1017 px                                         |
+| Einstellungen, hell, Seitenanfang   | Helle Einstellungsansicht | `artifacts/settings-light.png`                          | jeweils 1242 × 1061 px                                         |
+| Denkaufwand, geöffnet               | Geöffneter Denkaufwandregler | `artifacts/effort-dark-detail.png`                      | Referenz 483 × 191 px, Popover 275 × 177 px                    |
+| Monochrome Akzente und Karten       | Monochrome Arbeitsansicht | `artifacts/start-dark.png`, `artifacts/review-dark.png` | verschiedene Arbeitsabläufe; Flächen und Hierarchie verglichen |
 
 Die Implementierung wurde in Chromium bei Geräteskalierung 1 aufgenommen. Referenzpixel und CSS-Pixel wurden für den Vergleich 1:1 behandelt; die ursprüngliche Browser-Skalierung ist unbekannt. Es wurden keine Referenzbilder gestreckt.
 
