@@ -10,8 +10,6 @@
   --surface-input: #212121;
   --surface-code: #262626;
   --document-canvas: #171717;
-  --document-paper: #242424;
-  --document-ink: #dbdbdb;
   --document-filter: grayscale(1) invert(1) contrast(0.72);
   --text-primary: #ededed;
   --text-secondary: #b4b4b4;
@@ -71,8 +69,6 @@
   --surface-input: #ffffff;
   --surface-code: #efefef;
   --document-canvas: #eeeeee;
-  --document-paper: #ffffff;
-  --document-ink: #111111;
   --document-filter: none;
   --text-primary: #0d0d0d;
   --text-secondary: #535353;

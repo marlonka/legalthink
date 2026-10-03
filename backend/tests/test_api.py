@@ -7,6 +7,8 @@ from dataclasses import replace
 
 import pytest
 from docx import Document as WordDocument
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from fastapi import Request
 from fastapi.testclient import TestClient
 from lxml import etree
@@ -455,6 +457,37 @@ def test_docx_table_and_paragraph_order():
     text, pages = extract(output.getvalue(), ".docx")
     assert text == "Vor der Tabelle\n\nIn der Tabelle\n\nNach der Tabelle"
     assert pages == 0
+
+
+def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
+    for revision in (None, "ins", "del", "moveFrom", "moveTo"):
+        document = WordDocument()
+        document.add_paragraph("Der Vertrag beginnt am 1. Januar.")
+        # Nest the revision in a table to exercise the full document tree.
+        paragraph = document.add_table(rows=1, cols=1).cell(0, 0).paragraphs[0]
+        if revision:
+            change = OxmlElement(f"w:{revision}")
+            change.set(qn("w:id"), "1")
+            run = OxmlElement("w:r")
+            text = OxmlElement("w:delText" if revision in {"del", "moveFrom"} else "w:t")
+            text.text = "Der Auftragnehmer haftet unbegrenzt."
+            run.append(text)
+            change.append(run)
+            paragraph._p.append(change)
+        else:
+            paragraph.add_run("Der Auftragnehmer haftet unbegrenzt.")
+        output = io.BytesIO()
+        document.save(output)
+        response = client.post(
+            "/api/documents", files={"file": ("Vertrag.docx", output.getvalue())}
+        )
+        if revision:
+            assert response.status_code == 422, revision
+            assert "Änderungen" in response.json()["detail"]
+        else:
+            assert response.status_code == 201
+            assert "haftet unbegrenzt" in response.json()["text"]
+    assert len(client.get("/api/documents").json()) == 1
 
 
 def test_failed_upstream_analysis_is_not_persisted(client):

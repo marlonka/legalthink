@@ -54,6 +54,10 @@ def _page_location(document: Document, quote: str) -> str | None:
     if not document.name.lower().endswith(".pdf"):
         return None
     pages = re.split(r"\[Seite (\d+)\]\n", document.text)
+    # The extractor adds one marker per page. Identical-looking document text
+    # must not invent page provenance; ambiguous legacy text keeps only a quote match.
+    if pages[0].strip() or pages[1::2] != [str(page) for page in range(1, document.page_count + 1)]:
+        return None
     location = None
     for i in range(1, len(pages), 2):
         text = normalized(pages[i + 1])
@@ -173,9 +177,7 @@ def verify_findings(
 
 def verify_comparison_source(document: Document, quote: str) -> ComparisonSource:
     normalized_quote = normalized(quote)
-    verified = bool(
-        len(normalized_quote) >= 12 and normalized_quote in normalized(document.text)
-    )
+    verified = bool(len(normalized_quote) >= 12 and normalized_quote in normalized(document.text))
     return ComparisonSource(
         source_document_id=document.id,
         source_document_name=document.name,
@@ -183,7 +185,9 @@ def verify_comparison_source(document: Document, quote: str) -> ComparisonSource
         source_location=(
             (_page_location(document, normalized_quote) or "Textfundstelle")
             if verified
-            else "Beleg nicht bestätigt" if quote.strip() else ""
+            else "Beleg nicht bestätigt"
+            if quote.strip()
+            else ""
         ),
         verified=verified,
     )
@@ -296,9 +300,7 @@ class AnalysisService:
             "max_output_tokens": 24000,
             "truncation": "disabled",
             "prompt_cache_key": hashlib.sha256(PROMPT_VERSION.encode()).hexdigest()[:32],
-            # Forward documented GPT-6 fields through the official SDK's escape hatch.
-            # This also works with SDK releases that predate typed prompt_cache_options.
-            "extra_body": {"prompt_cache_options": {"mode": "explicit", "ttl": "30m"}},
+            "prompt_cache_options": {"mode": "explicit", "ttl": "30m"},
         }
         if request.research:
             kwargs["tools"] = [

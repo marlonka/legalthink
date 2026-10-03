@@ -28,6 +28,8 @@ Kopieren Sie `backend/.env.example` nach `backend/.env`. Tragen Sie Ihren OpenAI
 
 Für den Vergleich zuerst den eigenen Entwurf, dann den Gegenentwurf wählen. Gescannte PDFs benötigen vorher OCR. Der Import verarbeitet Text; er ersetzt keine Prüfung von Tabellen, Anhängen oder visuellen Vertragsbestandteilen.
 
+DOCX-Dateien mit offenen Textänderungen werden beim Import abgewiesen. Nehmen Sie die Änderungen in einer Kopie zuerst an oder lehnen Sie sie ab; sonst würde der Textimport geänderte Passagen übergehen. Das Original bleibt unverändert.
+
 ## Werkzeuge
 
 | Werkzeug | Ergebnis |

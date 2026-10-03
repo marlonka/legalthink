@@ -2,7 +2,7 @@ import type { Analysis, Finding } from './types';
 import { ExternalLink } from './ui';
 import './workflow-results.css';
 
-export interface WorkflowFindingContentProps {
+interface WorkflowFindingContentProps {
   analysis: Pick<Analysis, 'workflow' | 'compliance_task'>;
   finding: Finding;
 }
