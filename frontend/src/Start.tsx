@@ -349,10 +349,6 @@ export default function Start(props: Props) {
             rows={4}
           />
           <div className="composer-instruction-actions">
-            <span className="instruction-text-meta" id="analysis-instruction-limit">
-              {instructionCharCount.toLocaleString('de-DE')} /{' '}
-              {MAX_INSTRUCTION_CHARS.toLocaleString('de-DE')} Zeichen
-            </span>
             <MotionButton
               className="text-button"
               aria-haspopup="dialog"
@@ -365,14 +361,15 @@ export default function Start(props: Props) {
               <FileText size={14} aria-hidden="true" />
               Vorlage ansehen
             </MotionButton>
+            <span className="instruction-text-meta" id="analysis-instruction-limit">
+              {instructionCharCount.toLocaleString('de-DE')} /{' '}
+              {MAX_INSTRUCTION_CHARS.toLocaleString('de-DE')} Zeichen
+            </span>
             <span className="sr-only" role="status">
               {templateNotice}
             </span>
           </div>
         </div>
-        <p className="analysis-data-note" id="analysis-data-note">
-          Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
-        </p>
         <div className="composer-toolbar">
           <div className="composer-playbook-field">
             <label htmlFor="analysis-playbook">Playbook:</label>
@@ -454,6 +451,9 @@ export default function Start(props: Props) {
               <ChevronDown size={15} />
             </motion.span>
           </MotionButton>
+          <p className="analysis-data-note" id="analysis-data-note">
+            Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
+          </p>
         </div>
         <Collapse open={options} id="analysis-options" className="composer-options-collapse">
           <div className="composer-options aligned-composer-options">

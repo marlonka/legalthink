@@ -30,6 +30,23 @@
   pointer-events: none;
 }
 
+.model-picker.has-custom-models .picker-button:first-child .stable-picker-label {
+  max-width: 144px;
+}
+.model-picker .picker-option > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.custom-effort-select {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.custom-effort-select select {
+  width: 100%;
+}
+
 .model-picker > .motion-picker-popover {
   width: min(290px, calc(100vw - 36px));
   min-width: 0;

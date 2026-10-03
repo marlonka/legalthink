@@ -332,7 +332,7 @@ wheels = [
 ]
 
 [[package]]
-name = "legalthinkgpt-api"
+name = "legalthink-api"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

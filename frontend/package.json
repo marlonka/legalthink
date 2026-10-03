@@ -1,5 +1,7 @@
 {
-  "name": "legalthinkgpt-workspace",
+  "name": "legalthink-frontend",
+  "description": "LegalThink browser workspace",
+  "license": "MIT",
   "private": true,
   "version": "1.0.0",
   "type": "module",

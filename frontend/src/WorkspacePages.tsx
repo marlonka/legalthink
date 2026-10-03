@@ -39,6 +39,7 @@ import { MotionButton } from './motion';
 import { useDocumentPreview } from './DocumentPreview';
 import ServiceTierField from './ServiceTierField';
 import ProcessingRegionField from './ProcessingRegionField';
+import CustomModels from './CustomModels';
 
 export function History({
   analyses,
@@ -428,6 +429,8 @@ export function Settings({
   effort,
   onModel,
   onEffort,
+  onSaveCustomModel,
+  onRemoveCustomModel,
   processingRegion,
   onProcessingRegion,
   serviceTier,
@@ -446,6 +449,8 @@ export function Settings({
   effort: string;
   onModel: (value: string) => void;
   onEffort: (value: string) => void;
+  onSaveCustomModel: (model: Model) => void;
+  onRemoveCustomModel: (id: string) => void;
   processingRegion: ProcessingRegion | null;
   onProcessingRegion: (value: ProcessingRegion | null) => void;
   serviceTier: ServiceTier;
@@ -559,6 +564,12 @@ export function Settings({
             onEffort={onEffort}
           />
         </div>
+        <CustomModels
+          models={models}
+          selected={model}
+          onSave={onSaveCustomModel}
+          onRemove={onRemoveCustomModel}
+        />
       </section>
       <section className="settings-section">
         <div className="settings-section-heading">

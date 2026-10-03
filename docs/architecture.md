@@ -1,10 +1,10 @@
-# LegalThinkGPT architecture
+# LegalThink architecture
 
 Decision record — **3 October 2026**.
 
 ## Product boundary
 
-LegalThinkGPT is a German legal-work assistant with five focused workflows: contract review, version comparison, chronology, privacy/compliance review, and advertising review. The result is an editable review aid: findings, document evidence, suggested wording, and open questions. A human reviewer decides whether to accept a suggestion.
+LegalThink is a German legal-work assistant with five focused workflows: contract review, version comparison, chronology, privacy/compliance review, and advertising review. The result is an editable review aid: findings, document evidence, suggested wording, and open questions. A human reviewer decides whether to accept a suggestion.
 
 The application separates a clearly marked example from an actual model analysis. An example result cannot establish model accuracy. The Word export contains genuine OOXML insertions and deletions for confirmed quotations and their proposed replacements. Those revisions live in a review memo; the original contract's layout and content are not rewritten.
 

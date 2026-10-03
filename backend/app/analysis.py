@@ -311,14 +311,12 @@ class AnalysisService:
                         {
                             "type": "input_text",
                             "text": SYSTEM_PROMPT,
-                            "prompt_cache_breakpoint": {"mode": "explicit"},
                         },
                         {"type": "input_text", "text": scope},
                     ],
                 },
                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
             ],
-            "reasoning": {"effort": request.effort},
             "text": {
                 "format": {
                     "type": "json_schema",
@@ -330,9 +328,17 @@ class AnalysisService:
             "store": False,
             "max_output_tokens": 24000,
             "truncation": "disabled",
-            "prompt_cache_key": hashlib.sha256(PROMPT_VERSION.encode()).hexdigest()[:32],
-            "prompt_cache_options": {"mode": "explicit", "ttl": "30m"},
+            "prompt_cache_key": hashlib.sha256(
+                f"{PROMPT_VERSION}:{request.model}".encode()
+            ).hexdigest()[:32],
         }
+        if request.effort != "auto":
+            kwargs["reasoning"] = {"effort": request.effort}
+        # Explicit cache breakpoints are not supported by every Responses model.
+        # Custom models retain the common cache key and OpenAI's default caching.
+        if request.custom_model is None:
+            kwargs["prompt_cache_options"] = {"mode": "explicit", "ttl": "30m"}
+            kwargs["input"][0]["content"][0]["prompt_cache_breakpoint"] = {"mode": "explicit"}
         if request.research:
             kwargs["tools"] = [
                 {
@@ -432,6 +438,27 @@ class AnalysisService:
                     "oder unter Erweiterte Einstellungen einen anderen Modus wählen.",
                     503,
                 ) from None
+            if error.status_code == 400 and error.param:
+                parameter = str(error.param)
+                if parameter.startswith("reasoning"):
+                    raise AnalysisError(
+                        "OpenAI unterstützt diesen Denkaufwand beim gewählten Modell nicht. "
+                        "Prüfen Sie die Denkstufen in den Einstellungen oder wählen Sie "
+                        "bei einem eigenen Modell den Modellstandard.",
+                        422,
+                    ) from None
+                if parameter.startswith(("text.format", "response_format")):
+                    raise AnalysisError(
+                        "Das gewählte Modell unterstützt das benötigte strukturierte "
+                        "Antwortformat nicht. Wählen Sie ein Modell mit Structured Outputs.",
+                        422,
+                    ) from None
+                if parameter.startswith(("tools", "include", "max_tool_calls")):
+                    raise AnalysisError(
+                        "OpenAI hat die Webrecherche für dieses Modell abgewiesen. "
+                        "Deaktivieren Sie die Webrecherche oder wählen Sie ein kompatibles Modell.",
+                        422,
+                    ) from None
             if error.code == "model_not_found":
                 raise AnalysisError(
                     f"Das Modell {request.model} ist für das OpenAI-Projekt dieses "
@@ -528,6 +555,7 @@ class AnalysisService:
             created_at=now(),
             model=request.model,
             effort=request.effort,
+            custom_model=request.custom_model,
             is_demo=False,
             usage=usage,
             sources=sources,

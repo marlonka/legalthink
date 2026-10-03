@@ -59,10 +59,11 @@
 }
 
 .composer-instruction-actions > .text-button {
-  justify-self: end;
+  justify-self: start;
 }
 
 .instruction-text-meta {
+  justify-self: end;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 20px;
@@ -288,10 +289,18 @@
 }
 
 .composer-advanced-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
+  gap: 8px 16px;
   padding: 5px 20px 9px;
   border-top: 1px solid var(--border-subtle);
+}
+
+.composer-advanced-heading .analysis-data-note {
+  padding: 0;
+  text-align: right;
+  text-wrap: balance;
 }
 
 /* Workflow-specific controls extend below the common input and toolbar. */
@@ -424,8 +433,12 @@
 }
 
 @container composer (max-width: 480px) {
-  .composer-instruction-actions {
+  .composer-advanced-heading {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .composer-advanced-heading .analysis-data-note {
+    text-align: left;
   }
 
   .composer-toolbar .model-picker {

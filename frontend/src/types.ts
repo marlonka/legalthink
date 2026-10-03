@@ -21,6 +21,8 @@ export interface Model {
   name: string;
   efforts: string[];
   default_effort: string;
+  custom?: boolean;
+  supports_web_search?: boolean;
 }
 export interface Finding {
   id: string;
@@ -73,6 +75,7 @@ export interface Analysis {
   created_at: string;
   model: string;
   effort: string;
+  custom_model?: { efforts: string[]; supports_web_search: boolean } | null;
   is_demo: boolean;
   usage?: {
     input_tokens: number;

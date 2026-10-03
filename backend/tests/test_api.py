@@ -341,6 +341,34 @@ def test_validation_errors_never_echo_document_text(client):
     assert response.status_code == 422
     assert "Prüfauftrag" in response.json()["detail"] and "10.000" in response.json()["detail"]
     assert "PRIVATE" not in response.text
+    for invalid_model in (
+        {"model": "https://PRIVATE.invalid/model"},
+        {"model": "sk-PRIVATE"},
+        {"model": "x" * 121},
+        {"model": "custom-model", "effort": "auto"},
+        {
+            "model": "custom-model",
+            "effort": "high",
+            "research": False,
+            "custom_model": {"efforts": ["auto"]},
+        },
+        {
+            "model": "custom-model",
+            "effort": "auto",
+            "research": True,
+            "custom_model": {"efforts": ["auto"]},
+        },
+    ):
+        rejected = client.post(
+            "/api/analyses",
+            json={
+                "workflow": "contract",
+                "source_text": "PRIVATE Sachverhalt",
+                **invalid_model,
+            },
+        )
+        assert rejected.status_code == 422
+        assert "PRIVATE" not in rejected.text
     assert not service.calls
     assert client.get("/api/analyses").json() == []
 
