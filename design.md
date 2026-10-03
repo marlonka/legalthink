@@ -141,6 +141,8 @@ Der Composer darf höher werden, wenn Dokumente oder Optionen hinzukommen. Einge
 
 Beide Texteingaben verwenden denselben sichtbaren Rahmen, Innenabstand, Radius und Fokuszustand. Ihre unterschiedlichen Anfangshöhen richten sich nach dem erwarteten Inhalt.
 
+Der Prüfauftrag ist anfangs 224 px hoch und enthält eine bearbeitbare, auf die Aufgabe zugeschnittene Vorlage. Die Kopfzeile mit AVV-/DSFA-Auswahl hält 12 px Abstand zum Eingabefeld. „Vorlage ansehen“ steht unter dem Feld und öffnet die vollständige Vorlage. Bei vorhandenem Text ergänzt die Übernahme ausschließlich am Ende; leere Felder werden gefüllt. Bereits enthaltene Vorlagen und Überschreitungen des Zeichenlimits sperren die Übernahme. Keine automatische Ersetzung eigener Eingaben.
+
 Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
 
 Die Playbook-Auswahl steht mit der sichtbaren Beschriftung „Playbook:“ direkt links neben dem Webrecherche-Globus in der Werkzeugleiste. Darunter öffnet „Erweiterte Einstellungen“ die Verarbeitungsregion und den Verarbeitungsmodus Standard/Flex. Ihre Werte stehen ausschließlich in den geöffneten Einstellungen. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
@@ -192,7 +194,7 @@ Gespeicherte Dokumente zeigen nur eigene Quellen. Mitgelieferte Beispiele bleibe
 - Hintergrundfläche hebt sich von Composer oder Seite ab; eine dünne Kontur reicht neben einem zurückhaltenden Schatten.
 - Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
 - Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
-- Standardauswahl: GPT-6 Luna mit Denkaufwand Sehr hoch (`xhigh`). Explizite Nutzerauswahl bleibt gespeichert.
+- Standardauswahl: GPT-6 Luna mit Denkaufwand Sehr hoch (`xhigh`). Beide angebotenen Modelle verwenden `xhigh` als Standard-Denkaufwand. Explizite gültige Nutzerauswahl bleibt gespeichert.
 - Die Werkzeugleiste enthält Playbook, Webrecherche, Modell/Denkaufwand und Startaktion in dieser Reihenfolge. Die Playbook-Auswahl erhält feste Grenzen und kürzt lange Namen; vollständige Namen bleiben zugänglich. Der Globus-Schalter behält eine feste Größe, `aria-pressed`, Auswahlfläche und Häkchen. Der Hinweis zu Dokumentinhalten in Suchanfragen steht im Tooltip und ist für Screenreader zugänglich. „Erweiterte Einstellungen“ steht darunter. Auf schmalen Flächen bilden Playbook und Globus gemeinsam die erste Werkzeugzeile.
 - Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
 - Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
@@ -290,7 +292,7 @@ Die Beispiele sind Muster für vorhandene Funktionen, keine zusätzlichen Textel
 
 - Vertrag, Vergleich, Chronologie, Datenschutz und Werbung verwenden ein gemeinsames Eingaberaster. Datenschutz hat eine kompakte Auswahl für Allgemein, AVV und DSFA in der reservierten Zeile neben dem Prüfauftrag.
 - Jede der sieben Aufgaben hat einen eigenen Entwurf: Dokumentauswahl, eingefügter Text, Prüfauftrag, Playbook und Webrecherche bleiben beim Wechsel erhalten. Diese Entwürfe bestehen für die geöffnete Sitzung; ein Neuladen setzt sie zurück.
-- Platzhalter zeigen kurze Beispiele mit „z. B.“. Sie werden niemals als tatsächlicher Prüfauftrag übermittelt. Die fachlichen Prüfanweisungen stammen aus den ausgewählten Aufgaben im Backend; das Textfeld ergänzt Mandantenrolle und konkreten Schwerpunkt.
+- Neue Entwürfe enthalten je eine neutrale Prüfauftrag-Vorlage für Vertrag, Vergleich, Chronologie, Datenschutz allgemein, AVV, DSFA und Werbung. Die Vorlagen sind tatsächlicher, bearbeitbarer Text und werden beim Analysestart übermittelt. Sie setzen weder eine Mandantenrolle noch einen erfundenen Sachverhalt voraus. Bewusst geleerte Felder bleiben leer. Platzhalter darin zeigen nur Beispiele und werden nicht übermittelt. Der fachliche Grundumfang bleibt im Backend definiert.
 - „Beispiel öffnen“ öffnet passende synthetische Unterlagen mit vorgegebenem Ergebnis. Es ersetzt weder Dokumentauswahl noch Prüfauftrag des Nutzers.
 - Im Vergleich bleiben Original und Gegenentwurf festen Plätzen zugeordnet. Entfernen einer Fassung benennt die andere nicht um. Mehr als zwei Dateien werden vor dem Upload abgewiesen. Gespeicherte Ergebnisse nennen beide Eingabedokumente in ihrer ursprünglichen Reihenfolge.
 - Chronologie öffnet die Zeittafel zuerst. „Fundstelle ansehen“ zeigt den Beleg zum gewählten Ereignis; Schließen führt den Tastaturfokus zurück. „Formulierung“ führt zum zugehörigen Vorschlag.

@@ -24,6 +24,20 @@ test('Python serves the built workspace with local assets, CSP and working expor
   await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'GPT-6 Luna', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Denkaufwand: Sehr hoch' })).toBeVisible();
+  const instruction = page.getByRole('textbox', { name: 'Prüfauftrag (optional)' });
+  const customInstruction = '  Eigener Prüfauftrag\nOriginaltext erhalten  ';
+  await instruction.fill(customInstruction);
+  await page.getByRole('button', { name: 'Vorlage ansehen' }).click();
+  await page.getByRole('button', { name: 'Vorlage ergänzen' }).click();
+  await expect(instruction).toHaveValue(new RegExp(`^${customInstruction}\n\n\\S`));
+  const extendedInstruction = await instruction.inputValue();
+  await page.getByRole('button', { name: 'Chronologie', exact: true }).click();
+  await page.getByRole('button', { name: 'Vertrag', exact: true }).click();
+  await expect(instruction).toHaveValue(extendedInstruction);
+  await instruction.fill('');
+  await page.getByRole('button', { name: 'Chronologie', exact: true }).click();
+  await page.getByRole('button', { name: 'Vertrag', exact: true }).click();
+  await expect(instruction).toHaveValue('');
   await page.getByRole('button', { name: /^Beispiel öffnen/ }).click();
   await expect(
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),

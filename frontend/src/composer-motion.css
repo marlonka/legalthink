@@ -45,9 +45,23 @@
 }
 
 .context-input {
-  height: 144px;
+  height: 224px;
   min-height: 144px;
   max-height: 400px;
+}
+
+.composer-instruction-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.instruction-template-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.65;
 }
 
 .source-text-meta {
@@ -80,7 +94,7 @@
   align-items: center;
   gap: 12px;
   min-height: 40px;
-  margin: 0 23px;
+  margin: 0 23px 12px;
 }
 
 .composer-context-header .context-label {
