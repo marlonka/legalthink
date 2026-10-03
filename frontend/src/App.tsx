@@ -15,6 +15,7 @@ import Start from './Start';
 import Review from './Review';
 import { History, Playbooks, Settings } from './WorkspacePages';
 import { api } from './types';
+import { useThemePreference } from './theme';
 import type { Analysis, DocumentRecord, Health, Model, Playbook, Workflow } from './types';
 import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
 import './polish.css';
@@ -45,6 +46,7 @@ type DeleteTarget =
   | { type: 'document'; item: DocumentRecord };
 
 export default function App() {
+  const [themePreference, setThemePreference] = useThemePreference();
   const [route, setRoute] = useState(routeFromHash);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [health, setHealth] = useState<Health | null>(null);
@@ -517,6 +519,7 @@ export default function App() {
           <nav className="primary-nav">
             <button
               className={`nav-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
+              aria-current={route === 'new' ? 'page' : undefined}
               onClick={() => navigate('new')}
             >
               <Plus size={18} strokeWidth={1.6} />
@@ -524,6 +527,7 @@ export default function App() {
             </button>
             <button
               className={`nav-item ${route === 'history' || isReview ? 'active' : ''}`}
+              aria-current={route === 'history' ? 'page' : undefined}
               onClick={() => navigate('history')}
             >
               <HistoryIcon size={17} strokeWidth={1.6} />
@@ -532,6 +536,7 @@ export default function App() {
             </button>
             <button
               className={`nav-item ${route === 'playbooks' ? 'active' : ''}`}
+              aria-current={route === 'playbooks' ? 'page' : undefined}
               onClick={() => navigate('playbooks')}
             >
               <BookOpen size={17} strokeWidth={1.6} />
@@ -544,6 +549,8 @@ export default function App() {
               {analyses.slice(0, 4).map((item) => (
                 <button
                   className={`recent-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
+                  aria-current={analysis?.id === item.id && isReview ? 'page' : undefined}
+                  title={item.title}
                   key={item.id}
                   onClick={() => {
                     setAnalysis(item);
@@ -560,6 +567,7 @@ export default function App() {
           <div className="sidebar-bottom">
             <button
               className={`nav-item ${route === 'settings' ? 'active' : ''}`}
+              aria-current={route === 'settings' ? 'page' : undefined}
               onClick={() => navigate('settings')}
             >
               <Settings2 size={17} strokeWidth={1.6} />
@@ -657,6 +665,8 @@ export default function App() {
                 />
               ) : route === 'settings' ? (
                 <Settings
+                  themePreference={themePreference}
+                  onThemePreference={setThemePreference}
                   health={health}
                   models={models}
                   model={model}

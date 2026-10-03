@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, Check, ChevronDown, Cpu, X } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronDown, X } from 'lucide-react';
 import type { Model } from './types';
 
 export const DEFAULT_MODELS: Model[] = [
@@ -49,9 +49,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
   return (
     <motion.div
       className="page-transition"
-      initial={{ opacity: 0, y: reducedMotion ? 0 : 7 }}
+      initial={{ opacity: 0, y: reducedMotion ? 0 : 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
     >
       {children}
     </motion.div>
@@ -153,6 +153,11 @@ export function ModelPicker({
   const ref = useRef<HTMLDivElement>(null);
   const current = models.find((item) => item.id === model) ?? models[0];
   const menuId = useId();
+  const effortIndex = Math.max(0, current.efforts.indexOf(effort));
+  function closePicker() {
+    setOpen(null);
+    ref.current?.querySelector<HTMLButtonElement>(`[data-picker="${open}"]`)?.focus();
+  }
   useEffect(() => {
     if (!open) return;
     const listener = (event: PointerEvent) => {
@@ -167,8 +172,7 @@ export function ModelPicker({
       ref={ref}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
-          setOpen(null);
-          ref.current?.querySelector<HTMLButtonElement>(`[data-picker="${open}"]`)?.focus();
+          closePicker();
         }
       }}
     >
@@ -181,7 +185,6 @@ export function ModelPicker({
         onClick={() => setOpen(open === 'model' ? null : 'model')}
         disabled={disabled}
       >
-        <Cpu size={14} />
         <span>{current.name}</span>
         <ChevronDown size={12} />
       </button>
@@ -209,46 +212,66 @@ export function ModelPicker({
             exit={{ opacity: 0, y: 3 }}
             transition={{ duration: 0.12 }}
           >
-            <div className="popover-label">{open === 'model' ? 'Modell' : 'Denkaufwand'}</div>
-            {open === 'model'
-              ? models.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="picker-option"
-                    aria-pressed={model === item.id}
-                    onClick={() => {
-                      onModel(item.id);
-                      if (!item.efforts.includes(effort)) onEffort(item.default_effort);
-                      setOpen(null);
-                    }}
-                  >
-                    <span>
-                      <strong>{item.name}</strong>
-                    </span>
-                    {model === item.id && <Check size={16} />}
-                  </button>
-                ))
-              : current.efforts.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className="picker-option"
-                    aria-pressed={effort === value}
-                    onClick={() => {
-                      onEffort(value);
-                      setOpen(null);
-                    }}
-                  >
-                    <span>
-                      {EFFORT_NAMES[value] ?? value}
-                      {value === 'medium' && <small>Standard</small>}
-                    </span>
-                    {effort === value && <Check size={16} />}
-                  </button>
-                ))}
+            {open === 'model' ? (
+              models.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="picker-option"
+                  disabled={disabled}
+                  aria-pressed={model === item.id}
+                  onClick={() => {
+                    onModel(item.id);
+                    if (!item.efforts.includes(effort)) onEffort(item.default_effort);
+                    closePicker();
+                  }}
+                >
+                  <span>
+                    <strong>{item.name}</strong>
+                  </span>
+                  {model === item.id && <Check size={16} />}
+                </button>
+              ))
+            ) : (
+              <div className="effort-control">
+                <output className="effort-current" htmlFor={`${menuId}-range`}>
+                  {EFFORT_NAMES[effort] ?? effort}
+                </output>
+                <div className="effort-track">
+                  <input
+                    id={`${menuId}-range`}
+                    className="effort-range"
+                    type="range"
+                    disabled={disabled}
+                    min={0}
+                    max={current.efforts.length - 1}
+                    step={1}
+                    value={effortIndex}
+                    aria-label="Denkaufwand"
+                    aria-valuetext={EFFORT_NAMES[effort] ?? effort}
+                    aria-describedby={`${menuId}-cost`}
+                    onChange={(event) => onEffort(current.efforts[Number(event.target.value)])}
+                    style={
+                      {
+                        '--effort-progress': `${(effortIndex / Math.max(1, current.efforts.length - 1)) * 100}%`,
+                      } as CSSProperties
+                    }
+                  />
+                  <div className="effort-ticks" aria-hidden="true">
+                    {current.efforts.map((value, index) => (
+                      <span
+                        key={value}
+                        style={{
+                          left: `${(index / Math.max(1, current.efforts.length - 1)) * 100}%`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             {open === 'effort' && (
-              <p className="popover-note">
+              <p className="popover-note" id={`${menuId}-cost`}>
                 Höherer Denkaufwand kann länger dauern und mehr kosten.
               </p>
             )}

@@ -12,6 +12,8 @@ Verbotene Muster: „Mehr Klarheit. Für Ihr nächstes Argument.“, „Raum fü
 
 # Prüfung und Auslieferung
 
+- Bei Änderungen an der Oberfläche zuerst `design.md` lesen. Farben, Flächen, Abstände und Zustände aus dem dort beschriebenen Designsystem verwenden; beide Themes über gemeinsame semantische Tokens gestalten.
+
 - Vorhandene Bedienabläufe und Barrierefreiheit bei Text- und Layoutänderungen erhalten. Desktop und Mobilansicht prüfen.
 - Keine echten OpenAI-Anfragen in Entwicklung oder Tests, sofern Marlon sie nicht ausdrücklich freigibt.
 - Änderungen mit Conventional Commit committen und pushen.

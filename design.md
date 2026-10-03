@@ -1,0 +1,267 @@
+# LegalThinkGPT – Gestaltung
+
+## Grundlage und Geltungsbereich
+
+Grundlage sind die 13 vom Nutzer bereitgestellten ChatGPT-Screenshots: dunkle und helle Oberfläche, Navigation, Dokumentkarten, Eingabe, Menüs, Denkaufwand und Darstellungseinstellungen. Die Referenzen bleiben außerhalb des Repositories. Private Gesprächsinhalte, Namen und Verlaufstitel werden nicht übernommen.
+
+Die Screenshots zeigen die visuelle Richtung. LegalThinkGPT behält seine vorhandenen Arbeitsabläufe: Dokumente auswählen, Prüfauftrag eingeben, Analyse starten, Befunde und Zitate prüfen, Berichte exportieren und Playbooks verwalten.
+
+### Was die Referenzen belegen
+
+- Dunkle Flächen sind neutral und nahezu schwarz. Karten und Menüs heben sich durch geringe Helligkeitsunterschiede ab.
+- Eine schmale schwarze App-Leiste und eine breitere Inhaltsnavigation stehen links. Inhalt und Eingabe bilden eine gemeinsame, begrenzte Spalte.
+- Normale Navigationseinträge haben keine eigene Karte. Auswahl und Hover füllen die ganze Zeile mit einer dezenten Fläche.
+- Text ist linksbündig. Überschriften bleiben im Maßstab der Anwendung. Icons sind kleine, schlichte Linienzeichen.
+- Der Composer ist stark gerundet. Hinzufügen, Denkaufwand und Senden liegen in seiner Bedienzeile.
+- Menüs verwenden volle, gut anklickbare Zeilen. Zusatzinformationen sind dem Aktionsnamen untergeordnet.
+- Einstellungen verwenden beschriftete Gruppen, zeilenweise angeordnete Werte und dünne Trennlinien.
+- Die helle Darstellung nennt in den sichtbaren Einstellungen `#FCFCFC` als Hintergrund und `#0D0D0D` als Vordergrund.
+- Blau ist in mehreren Bildern als Akzent sichtbar. Die letzte Referenz zeigt die Bedienung monochrom. Blau ist deshalb keine feste Markenfarbe für LegalThinkGPT.
+
+### Was aus Screenshots nicht feststeht
+
+Schriftfamilie, CSS-Maße, Breakpoints, Hover-Verhalten, Fokusführung und Animationsparameter lassen sich daraus nicht zuverlässig bestimmen. Die folgenden Maße sind umsetzbare Festlegungen für LegalThinkGPT. Sie sind keine Behauptung über den Originalcode von ChatGPT.
+
+### Gemessene Bildwerte
+
+Die Pixel wurden mit `System.Drawing.GetPixel` in einem Raster von 4 px abgetastet. Die Werte beschreiben die gelieferten Bilddateien; sie beweisen keine identischen CSS-Werte im Original.
+
+| Referenz                                             | Gemessene, wiederkehrende Bildwerte                                                                                                                   |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dunkle Vollansichten, 1260 × 1301 und 1272 × 1295 px | Hauptfläche `#0E0E0E`, Karte `#1E1E1E`, äußere Leiste `#000000`, Composer `#212121`, Kontur `#323232`, Zeilenauswahl `#262626`, heller Text `#EDEDED` |
+| Letzte dunkle Vollansicht                            | Monochrome Nachrichtenfläche `#2D2D2D`                                                                                                                |
+| Helle Einstellungen, 1242 × 1061 px                  | Hauptfläche `#FCFCFC`, äußere Leiste `#F9F9F9`, Zeilenauswahl `#EFEFEF`, Kontur `#E2E2E2`, Text `#0D0D0D`                                             |
+| Denkaufwand, 483 × 191 px                            | Popover `#303030`, Wertanzeige `#383838`, inaktive Spur `#454545`, blauer Akzent `#3A83F7`                                                            |
+
+Die in den hellen Einstellungen eingeblendeten Farbwerte bestätigen Hintergrund und Vordergrund. Die dunkle Hauptfläche wird entsprechend den Bildpixeln auf `#0E0E0E` festgelegt. Der monochrome Akzent folgt der letzten Referenz.
+
+## Flächen und Farben
+
+Monochrome Bedienoberfläche. Farbe bleibt für Zustände und die Priorität eines Befunds reserviert. Keine grünen Markenflächen, farbigen Verläufe oder dekorativen Leuchteffekte.
+
+| Rolle                | Dunkel    | Hell      |
+| -------------------- | --------- | --------- |
+| Hauptfläche          | `#0E0E0E` | `#FCFCFC` |
+| Navigation           | `#0E0E0E` | `#FCFCFC` |
+| Haupttext            | `#EDEDED` | `#0D0D0D` |
+| Nebeninformationen   | `#B4B4B4` | `#535353` |
+| Karte                | `#1E1E1E` | `#FFFFFF` |
+| Composer             | `#212121` | `#FFFFFF` |
+| Menü oder Popover    | `#303030` | `#FFFFFF` |
+| Hover                | `#262626` | `#EFEFEF` |
+| Trennlinie           | `#323232` | `#E2E2E2` |
+| Primäraktion: Fläche | `#FFFFFF` | `#0D0D0D` |
+| Primäraktion: Text   | `#0D0D0D` | `#FFFFFF` |
+
+Die Palette übernimmt gemessene Flächenwerte; Nebeninformationen und Primäraktionen sind daraus abgeleitete Implementierungswerte. Transparenz darf Text nicht unlesbar machen. Kontrast wird am gerenderten Ergebnis geprüft: mindestens 4,5:1 für normalen Text und 3:1 für große Schrift sowie relevante Bedienelemente. Rahmen zur rein dekorativen Trennung müssen nicht künstlich verstärkt werden.
+
+Die einzelne LegalThinkGPT-Navigation übernimmt die Hauptnavigation der Referenz. Schwarz beziehungsweise `#F9F9F9` gehören zur dortigen äußeren App-Leiste, die hier entfällt.
+
+### Darstellung wählen
+
+Dunkel ist die Voreinstellung. In den Einstellungen stehen „Hell“, „Dunkel“ und „System“ zur Wahl. Die Auswahl bleibt im Browser gespeichert. „System“ folgt auch Änderungen der Betriebssystemdarstellung während einer geöffneten Sitzung. Ohne verfügbaren Browserspeicher bleibt die aktuelle Sitzung bedienbar; die Auswahl kann dann nach dem Neuladen zurückfallen.
+
+Das gewählte Erscheinungsbild gilt bereits beim ersten Rendern, damit kein heller Zwischenzustand vor einer dunklen Seite erscheint. Die statischen Referenzen belegen weder die Originalimplementierung dieser Umschaltung noch Schriftfamilie und Übergangsdauer.
+
+Priorität wird durch Text und ein kleines Farbsignal vermittelt. Ein roter Punkt allein erklärt keinen Befund. Verifiziertes Zitat und juristische Einschätzung erhalten keine gemeinsame Erfolgsfarbe.
+
+## Aufbau und Abstände
+
+### Desktop
+
+- Eine echte Navigation für LegalThinkGPT. Die zusätzliche App-Leiste aus der Referenz wird nicht nachgebaut; ihre Funktionen existieren hier nicht.
+- Zielbreite der Navigation: 288 px. Neue Analyse, Analysen, Playbooks und Einstellungen bleiben direkt erreichbar.
+- Keine erfundenen Projekte, Nutzerprofile, Aktivitätszahlen oder Verlaufseinträge.
+- Hauptinhalt mit 24–48 px seitlichem Abstand. Die sichtbare Breite bestimmt den Abstand, nicht ein großer fester Außenrand.
+- Eingabe und einfache Einstellungsseiten: maximal 768 px Inhaltsbreite.
+- Befundansicht: bis zu 1440 px. Befund und zugehöriger Dokumentausschnitt stehen nebeneinander, solange beide sinnvoll lesbar bleiben.
+- Fließtext möglichst 60–85 Zeichen je Zeile. Lange Klauseln erhalten ausreichend Breite; Zeilen werden nicht zur Erzeugung leerer Flächen eingeengt.
+- Navigation und Hauptinhalt können unabhängig scrollen. Fixierte Bedienelemente dürfen keine letzte Zeile verdecken.
+
+In den großen Referenzen ist die äußere App-Leiste ungefähr 48 px breit, die anschließende Navigation ungefähr 288 px. Die Inhaltsspalte ist ungefähr 768 px breit. Das sind visuelle Näherungen aus den gelieferten Bildern, keine ausgelesenen CSS-Werte.
+
+### Größenraster
+
+| Eigenschaft                                    | Zielwert                                                 |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| Grundraster                                    | 4 px                                                     |
+| Zusammengehörige Elemente                      | 8–12 px Abstand                                          |
+| Abstand zwischen Abschnitten                   | 24–32 px                                                 |
+| Standard-Innenabstand                          | 16–24 px                                                 |
+| Navigations- und Menüzeile                     | 36–44 px hoch                                            |
+| Primäraktionen und Navigation auf Mobilgeräten | mindestens 44 px hoch                                    |
+| Kleine Nebenaktionen auf Mobilgeräten          | mindestens 24 × 24 px, mit Abstand; möglichst 44 × 44 px |
+| Zeilenradius                                   | 8–10 px                                                  |
+| Kartenradius                                   | 24 px                                                    |
+| Composer-Radius                                | 26 px                                                    |
+| Menüradius                                     | 16 px                                                    |
+| Dialogradius                                   | 24 px                                                    |
+| Normale Trennlinie                             | 1 px                                                     |
+
+Radien folgen der Größe des Elements. Kleine Schaltflächen werden nicht zu Miniaturkarten. Schatten helfen nur bei überlagernden Menüs und Dialogen; normale Inhaltsblöcke brauchen keinen Schatten.
+
+## Typografie und Icons
+
+- Die bereits lokal eingebundene Inter bleibt die Implementierungsschrift. Die Originalschrift der Referenz ist aus den Bildern nicht sicher bestimmbar.
+- Fließtext und Texteingaben: 15–16 px, Zeilenhöhe 1,5–1,65.
+- Navigation, Buttons und kompakte Feldwerte: 14 px, mindestens 20 px Zeilenhöhe.
+- Ergänzende Metadaten: 12–13 px. Kein wesentlicher Zustand wird nur als kaum lesbare Kleinschrift dargestellt.
+- Seitenüberschrift: 24–28 px, Gewicht 500. Keine riesige Hero-Schrift.
+- Abschnittstitel: 16–18 px, Gewicht 500. Keine dekorativen Großbuchstaben oder Eyebrows.
+- Gewichte 400, 500 und 600 reichen für die normale Hierarchie. Fett markiert Bedeutung, nicht ganze Absätze.
+- Icons: vorhandene Lucide-Linienicons, meist 18–20 px, Strichstärke etwa 1,5–1,75. Nur eine Icon-Sprache.
+- Icons ergänzen vorhandene Aktionen. Kein Symbol muss freien Platz füllen. Reine Icon-Buttons erhalten einen zugänglichen Namen und bei Bedarf einen Tooltip.
+
+## Navigation und Seiten
+
+### Navigation
+
+Logo als Identität, dann reale Funktionen. Aktuelle Seite durch Hintergrund und `aria-current` bzw. den bestehenden semantischen Auswahlzustand erkennbar machen. Hover, Tastaturfokus und Auswahl dürfen nicht identisch aussehen.
+
+Lange Namen werden in der Navigation gekürzt; vollständige Namen bleiben im geöffneten Inhalt verfügbar. Löschaktionen erscheinen beim Hover und beim Tastaturfokus. Sie dürfen auf Touchgeräten nicht ausschließlich vom Hover abhängen.
+
+### Neue Analyse
+
+Der Prüfauftrag und seine Dokumente bilden den Schwerpunkt. Die Seite braucht keinen einleitenden Nutzenabsatz.
+
+1. Prüfungsart wählen.
+2. Dokumente hinzufügen oder gespeicherte Dokumente auswählen.
+3. Optionalen Prüfauftrag eingeben; Modell und Denkaufwand bleiben am Composer erreichbar.
+4. Analyse starten.
+
+Diese Reihenfolge beschreibt den Ablauf; sie wird nicht als erklärender Vier-Schritte-Text in die Oberfläche kopiert.
+
+Der Composer darf höher werden, wenn Dokumente, Optionen oder längerer Text hinzukommen. Eine juristische Prüfaufgabe wird nicht auf die Höhe einer Chatzeile gezwungen. Dokumentnamen, Original/Gegenentwurf und Entfernen müssen in der Auswahl lesbar bleiben.
+
+Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
+
+Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im geschlossenen Zustand knapp erkennbar. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
+
+### Befunde und Dokumente
+
+- Haupttitel ist der konkrete Berichtstitel. Prüfungsart, Modell und Zeitpunkt sind Metadaten.
+- Zusammenfassung ohne zusätzliche werbliche Überschrift.
+- Befunde, Formulierungen und Chronologie bleiben unterschiedliche Ansichten.
+- Jeder Befund hat eine lesbare Priorität, Beschreibung und bei Bedarf einen Rechtsbezug.
+- Zitat und Änderungsvorschlag sind eindeutig bezeichnet. Keine bloße Farbmarkierung als angebliche Änderungsverfolgung.
+- Der Dokumentbereich zeigt den tatsächlichen Dateinamen, die Fundstelle und den Wortlaut. Weiterer Dokumenttext bleibt bei Bedarf aufklappbar.
+- „Zitat im Dokument gefunden“ bezeichnet einen Textabgleich. Die Einschränkung auf den Wortlaut wird direkt dort zugänglich erklärt.
+- Fehlender ursprünglicher Dokumenttext wird sachlich benannt. Ein gespeichertes Zitat wird dadurch nicht als weiterhin live überprüfbar dargestellt.
+- Export heißt Prüfbericht. Das UI darf keine bearbeitete Originaldatei versprechen, wenn der Export einen eigenständigen Bericht erzeugt.
+- Tabellen erhalten eigene horizontale Scrollbereiche, falls nötig. Die ganze Seite darf dadurch nicht horizontal scrollen.
+
+### Analysen und Playbooks
+
+Listen bevorzugen gleichmäßige Zeilen vor vielen einzelnen Karten. Der Titel führt; Datum, Prüfungsart und Anzahl ergänzen. Keine Vorschaubeschreibung allein zur Füllung einer Zeile.
+
+Playbooks bleiben fachliche Prüfvorgaben. Name und tatsächlicher Inhalt sind ausreichend. Kein abstrakter Claim zur „Kanzlei-DNA“ oder zu vermeintlich garantierter Konsistenz.
+
+### Einstellungen
+
+Verwandte Werte in Gruppen zusammenfassen. Pro Zeile eine Einstellung mit Bezeichnung links und Wert oder Bedienelement rechts. Auf kleinen Displays darf das Bedienelement darunter stehen.
+
+Technische Informationen nur dort, wo sie zur Einrichtung oder Diagnose nötig sind. Hostdetails und API-Anfrage-IDs gehören nicht in die Hauptnavigation. Kein Konto-, Abrechnungs- oder Berechtigungsbereich ohne entsprechende Funktion.
+
+## Menüs, Popover und Dialoge
+
+- Menüs öffnen am auslösenden Element und bleiben innerhalb des sichtbaren Bereichs.
+- Hintergrundfläche hebt sich von Composer oder Seite ab; eine dünne Kontur reicht neben einem zurückhaltenden Schatten.
+- Gewählte Werte erhalten Häkchen oder einen eindeutigen Auswahlzustand. Auswahl nicht allein durch Farbe darstellen.
+- Modellmenü zeigt die Modellnamen. Keine erfundenen Qualitätsversprechen oder generische Beschreibung je Modell.
+- Denkaufwand verwendet nur vom gewählten Modell unterstützte Werte. Bei einem Modellwechsel bleibt die Auswahl gültig.
+- Denkaufwand verwendet einen nativen Range-Slider mit diskreten Stufen. Der aktuelle Wert steht oberhalb der Spur. Unterstützte Stufen werden in ihrer Reihenfolge auf die ganzzahligen Slider-Werte abgebildet; keine Zwischenwerte erfinden.
+- Der Slider hat eine zugängliche Beschriftung, `aria-valuetext` für den benannten Wert und native Tastaturbedienung mit Pfeiltasten, Home und End. Ein knapper Kosten-/Zeithinweis bleibt dem Slider zugeordnet.
+- Escape schließt. Nach dem Schließen kehrt Fokus zum Auslöser zurück.
+- Modale Dialoge halten den Fokus innerhalb des Dialogs. Hintergrund wird für Interaktion gesperrt.
+- Löschdialoge nennen das konkrete Objekt und die tatsächliche Folge. Keine allgemeine Warnung ohne Bezug.
+
+## Mobile Darstellung
+
+- Navigation wird unterhalb des vorhandenen Desktop-Breakpoints zum bedienbaren Drawer. Der vorhandene Breakpoint liegt bei 700 px und wird nur bei nachgewiesenem Platzproblem geändert.
+- Kopfzeile zeigt Seitenidentität und Navigationstaste. Keine zusätzliche Logo- oder Sloganfläche.
+- Außenabstand 16 px, bei sehr schmalen Ansichten mindestens 12 px.
+- Workflow-Auswahl und Composer-Werkzeuge dürfen umbrechen. Reihenfolge und Beschriftung bleiben erhalten.
+- Auf 320 px Breite entstehen keine abgeschnittenen Aktionen oder horizontales Seitenscrolling.
+- Befund und Zitat stehen untereinander, wenn zwei lesbare Spalten nicht mehr passen. „Fundstelle ansehen“ führt zum zugehörigen Bereich.
+- Popover erhalten eine Breitenbegrenzung relativ zum Viewport. Lange Datei- und Playbooknamen dürfen umbrechen.
+- Dialoge bleiben mit Bildschirmtastatur bedienbar. Speichern, Abbrechen und Fehlerzustand müssen erreichbar sein.
+
+## Fokus, Zustände und Bewegung
+
+### Zustände
+
+Normal, Hover, Fokus, aktiv, ausgewählt, deaktiviert und laufend sind getrennte Zustände. Deaktiviert bedeutet weder „versteckt“ noch „beschriftungslos“. Ladezustände nennen die laufende Tätigkeit. Fehler nennen das Problem und eine konkrete nächste Handlung, sofern diese bekannt ist.
+
+Tastaturfokus erhält eine sichtbare, kontrastreiche Kontur mit Abstand zur Elementkante. Der Fokus bleibt auch auf ausgewählten Zeilen und hellen Primärbuttons erkennbar. Farbwechsel allein genügt nicht.
+
+### Bewegung
+
+Die Screenshots belegen keine Dauer oder Physik. Für die Implementierung gelten diese Grenzen:
+
+- Kleine Menüs und Zustandswechsel: etwa 120–180 ms.
+- Seitenwechsel: höchstens 200–250 ms, geringe Verschiebung von maximal 4–6 px.
+- Dialoge und Drawer dürfen die vorhandene Federanimation verwenden, ohne Überschwingen oder sichtbares Nachfedern beim Lesen.
+- Keine Animation von Breite oder Höhe, die große Textflächen unruhig verschiebt, wenn eine einfache Einblendung ausreicht.
+- `prefers-reduced-motion` entfernt räumliche Bewegung und unnötige Übergänge. Status bleibt auch ohne Animation erkennbar.
+- Screenshots und Kontrastprüfung erst nach abgeschlossenem Übergang erstellen. Während einer Einblendung gemessene Transparenz ist kein verlässlicher Endzustand.
+
+## Textregeln
+
+Jeder sichtbare Text benennt eine Aktion, einen Zustand, einen konkreten Sachverhalt, Daten, eine Identität oder eine entscheidungsrelevante Information. Das gilt auch für Text innerhalb von Bildern.
+
+- Keine Slogans, Markenpoesie, abstrakten Nutzenversprechen oder künstlichen Dreierformeln.
+- Keine motivierenden oder beruhigenden Sätze als Ersatz für eine Funktion.
+- Keine dekorativen Eyebrows oder Profilattrappen.
+- Keine Wiederholung einer unmittelbar sichtbaren Aktion im leeren Zustand.
+- Kein behauptetes Qualitäts-, Sicherheits- oder Rechtsniveau ohne belastbare Grundlage.
+- Hinweise dort zeigen, wo ihre Folge für die Handlung relevant wird. Vertiefungen aufklappbar halten.
+- Leerzustände nennen den fehlenden Inhalt. Ein nächster Schritt ist nur nötig, wenn er nicht bereits direkt sichtbar ist.
+- Im Zweifel streichen. Eine Floskel wird nicht durch eine geschliffenere Floskel ersetzt.
+
+| Zweck                          | Passende Form                                  |
+| ------------------------------ | ---------------------------------------------- |
+| Neue Arbeit beginnen           | „Neue Analyse“                                 |
+| Dokument auswählen             | „Dokumente hinzufügen“                         |
+| Leere Verlaufsliste            | „Noch keine Analysen“                          |
+| Wortlaut gefunden              | „Zitat im Dokument gefunden“                   |
+| Nicht mehr gespeicherte Quelle | „Der Dokumenttext ist nicht mehr gespeichert.“ |
+| Konkrete Fehlermeldung         | „Die Datei darf höchstens 12 MB groß sein.“    |
+
+Die Beispiele sind Muster für vorhandene Funktionen, keine zusätzlichen Textelemente.
+
+## Prüfung aus drei Perspektiven
+
+### Textredaktion
+
+Ist die Oberfläche nach Entfernung eines Satzes genauso verständlich und bedienbar? Dann entfällt der Satz. Beschriftungen bleiben über Navigation, Dialoge und Aktionen hinweg konsistent. Ein sichtbarer Zustand darf nicht an drei Stellen erklärt werden.
+
+### Juristische Arbeitspraxis
+
+Sind Original, Gegenentwurf, Zitat, Modellbewertung und Formulierungsvorschlag klar unterscheidbar? Kann man lange Klauseln und ihre Fundstellen ohne unnötige Wechsel vergleichen? Bleiben Unsicherheiten und fehlende Dokumente erkennbar? Kein automatischer Textabgleich wird als rechtliche Freigabe bezeichnet.
+
+### Interface-Design
+
+Hat jedes Element einen sinnvollen Platz und eine erkennbare Gewichtung? Tragen Abstände, Flächen und Schriftgrößen die Hierarchie ohne erklärende Zusatztexte? Sind Navigation, Startaktion und Quellenwechsel mit Maus, Tastatur und Touch erreichbar?
+
+## Abnahme
+
+### Umsetzung im Repository
+
+- `frontend/src/theme.css`: gemeinsame semantische Tokens für beide Themes. Komponenten erhalten keine eigenen Hex-Farben.
+- `frontend/public/theme-init.js`: gespeicherte Darstellung vor dem ersten Rendern anwenden. Hintergrundwerte dort und im HTML-Fallback mit den Seitentokens synchron halten.
+- `frontend/src/theme.ts`: React-Anbindung an dieselbe Theme-Verwaltung.
+- `frontend/src/styles.css`: Navigation, Eingabe, gemeinsame Controls und Popover.
+- `frontend/src/workspace.css`: Befunde, Quellen, Listen, Playbooks und Einstellungen.
+- `frontend/src/polish.css`: Dokumentauswahl und Fehler beim Laden.
+- `tests/workspace.spec.ts`: Darstellung, Kontrast, Tastaturbedienung, Persistenz und Menügrenzen bei 320, 390, 568, 768 und 1024 px.
+
+### Prüfpunkte
+
+- Desktop: Neue Analyse, befüllter Composer, Befunde mit Quelle, Menü und Einstellungen visuell prüfen.
+- Mobil: 320–390 px Breite, Navigation, Dokumentauswahl, Optionen und Dialoge prüfen.
+- Dunkle und helle Darstellung auf harte Farbreste, Textkontrast und Fokus prüfen.
+- Bestehende Abläufe für Upload, Vergleichsreihenfolge, Analyseauswahl, Export und Playbook-Bearbeitung erhalten.
+- Tastaturfokus, Escape, Fokuswiederherstellung und reduzierte Bewegung prüfen.
+- Keine privaten Referenzinhalte oder Screenshot-Dateien einchecken.
+- Keine echten OpenAI-Anfragen während Entwicklung oder Tests.
+- Gestaltung und Implementierung gemeinsam aktualisieren, wenn sich Zielwerte bei der visuellen Prüfung ändern.
