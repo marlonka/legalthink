@@ -109,6 +109,10 @@ EU means Europe (EEA + Switzerland). The official guide lists Standard and Flex 
 
 Flex uses a 900-second request deadline, compared with 180 seconds for Standard. User cancellation remains available. Requests are not automatically retried and cannot silently switch to the more expensive Standard tier. Flex resource-unavailable responses are surfaced for an explicit later retry or a user-selected Standard request. No latency guarantee is derived from a provider comparison screenshot. Reports keep `requested_service_tier` separately from the provider-reported `service_tier`; an absent actual tier stays unknown. Older reports retain unknown region/tier metadata. These contracts are verified offline; eligibility, actual billing and live latency remain unverified.
 
+## Provider errors
+
+Provider errors are translated into German recovery instructions before they reach the UI. Quota and spending limits, temporary rate limits, unavailable Flex capacity, rejected processing modes, EU access errors, context limits, timeouts and provider outages have distinct messages. Unknown provider messages are not forwarded because they can contain submitted content. The frontend displays the backend's safe `detail` in an alert. Errors do not trigger a retry or change the selected region or processing mode. [OpenAI error codes](https://developers.openai.com/api/docs/guides/error-codes).
+
 ## Deferred live validation
 
 Only after explicit authorization: use `gpt-6-luna` with `high`, send synthetic material, and inspect schema/refusal handling, citations, cache reads/writes, latency, and provider request identifiers. A configured key alone is not permission to run a paid check. Keep Luna/xhigh as the application default. Sol remains an explicit user choice. Review project retention and regional settings separately; do not use real client matters for the initial integration check.

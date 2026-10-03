@@ -452,16 +452,20 @@ async def test_provider_non_results_fail_closed(payload, expected):
 
 
 @pytest.mark.parametrize(
-    "status,code,region,tier,expected_status,detail",
+    "status,code,param,region,tier,expected_status,detail",
     [
-        (429, "rate_limit_exceeded", "global", "default", 429, "Kontingent"),
-        (403, "model_not_found", "global", "default", 503, "Modellzugriff"),
-        (429, "resource_unavailable", "eu", "flex", 429, "Flex-Kapazität"),
-        (403, "permission_denied", "eu", "default", 503, "nicht global wiederholt"),
+        (429, "rate_limit_exceeded", None, "global", "default", 429, "Ratenlimit"),
+        (429, "project_spend_limit_exceeded", None, "global", "default", 429, "Projektlimit"),
+        (403, "model_not_found", None, "global", "default", 503, "Modellzugriff"),
+        (429, "resource_unavailable", None, "eu", "flex", 429, "Flex-Kapazität"),
+        (403, "permission_denied", None, "eu", "default", 503, "nicht global wiederholt"),
+        (400, None, "service_tier", "global", "default", 503, "Standard"),
+        (400, "context_length_exceeded", None, "eu", "flex", 422, "Dokumente oder Text"),
+        (503, "server_is_overloaded", None, "global", "default", 503, "vorübergehend"),
     ],
 )
 async def test_provider_access_errors_are_actionable_without_retry_or_private_details(
-    status, code, region, tier, expected_status, detail
+    status, code, param, region, tier, expected_status, detail
 ):
     calls = []
 
@@ -470,7 +474,12 @@ async def test_provider_access_errors_are_actionable_without_retry_or_private_de
         return httpx2.Response(
             status,
             json={
-                "error": {"code": code, "message": "PRIVATE DOCUMENT API KEY", "type": "test_error"}
+                "error": {
+                    "code": code,
+                    "param": param,
+                    "message": "PRIVATE DOCUMENT API KEY",
+                    "type": "test_error",
+                }
             },
         )
 

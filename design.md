@@ -143,7 +143,7 @@ Beide Texteingaben verwenden denselben sichtbaren Rahmen, Innenabstand, Radius u
 
 Dateitypen und Größenlimit stehen beim Hinzufügen. Datenübermittlung steht am Start der Analyse. Der Hinweis zur möglichen Übernahme von Dokumentinhalten in Suchanfragen steht bei Webrecherche. Kein allgemeiner Datenschutzhinweis als Dekoration unter jeder Seite.
 
-Die Playbook-Auswahl steht direkt links neben dem Webrecherche-Globus in der Werkzeugleiste. Darunter öffnet „Erweiterte Einstellungen“ die Verarbeitungsregion und den Verarbeitungsmodus Standard/Flex. Die gewählte Verarbeitung bleibt geschlossen knapp erkennbar. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
+Die Playbook-Auswahl steht mit der sichtbaren Beschriftung „Playbook:“ direkt links neben dem Webrecherche-Globus in der Werkzeugleiste. Darunter öffnet „Erweiterte Einstellungen“ die Verarbeitungsregion und den Verarbeitungsmodus Standard/Flex. Ihre Werte stehen ausschließlich in den geöffneten Einstellungen. Laufende Analyse zeigt Status und Abbruchaktion; vorhandene Eingaben bleiben erhalten.
 
 Webrecherche ist bei neuen Entwürfen und API-Anfragen standardmäßig aktiv. Sie nutzt das OpenAI-Suchwerkzeug. Bewusstes Abschalten bleibt für den jeweiligen Entwurf erhalten; ein Aufgabenwechsel überschreibt diese Wahl nicht.
 
@@ -169,6 +169,8 @@ Webrecherche ist bei neuen Entwürfen und API-Anfragen standardmäßig aktiv. Si
 Listen bevorzugen gleichmäßige Zeilen vor vielen einzelnen Karten. Der Titel führt; Datum, Prüfungsart und Anzahl ergänzen. Keine Vorschaubeschreibung allein zur Füllung einer Zeile.
 
 Playbooks bleiben fachliche Prüfvorgaben. Name und tatsächlicher Inhalt sind ausreichend. Kein abstrakter Claim zur „Kanzlei-DNA“ oder zu vermeintlich garantierter Konsistenz.
+
+Beim Dokumentimport entstehen eine gespeicherte Quelldatei und ein Playbook mit übernommenem Text. Der Importhinweis benennt die getrennten Löschorte: Playbooks unter „Kanzlei-Playbooks“, Importdateien unter „Einstellungen → Gespeicherte Dokumente“.
 
 ### Einstellungen
 
@@ -323,6 +325,7 @@ Sind Original, Gegenentwurf, Zitat, Modellbewertung und Formulierungsvorschlag k
 - Auf schmaleren Fenstern und außerhalb der Analyse öffnet die Vorschau bildschirmfüllend. Ein nativer Dialog führt den Fokus; Escape funktioniert auch innerhalb des Word-Dokuments. Schließen stellt den Fokus ohne Scrollsprung wieder her. Am Desktop bleibt die Ergebnisliste während der geteilten Ansicht bedienbar.
 - Auf ausdrücklichen Nutzerwunsch fährt nur die Dokumentoberfläche beim Öffnen mit dem vorhandenen `panel`-Spring von rechts ein. Mit Reduced Motion entfällt diese Bewegung. Quellenwechsel animieren weder Rahmen noch Controls; die geschlossene Zitatzeile behält ihre Höhe.
 - PDF: fortlaufende Seiten, sichtbare Nachbarseiten rendern, Seitenwahl, Zoom und Sprung zur Fundstelle. Nur eindeutige Texttreffer markieren; mehrdeutige Treffer benennen. Word: lokal gerenderte DOCX-Datei mit Tabellen, Bildern und sichtbaren Änderungen; keine behauptete Übereinstimmung mit Word-Seitenumbrüchen. TXT und Markdown: vollständiger Text; Markdown zusätzlich als Leseansicht ohne eingebettetes HTML oder externe Bilder. Zitate führen zum unveränderten Quelltext.
+- Die Word-Fußzeile richtet ihre Höhe nach den vorhandenen Hinweisen. Eine einzelne Zeile reserviert keine zusätzliche Leerfläche. Bei mehreren Hinweisen bleibt die Fußzeile begrenzt und scrollbar.
 - Originaldateien bleiben als Download verfügbar. Alte PDF-/Word-Quellen ohne Original zeigen ihren ausgelesenen Text; eine passende Datei kann ergänzt werden. Der Textabgleich bestätigt den Wortlaut, keine Dateiauthentizität. Gespeicherte Originalbytes werden nicht ersetzt.
 - PDF und Word starten bei 100 %; weitere Zoomstufen sind 25, 50, 75, 125, 150 und 200 %. Keine automatische Seitenbreite. Bei 100 % entsprechen Seitenmaße CSS-Druckmaßen (96 px pro Zoll); breite Seiten scrollen innerhalb der Vorschau.
 - Word übernimmt gespeicherte Umbrüche und ergänzt Vorschauseiten anhand der DOCX-Seitenmaße. Lange Absätze und einfache Tabellen werden ohne Textverlust aufgeteilt; Seitenwahl und Zitatsprung beziehen sich auf diese Vorschauseiten. Die Seitenzahlen sind keine garantierten Word-Fundstellen. Mehrspaltige Abschnitte, übergroße unteilbare Objekte und Fußnoten bleiben vollständig sichtbar und können längere Seiten benötigen.

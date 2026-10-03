@@ -214,7 +214,16 @@
 
 .composer-playbook-field {
   position: relative;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+}
+
+.composer-playbook-field > label {
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 
 .composer-playbook-select {
@@ -245,19 +254,8 @@
 .composer-advanced-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
   padding: 5px 20px 9px;
   border-top: 1px solid var(--border-subtle);
-}
-
-.composer-processing-summary {
-  min-width: 108px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 20px;
-  text-align: right;
-  white-space: nowrap;
 }
 
 /* Workflow-specific controls extend below the common input and toolbar. */
@@ -403,18 +401,5 @@
 
   .composer-options.aligned-composer-options {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@container composer (max-width: 380px) {
-  .composer-advanced-heading {
-    flex-wrap: wrap;
-    gap: 0;
-  }
-
-  .composer-processing-summary {
-    width: 100%;
-    text-align: left;
-    padding: 0 3px 6px;
   }
 }

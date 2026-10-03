@@ -122,7 +122,6 @@ export default function Start(props: Props) {
   const [options, setOptions] = useState(false);
   const [documentPickerOpen, setDocumentPickerOpen] = useState(false);
   const { reduced, transition } = useMotionPreferences();
-  const effectiveRegion = processingRegion ?? serverDefaultRegion;
   const selectedPlaybookName = playbooks.find((item) => item.id === playbookId)?.name;
   return (
     <div className="start-page">
@@ -335,6 +334,7 @@ export default function Start(props: Props) {
         </p>
         <div className="composer-toolbar">
           <div className="composer-playbook-field">
+            <label htmlFor="analysis-playbook">Playbook:</label>
             <select
               id="analysis-playbook"
               className="composer-playbook-select"
@@ -413,10 +413,6 @@ export default function Start(props: Props) {
               <ChevronDown size={15} />
             </motion.span>
           </MotionButton>
-          <span className="composer-processing-summary">
-            {effectiveRegion ? `${effectiveRegion === 'eu' ? 'Europa' : 'Global'} · ` : ''}
-            {serviceTier === 'flex' ? 'Flex' : 'Standard'}
-          </span>
         </div>
         <Collapse open={options} id="analysis-options" className="composer-options-collapse">
           <div className="composer-options aligned-composer-options">
