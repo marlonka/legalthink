@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -17,10 +17,12 @@ import {
   Quote,
   Search,
 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, LayoutGroup, motion, useIsPresent } from 'motion/react';
 import type { Analysis, DocumentRecord, Finding, Severity } from './types';
 import { dateLabel, EFFORT_NAMES, ExternalLink } from './ui';
 import { workflowName } from './workflows';
+import { Collapse, MotionButton, useMotionPreferences } from './motion';
+import './review-motion.css';
 
 const SEVERITIES: Record<Severity, { label: string; short: string }> = {
   high: { label: 'Hohe Priorität', short: 'Hoch' },
@@ -52,6 +54,43 @@ export default function Review({
   const [sourceVisible, setSourceVisible] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [marked, setMarked] = useState<Set<string>>(new Set());
+  const [sourceRequest, setSourceRequest] = useState(0);
+  const consumedSourceRequest = useRef(0);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const exportTrigger = useRef<HTMLButtonElement>(null);
+  const sourceTrigger = useRef<HTMLButtonElement>(null);
+  const motionId = useId();
+  const { reduced, transition } = useMotionPreferences();
+  function closeExport(restoreFocus = false) {
+    setExportOpen(false);
+    if (restoreFocus) exportTrigger.current?.focus();
+  }
+  function closeSource() {
+    setSourceVisible(false);
+    sourceTrigger.current?.focus();
+  }
+  useEffect(() => {
+    if (!exportOpen) return;
+    function outside(event: PointerEvent) {
+      if (!exportRef.current?.contains(event.target as Node)) setExportOpen(false);
+    }
+    document.addEventListener('pointerdown', outside);
+    return () => document.removeEventListener('pointerdown', outside);
+  }, [exportOpen]);
+  useEffect(() => {
+    if (!sourceRequest || !sourceVisible || consumedSourceRequest.current === sourceRequest) return;
+    const frame = requestAnimationFrame(() => {
+      const panel = document.getElementById('source-panel');
+      if (!panel) return;
+      consumedSourceRequest.current = sourceRequest;
+      const bounds = panel.getBoundingClientRect();
+      // An explicit source action should reveal an off-screen source, not disturb reading.
+      if (bounds.top < 0 || bounds.top > window.innerHeight - 100) {
+        panel.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [sourceRequest, sourceVisible, reduced]);
   useEffect(() => {
     setTab(analysis.workflow === 'chronology' ? 'timeline' : 'findings');
     setFilter('all');
@@ -81,426 +120,513 @@ export default function Review({
     });
   }
   return (
-    <div className="review-page">
-      <div className="review-breadcrumb">
-        <button className="text-button" onClick={onBack}>
-          <ArrowLeft size={14} /> Neue Analyse
-        </button>
-        <span>/</span>
-        <span>{workflowName(analysis.workflow)}</span>
-      </div>
-      {analysis.is_demo && (
-        <div className="demo-banner">
-          <FileText size={15} />
-          <span>
-            <strong>Beispielanalyse</strong> · Fiktive Unterlagen mit vorgegebenen Ergebnissen.
-          </span>
+    <LayoutGroup id={motionId}>
+      <div className="review-page review-motion">
+        <div className="review-breadcrumb">
+          <button className="text-button" onClick={onBack}>
+            <ArrowLeft size={14} /> Neue Analyse
+          </button>
+          <span>/</span>
+          <span>{workflowName(analysis.workflow)}</span>
         </div>
-      )}
-      <header className="review-heading">
-        <div>
-          <h1>{analysis.title}</h1>
-          <div className="review-meta">
-            <span>{dateLabel(analysis.created_at)}</span>
-            <span className="meta-dot" />
-            <span>{analysis.model}</span>
-            <span className="meta-dot" />
-            <span>Denkaufwand {EFFORT_NAMES[analysis.effort] ?? analysis.effort}</span>
+        {analysis.is_demo && (
+          <div className="demo-banner">
+            <FileText size={15} />
+            <span>
+              <strong>Beispielanalyse</strong> · Fiktive Unterlagen mit vorgegebenen Ergebnissen.
+            </span>
+          </div>
+        )}
+        <header className="review-heading">
+          <div>
+            <h1>{analysis.title}</h1>
+            <div className="review-meta">
+              <span>{dateLabel(analysis.created_at)}</span>
+              <span className="meta-dot" />
+              <span>{analysis.model}</span>
+              <span className="meta-dot" />
+              <span>Denkaufwand {EFFORT_NAMES[analysis.effort] ?? analysis.effort}</span>
+            </div>
+          </div>
+          <div
+            className="export-wrapper"
+            ref={exportRef}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setExportOpen(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && exportOpen) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeExport(true);
+              }
+            }}
+          >
+            <MotionButton
+              ref={exportTrigger}
+              className="button secondary"
+              onClick={() => setExportOpen(!exportOpen)}
+              disabled={exporting}
+              aria-expanded={exportOpen}
+              aria-controls="export-options"
+            >
+              {exporting ? (
+                <LoaderCircle className="spin" size={16} />
+              ) : (
+                <ArrowDownToLine size={16} />
+              )}
+              Exportieren
+              <motion.span
+                className="review-chevron"
+                aria-hidden="true"
+                initial={false}
+                animate={{ rotate: exportOpen ? 180 : 0 }}
+                transition={transition('control')}
+              >
+                <ChevronDown size={13} />
+              </motion.span>
+            </MotionButton>
+            <AnimatePresence initial={false}>
+              {exportOpen && (
+                <ExportPopover
+                  onExport={(format) => {
+                    closeExport(true);
+                    onExport(format);
+                  }}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+        </header>
+        <div className="review-overview">
+          <div className="summary-block">
+            <p>{analysis.summary}</p>
+          </div>
+          <div className="risk-summary">
+            {(['high', 'medium', 'low'] as Severity[]).map((severity) => (
+              <button
+                key={severity}
+                aria-label={`${counts[severity]} Befunde, Priorität ${SEVERITIES[severity].short}`}
+                onClick={() => {
+                  setFilter(severity);
+                  setTab('findings');
+                }}
+                className="risk-stat"
+              >
+                <span className="risk-count">{counts[severity].toString().padStart(2, '0')}</span>
+                <span>
+                  <i className={`severity-dot ${severity}`} />
+                  {SEVERITIES[severity].short}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
-        <div className="export-wrapper">
-          <button
-            className="button secondary"
-            onClick={() => setExportOpen(!exportOpen)}
-            disabled={exporting}
-            aria-expanded={exportOpen}
-            aria-controls="export-options"
-          >
-            {exporting ? (
-              <LoaderCircle className="spin" size={16} />
-            ) : (
-              <ArrowDownToLine size={16} />
-            )}
-            Exportieren
-            <ChevronDown size={13} />
-          </button>
-          {exportOpen && (
-            <div className="export-popover" id="export-options">
+        <div className="review-tab-bar">
+          <div className="review-tabs" role="tablist" aria-label="Analyseansichten">
+            {(
+              [
+                { id: 'findings', label: 'Befunde', count: analysis.findings.length },
+                { id: 'suggestions', label: 'Formulierungen', count: suggestions.length },
+                ...(hasTimeline
+                  ? [{ id: 'timeline', label: 'Chronologie', count: analysis.timeline.length }]
+                  : []),
+              ] as { id: Tab; label: string; count: number }[]
+            ).map((item) => (
               <button
-                onClick={() => {
-                  onExport('docx');
-                  setExportOpen(false);
+                key={item.id}
+                id={`tab-${item.id}`}
+                role="tab"
+                aria-selected={tab === item.id}
+                aria-controls={`panel-${item.id}`}
+                tabIndex={tab === item.id ? 0 : -1}
+                onKeyDown={(event) => {
+                  const tabs = Array.from(
+                    event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>(
+                      '[role="tab"]',
+                    ),
+                  );
+                  const index = tabs.indexOf(event.currentTarget);
+                  if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
+                    event.preventDefault();
+                    const next =
+                      event.key === 'Home'
+                        ? tabs[0]
+                        : event.key === 'End'
+                          ? tabs[tabs.length - 1]
+                          : tabs[
+                              (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) %
+                                tabs.length
+                            ];
+                    next.click();
+                    next.focus();
+                  }
                 }}
+                className={tab === item.id ? 'active' : ''}
+                onClick={() => setTab(item.id)}
               >
-                <FileText size={16} />
-                <span>
-                  Word-Dokument<small>Prüfbericht mit Änderungsvorschlägen</small>
-                </span>
+                {item.label}
+                <span>{item.count}</span>
+                {tab === item.id && (
+                  <motion.i
+                    className="review-tab-indicator"
+                    layoutId="review-tab"
+                    transition={transition('control')}
+                    aria-hidden="true"
+                  />
+                )}
               </button>
-              <button
-                onClick={() => {
-                  onExport('md');
-                  setExportOpen(false);
-                }}
-              >
-                <FileText size={16} />
-                <span>
-                  Markdown<small>Prüfbericht als Textdatei</small>
-                </span>
-              </button>
-            </div>
+            ))}
+          </div>
+          {tab !== 'timeline' && (
+            <button
+              ref={sourceTrigger}
+              className="text-button source-toggle"
+              onClick={() => setSourceVisible(!sourceVisible)}
+              aria-pressed={sourceVisible}
+            >
+              <PanelRightClose size={16} />
+              {sourceVisible ? 'Quelle ausblenden' : 'Quelle anzeigen'}
+            </button>
           )}
         </div>
-      </header>
-      <div className="review-overview">
-        <div className="summary-block">
-          <p>{analysis.summary}</p>
-        </div>
-        <div className="risk-summary">
-          {(['high', 'medium', 'low'] as Severity[]).map((severity) => (
-            <button
-              key={severity}
-              aria-label={`${counts[severity]} Befunde, Priorität ${SEVERITIES[severity].short}`}
-              onClick={() => {
-                setFilter(severity);
-                setTab('findings');
-              }}
-              className="risk-stat"
-            >
-              <span className="risk-count">{counts[severity].toString().padStart(2, '0')}</span>
-              <span>
-                <i className={`severity-dot ${severity}`} />
-                {SEVERITIES[severity].short}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="review-tab-bar">
-        <div className="review-tabs" role="tablist" aria-label="Analyseansichten">
-          {(
-            [
-              { id: 'findings', label: 'Befunde', count: analysis.findings.length },
-              { id: 'suggestions', label: 'Formulierungen', count: suggestions.length },
-              ...(hasTimeline
-                ? [{ id: 'timeline', label: 'Chronologie', count: analysis.timeline.length }]
-                : []),
-            ] as { id: Tab; label: string; count: number }[]
-          ).map((item) => (
-            <button
-              key={item.id}
-              id={`tab-${item.id}`}
-              role="tab"
-              aria-selected={tab === item.id}
-              aria-controls={`panel-${item.id}`}
-              tabIndex={tab === item.id ? 0 : -1}
-              onKeyDown={(event) => {
-                const tabs = Array.from(
-                  event.currentTarget.parentElement!.querySelectorAll<HTMLButtonElement>(
-                    '[role="tab"]',
-                  ),
-                );
-                const index = tabs.indexOf(event.currentTarget);
-                if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
-                  event.preventDefault();
-                  const next =
-                    event.key === 'Home'
-                      ? tabs[0]
-                      : event.key === 'End'
-                        ? tabs[tabs.length - 1]
-                        : tabs[
-                            (index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) %
-                              tabs.length
-                          ];
-                  next.click();
-                  next.focus();
-                }
-              }}
-              className={tab === item.id ? 'active' : ''}
-              onClick={() => setTab(item.id)}
-            >
-              {item.label}
-              <span>{item.count}</span>
-            </button>
-          ))}
-        </div>
-        {tab !== 'timeline' && (
-          <button
-            className="text-button source-toggle"
-            onClick={() => setSourceVisible(!sourceVisible)}
-            aria-pressed={sourceVisible}
+        {tab === 'findings' && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={transition('fade')}
+            role="tabpanel"
+            id="panel-findings"
+            aria-labelledby="tab-findings"
+            className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
           >
-            <PanelRightClose size={16} />
-            {sourceVisible ? 'Quelle ausblenden' : 'Quelle anzeigen'}
-          </button>
-        )}
-      </div>
-      {tab === 'findings' && (
-        <div
-          role="tabpanel"
-          id="panel-findings"
-          aria-labelledby="tab-findings"
-          className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
-        >
-          <section className="findings-column" aria-label="Befunde">
-            <div className="findings-toolbar">
-              <div className="filter-pills" aria-label="Nach Priorität filtern">
-                <button
-                  className={filter === 'all' ? 'active' : ''}
-                  onClick={() => setFilter('all')}
-                  aria-pressed={filter === 'all'}
-                >
-                  <ListFilter size={13} />
-                  Alle
-                </button>
-                {(['high', 'medium', 'low', 'info'] as Severity[])
-                  .filter((severity) => counts[severity] > 0)
-                  .map((severity) => (
-                    <button
-                      key={severity}
-                      className={filter === severity ? 'active' : ''}
-                      onClick={() => setFilter(severity)}
-                      aria-pressed={filter === severity}
-                    >
-                      {SEVERITIES[severity].short}
-                      <span>{counts[severity]}</span>
-                    </button>
-                  ))}
-              </div>
-              <label className="findings-search">
-                <Search size={14} />
-                <input
-                  placeholder="Befunde durchsuchen"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Befunde durchsuchen"
-                />
-              </label>
-            </div>
-            <div className="finding-list">
-              {filtered.map((finding, index) => (
-                <FindingCard
-                  key={finding.id}
-                  finding={finding}
-                  index={index}
-                  active={selectedId === finding.id}
-                  onSelect={() => {
-                    setSelectedId(selectedId === finding.id ? '' : finding.id);
-                  }}
-                  onShowSource={() => {
-                    setSelectedId(finding.id);
-                    setSourceVisible(true);
-                    document
-                      .getElementById('source-panel')
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }}
-                  onSuggestion={() => {
-                    setSelectedId(finding.id);
-                    setTab('suggestions');
-                  }}
-                />
-              ))}
-              {!filtered.length && (
-                <div className="empty-state compact">
-                  <FileCheck2 size={28} />
-                  <h3>
-                    {analysis.findings.length ? 'Keine passenden Befunde' : 'Keine Befunde erfasst'}
-                  </h3>
-                  {analysis.findings.length > 0 && (
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        setFilter('all');
-                        setSearch('');
-                      }}
-                    >
-                      Filter zurücksetzen
-                      <ArrowRight size={14} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
-          </section>
-          {sourceVisible && (
-            <SourcePanel
-              finding={selected}
-              document={sourceDocument}
-              onClose={() => setSourceVisible(false)}
-            />
-          )}
-        </div>
-      )}
-      {tab === 'suggestions' && (
-        <div
-          role="tabpanel"
-          id="panel-suggestions"
-          aria-labelledby="tab-suggestions"
-          className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
-        >
-          <section className="suggestions-column">
-            {suggestions.map((finding, index) => (
-              <article
-                className={`suggestion-card ${selectedId === finding.id ? 'active' : ''}`}
-                key={finding.id}
-              >
-                <header>
-                  <button className="suggestion-title" onClick={() => setSelectedId(finding.id)}>
-                    <span className="finding-number">
-                      {(index + 1).toString().padStart(2, '0')}
-                    </span>
-                    <h3>{finding.title}</h3>
+            <section className="findings-column" aria-label="Befunde">
+              <div className="findings-toolbar">
+                <div className="filter-pills" aria-label="Nach Priorität filtern">
+                  <button
+                    className={filter === 'all' ? 'active' : ''}
+                    onClick={() => setFilter('all')}
+                    aria-pressed={filter === 'all'}
+                  >
+                    <ListFilter size={13} />
+                    Alle
+                    {filter === 'all' && (
+                      <motion.i
+                        className="review-filter-indicator"
+                        layoutId="review-filter"
+                        transition={transition('control')}
+                        aria-hidden="true"
+                      />
+                    )}
                   </button>
-                  <span className={`severity-tag ${finding.severity}`}>
-                    <i className={`severity-dot ${finding.severity}`} />
-                    {SEVERITIES[finding.severity].short}
-                  </span>
-                </header>
-                {finding.source_quote && (
-                  <div className="original-clause">
-                    <span className="clause-label">AUSGANGSTEXT</span>
-                    <p>{finding.source_quote}</p>
+                  {(['high', 'medium', 'low', 'info'] as Severity[])
+                    .filter((severity) => counts[severity] > 0)
+                    .map((severity) => (
+                      <button
+                        key={severity}
+                        className={filter === severity ? 'active' : ''}
+                        onClick={() => setFilter(severity)}
+                        aria-pressed={filter === severity}
+                      >
+                        {SEVERITIES[severity].short}
+                        <span>{counts[severity]}</span>
+                        {filter === severity && (
+                          <motion.i
+                            className="review-filter-indicator"
+                            layoutId="review-filter"
+                            transition={transition('control')}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
+                    ))}
+                </div>
+                <label className="findings-search">
+                  <Search size={14} />
+                  <input
+                    placeholder="Befunde durchsuchen"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    aria-label="Befunde durchsuchen"
+                  />
+                </label>
+              </div>
+              <motion.div
+                className="finding-list"
+                key={filter}
+                initial={reduced ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={transition('fade')}
+              >
+                {filtered.map((finding, index) => (
+                  <FindingCard
+                    key={finding.id}
+                    finding={finding}
+                    index={index}
+                    active={selectedId === finding.id}
+                    onSelect={() => {
+                      setSelectedId(selectedId === finding.id ? '' : finding.id);
+                    }}
+                    onShowSource={() => {
+                      setSelectedId(finding.id);
+                      setSourceVisible(true);
+                      setSourceRequest((request) => request + 1);
+                    }}
+                    onSuggestion={() => {
+                      setSelectedId(finding.id);
+                      setTab('suggestions');
+                    }}
+                  />
+                ))}
+                {!filtered.length && (
+                  <div className="empty-state compact">
+                    <FileCheck2 size={28} />
+                    <h3>
+                      {analysis.findings.length
+                        ? 'Keine passenden Befunde'
+                        : 'Keine Befunde erfasst'}
+                    </h3>
+                    {analysis.findings.length > 0 && (
+                      <button
+                        className="text-button"
+                        onClick={() => {
+                          setFilter('all');
+                          setSearch('');
+                        }}
+                      >
+                        Filter zurücksetzen
+                        <ArrowRight size={14} />
+                      </button>
+                    )}
                   </div>
                 )}
-                <div className="proposed-clause">
-                  <span className="clause-label">VORSCHLAG</span>
-                  <p>{finding.suggestion}</p>
+              </motion.div>
+              {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
+            </section>
+            {sourceVisible && (
+              <SourcePanel finding={selected} document={sourceDocument} onClose={closeSource} />
+            )}
+          </motion.div>
+        )}
+        {tab === 'suggestions' && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={transition('fade')}
+            role="tabpanel"
+            id="panel-suggestions"
+            aria-labelledby="tab-suggestions"
+            className={`review-workspace ${sourceVisible ? '' : 'source-hidden'}`}
+          >
+            <section className="suggestions-column">
+              {suggestions.map((finding, index) => (
+                <article
+                  className={`suggestion-card ${selectedId === finding.id ? 'active' : ''}`}
+                  key={finding.id}
+                >
+                  <header>
+                    <button className="suggestion-title" onClick={() => setSelectedId(finding.id)}>
+                      <span className="finding-number">
+                        {(index + 1).toString().padStart(2, '0')}
+                      </span>
+                      <h3>{finding.title}</h3>
+                    </button>
+                    <span className={`severity-tag ${finding.severity}`}>
+                      <i className={`severity-dot ${finding.severity}`} />
+                      {SEVERITIES[finding.severity].short}
+                    </span>
+                  </header>
+                  {finding.source_quote && (
+                    <div className="original-clause">
+                      <span className="clause-label">AUSGANGSTEXT</span>
+                      <p>{finding.source_quote}</p>
+                    </div>
+                  )}
+                  <div className="proposed-clause">
+                    <span className="clause-label">VORSCHLAG</span>
+                    <p>{finding.suggestion}</p>
+                  </div>
+                  <footer>
+                    <MotionButton
+                      className="text-button"
+                      onClick={() => onCopy(finding.suggestion)}
+                    >
+                      <Clipboard size={14} />
+                      Kopieren
+                    </MotionButton>
+                    <MotionButton
+                      className={`mark-button ${marked.has(finding.id) ? 'marked' : ''}`}
+                      onClick={() => mark(finding.id)}
+                      aria-pressed={marked.has(finding.id)}
+                    >
+                      <motion.span
+                        className="review-check"
+                        key={String(marked.has(finding.id))}
+                        initial={reduced ? false : { scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={transition('control')}
+                        aria-hidden="true"
+                      >
+                        <Check size={14} />
+                      </motion.span>
+                      {marked.has(finding.id) ? 'Geprüft' : 'Als geprüft markieren'}
+                    </MotionButton>
+                  </footer>
+                </article>
+              ))}
+              {!suggestions.length && (
+                <div className="empty-state">
+                  <FileText size={30} />
+                  <h3>Keine Formulierungsvorschläge</h3>
                 </div>
-                <footer>
-                  <button className="text-button" onClick={() => onCopy(finding.suggestion)}>
-                    <Clipboard size={14} />
-                    Kopieren
-                  </button>
-                  <button
-                    className={`mark-button ${marked.has(finding.id) ? 'marked' : ''}`}
-                    onClick={() => mark(finding.id)}
-                    aria-pressed={marked.has(finding.id)}
-                  >
-                    <Check size={14} />
-                    {marked.has(finding.id) ? 'Geprüft' : 'Als geprüft markieren'}
-                  </button>
-                </footer>
-              </article>
-            ))}
-            {!suggestions.length && (
+              )}
+              {marked.size > 0 && (
+                <p className="session-note">
+                  {marked.size} von {suggestions.length} Vorschlägen für diese Sitzung als geprüft
+                  markiert.
+                </p>
+              )}
+            </section>
+            {sourceVisible && (
+              <SourcePanel finding={selected} document={sourceDocument} onClose={closeSource} />
+            )}
+          </motion.div>
+        )}
+        {tab === 'timeline' && (
+          <motion.section
+            initial={reduced ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={transition('fade')}
+            role="tabpanel"
+            id="panel-timeline"
+            aria-labelledby="tab-timeline"
+            className="timeline-panel"
+          >
+            {analysis.timeline.length ? (
+              <div className="table-scroll">
+                <table className="timeline-table">
+                  <thead>
+                    <tr>
+                      <th>Datum / Zeitraum</th>
+                      <th>Ereignis</th>
+                      <th>Beleg</th>
+                      <th>Offene Frage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.timeline.map((event, index) => (
+                      <tr key={`${event.date}-${index}`}>
+                        <td>
+                          <span className="timeline-date">
+                            <span />
+                            {event.date || 'Undatiert'}
+                          </span>
+                        </td>
+                        <td>{event.event}</td>
+                        <td>
+                          <span className="table-source">
+                            <FileText size={14} />
+                            {event.source || 'Kein Beleg zugeordnet'}
+                          </span>
+                          {event.source_quote && (
+                            <details className="table-source-evidence">
+                              <summary>
+                                {event.verified ? 'Zitat im Dokument gefunden' : 'Zitat prüfen'}
+                              </summary>
+                              <blockquote>{event.source_quote}</blockquote>
+                            </details>
+                          )}
+                        </td>
+                        <td>{event.open_question || <span className="muted">—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
               <div className="empty-state">
-                <FileText size={30} />
-                <h3>Keine Formulierungsvorschläge</h3>
+                <CircleHelp size={30} />
+                <h3>Keine zeitlichen Ereignisse erfasst</h3>
               </div>
             )}
-            {marked.size > 0 && (
-              <p className="session-note">
-                {marked.size} von {suggestions.length} Vorschlägen für diese Sitzung als geprüft
-                markiert.
-              </p>
-            )}
+            {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
+          </motion.section>
+        )}
+        {(analysis.sources ?? []).length > 0 && (
+          <section className="external-sources">
+            <h3>
+              <ExternalLinkIcon size={14} />
+              Externe Quellen
+            </h3>
+            {analysis.sources!.map((source, index) => (
+              <ExternalLink key={`${source.url}-${index}`} url={source.url}>
+                {source.title}
+              </ExternalLink>
+            ))}
           </section>
-          {sourceVisible && (
-            <SourcePanel
-              finding={selected}
-              document={sourceDocument}
-              onClose={() => setSourceVisible(false)}
-            />
-          )}
-        </div>
-      )}
-      {tab === 'timeline' && (
-        <section
-          role="tabpanel"
-          id="panel-timeline"
-          aria-labelledby="tab-timeline"
-          className="timeline-panel"
-        >
-          {analysis.timeline.length ? (
-            <div className="table-scroll">
-              <table className="timeline-table">
-                <thead>
-                  <tr>
-                    <th>Datum / Zeitraum</th>
-                    <th>Ereignis</th>
-                    <th>Beleg</th>
-                    <th>Offene Frage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analysis.timeline.map((event, index) => (
-                    <tr key={`${event.date}-${index}`}>
-                      <td>
-                        <span className="timeline-date">
-                          <span />
-                          {event.date || 'Undatiert'}
-                        </span>
-                      </td>
-                      <td>{event.event}</td>
-                      <td>
-                        <span className="table-source">
-                          <FileText size={14} />
-                          {event.source || 'Kein Beleg zugeordnet'}
-                        </span>
-                        {event.source_quote && (
-                          <details className="table-source-evidence">
-                            <summary>
-                              {event.verified ? 'Zitat im Dokument gefunden' : 'Zitat prüfen'}
-                            </summary>
-                            <blockquote>{event.source_quote}</blockquote>
-                          </details>
-                        )}
-                      </td>
-                      <td>{event.open_question || <span className="muted">—</span>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="empty-state">
-              <CircleHelp size={30} />
-              <h3>Keine zeitlichen Ereignisse erfasst</h3>
-            </div>
-          )}
-          {analysis.questions.length > 0 && <OpenQuestions questions={analysis.questions} />}
-        </section>
-      )}
-      {(analysis.sources ?? []).length > 0 && (
-        <section className="external-sources">
-          <h3>
-            <ExternalLinkIcon size={14} />
-            Externe Quellen
-          </h3>
-          {analysis.sources!.map((source, index) => (
-            <ExternalLink key={`${source.url}-${index}`} url={source.url}>
-              {source.title}
-            </ExternalLink>
-          ))}
-        </section>
-      )}
-      {(analysis.usage || analysis.provider_request_id) && (
-        <details className="analysis-details">
-          <summary>Verarbeitung & Verbrauch</summary>
-          <dl>
-            {analysis.usage && (
-              <>
-                <dt>Eingabe</dt>
-                <dd>{analysis.usage.input_tokens.toLocaleString('de-DE')} Token</dd>
-                <dt>Davon aus Cache</dt>
-                <dd>{analysis.usage.cached_tokens.toLocaleString('de-DE')} Token</dd>
-                <dt>Ausgabe</dt>
-                <dd>{analysis.usage.output_tokens.toLocaleString('de-DE')} Token</dd>
-              </>
-            )}
-            {analysis.provider_request_id && (
-              <>
-                <dt>API-Anfrage-ID</dt>
-                <dd>
-                  <code>{analysis.provider_request_id}</code>
-                </dd>
-              </>
-            )}
-          </dl>
-        </details>
-      )}
-    </div>
+        )}
+        {(analysis.usage || analysis.provider_request_id) && (
+          <details className="analysis-details">
+            <summary>Verarbeitung & Verbrauch</summary>
+            <dl>
+              {analysis.usage && (
+                <>
+                  <dt>Eingabe</dt>
+                  <dd>{analysis.usage.input_tokens.toLocaleString('de-DE')} Token</dd>
+                  <dt>Davon aus Cache</dt>
+                  <dd>{analysis.usage.cached_tokens.toLocaleString('de-DE')} Token</dd>
+                  <dt>Ausgabe</dt>
+                  <dd>{analysis.usage.output_tokens.toLocaleString('de-DE')} Token</dd>
+                </>
+              )}
+              {analysis.provider_request_id && (
+                <>
+                  <dt>API-Anfrage-ID</dt>
+                  <dd>
+                    <code>{analysis.provider_request_id}</code>
+                  </dd>
+                </>
+              )}
+            </dl>
+          </details>
+        )}
+      </div>
+    </LayoutGroup>
+  );
+}
+
+function ExportPopover({ onExport }: { onExport: (format: 'docx' | 'md') => void }) {
+  const present = useIsPresent();
+  const firstOption = useRef<HTMLButtonElement>(null);
+  const { reduced, transition } = useMotionPreferences();
+  useEffect(() => {
+    if (present) firstOption.current?.focus();
+  }, [present]);
+  return (
+    <motion.div
+      className="export-popover"
+      id="export-options"
+      inert={!present}
+      aria-hidden={!present || undefined}
+      initial={reduced ? false : { opacity: 0, y: -4, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: reduced ? 0 : -3, scale: reduced ? 1 : 0.98 }}
+      transition={{ ...transition('panel'), opacity: transition('fade') }}
+      style={{ transformOrigin: 'top right' }}
+    >
+      <MotionButton ref={firstOption} onClick={() => onExport('docx')}>
+        <FileText size={16} />
+        <span>
+          Word-Dokument<small>Prüfbericht mit Änderungsvorschlägen</small>
+        </span>
+      </MotionButton>
+      <MotionButton onClick={() => onExport('md')}>
+        <FileText size={16} />
+        <span>
+          Markdown<small>Prüfbericht als Textdatei</small>
+        </span>
+      </MotionButton>
+    </motion.div>
   );
 }
 
@@ -519,7 +645,7 @@ function FindingCard({
   onShowSource: () => void;
   onSuggestion: () => void;
 }) {
-  const reducedMotion = useReducedMotion();
+  const { transition } = useMotionPreferences();
   return (
     <article className={`finding-card ${active ? 'active' : ''}`}>
       <button
@@ -537,50 +663,47 @@ function FindingCard({
             {SEVERITIES[finding.severity].label}
           </span>
         </span>
-        <ChevronDown size={17} className={`finding-chevron ${active ? 'rotated' : ''}`} />
+        <motion.span
+          className="finding-chevron review-chevron"
+          aria-hidden="true"
+          initial={false}
+          animate={{ rotate: active ? 180 : 0 }}
+          transition={transition('control')}
+        >
+          <ChevronDown size={17} />
+        </motion.span>
       </button>
-      <AnimatePresence initial={false}>
-        {active && (
-          <motion.div
-            id={`finding-${finding.id}`}
-            initial={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="finding-content-motion"
-          >
-            <div className="finding-content">
-              <p>{finding.description}</p>
-              {finding.legal_basis && (
-                <div className="legal-basis">
-                  <span>Rechtsbezug</span>
-                  <p>{finding.legal_basis}</p>
-                  {finding.source_urls?.map((url, index) => (
-                    <ExternalLink key={url} url={url}>
-                      Recherchebeleg {index + 1}
-                    </ExternalLink>
-                  ))}
-                </div>
-              )}
-              <div className="finding-actions">
-                {finding.source_quote && (
-                  <button className="text-button" onClick={onShowSource}>
-                    <Quote size={13} />
-                    Fundstelle ansehen
-                    <ChevronRight size={12} />
-                  </button>
-                )}
-                {finding.suggestion && (
-                  <button className="text-button" onClick={onSuggestion}>
-                    Formulierung
-                    <ArrowRight size={13} />
-                  </button>
-                )}
-              </div>
+      <Collapse open={active} id={`finding-${finding.id}`} className="finding-content-motion">
+        <div className="finding-content">
+          <p>{finding.description}</p>
+          {finding.legal_basis && (
+            <div className="legal-basis">
+              <span>Rechtsbezug</span>
+              <p>{finding.legal_basis}</p>
+              {finding.source_urls?.map((url, index) => (
+                <ExternalLink key={url} url={url}>
+                  Recherchebeleg {index + 1}
+                </ExternalLink>
+              ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+          <div className="finding-actions">
+            {finding.source_quote && (
+              <MotionButton className="text-button" onClick={onShowSource}>
+                <Quote size={13} />
+                Fundstelle ansehen
+                <ChevronRight size={12} />
+              </MotionButton>
+            )}
+            {finding.suggestion && (
+              <MotionButton className="text-button" onClick={onSuggestion}>
+                Formulierung
+                <ArrowRight size={13} />
+              </MotionButton>
+            )}
+          </div>
+        </div>
+      </Collapse>
     </article>
   );
 }
@@ -596,6 +719,7 @@ function SourcePanel({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [contextExpanded, setContextExpanded] = useState(false);
+  const { reduced, transition } = useMotionPreferences();
   const contextId = useId();
   const documentTextId = useId();
   useEffect(() => {
@@ -622,16 +746,21 @@ function SourcePanel({
           <FileText size={15} />
           Im Dokument
         </span>
-        <button
+        <MotionButton
           className="icon-button small"
           aria-label="Quellenansicht schließen"
           onClick={onClose}
         >
           <PanelRightClose size={15} />
-        </button>
+        </MotionButton>
       </div>
       {finding ? (
-        <>
+        <motion.div
+          key={finding.id}
+          initial={reduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={transition('fade')}
+        >
           <div className="source-document-name">
             <div className="source-file-icon">
               <FileText size={22} strokeWidth={1.3} />
@@ -708,7 +837,7 @@ function SourcePanel({
               verifiziert.
             </p>
           </details>
-        </>
+        </motion.div>
       ) : (
         <div className="empty-source">
           <Quote size={27} strokeWidth={1.2} />

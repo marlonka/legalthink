@@ -1,8 +1,11 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import { ArrowUpRight, Check, ChevronDown, X } from 'lucide-react';
 import type { Model } from './types';
+import { MotionButton, useMotionPreferences } from './motion';
+import './overlay-motion.css';
 
 export const DEFAULT_MODELS: Model[] = [
   {
@@ -45,17 +48,78 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export function PageTransition({ children }: { children: ReactNode }) {
-  const reducedMotion = useReducedMotion();
+  const { reduced, transition } = useMotionPreferences();
   return (
     <motion.div
       className="page-transition"
-      initial={{ opacity: 0, y: reducedMotion ? 0 : 4 }}
+      initial={reduced ? false : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={{ y: transition('panel'), opacity: transition('fade') }}
     >
       {children}
     </motion.div>
   );
+}
+
+const focusableSelector =
+  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]';
+type ActiveModal = { portal: HTMLDivElement; dialog: HTMLDivElement };
+const modalStack: ActiveModal[] = [];
+const backgroundState = new Map<HTMLElement, boolean>();
+let originalOverflow = '';
+let originalFocus: HTMLElement | null = null;
+
+function focusDialog(dialog: HTMLDivElement) {
+  const controls = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+    (element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.width > 2 && bounds.height > 2 && !element.closest('[inert]');
+    },
+  );
+  const autofocus = controls.find((element) => element.hasAttribute('autofocus'));
+  const editable = controls.find((element) =>
+    element.matches('input:not([type="file"]), textarea, select'),
+  );
+  // React autoFocus runs before a new portal is attached. Focus its editable field here.
+  (autofocus ?? editable ?? controls[0] ?? dialog).focus({ preventScroll: true });
+}
+
+function lockModal(modal: ActiveModal) {
+  if (backgroundState.size === 0) {
+    originalFocus = document.activeElement as HTMLElement | null;
+    originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    for (const element of Array.from(document.body.children)) {
+      if (!(element instanceof HTMLElement) || element.hasAttribute('data-modal-portal')) continue;
+      backgroundState.set(element, element.inert);
+      element.inert = true;
+    }
+  }
+  modalStack.push(modal);
+  for (const item of modalStack) item.portal.inert = item !== modal;
+  focusDialog(modal.dialog);
+  return () => {
+    const index = modalStack.indexOf(modal);
+    if (index < 0) return;
+    const wasTop = index === modalStack.length - 1;
+    modalStack.splice(index, 1);
+    const top = modalStack.at(-1);
+    if (top) {
+      top.portal.inert = false;
+      if (wasTop) focusDialog(top.dialog);
+      return;
+    }
+    // A replacement dialog can mount in this commit. Keep its lock and original trigger.
+    queueMicrotask(() => {
+      if (modalStack.length) return;
+      for (const [element, wasInert] of backgroundState) element.inert = wasInert;
+      backgroundState.clear();
+      document.body.style.overflow = originalOverflow;
+      if (originalFocus?.isConnected && !originalFocus.closest('[inert]'))
+        originalFocus.focus({ preventScroll: true });
+      originalFocus = null;
+    });
+  };
 }
 
 export function Modal({
@@ -73,24 +137,41 @@ export function Modal({
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  const reducedMotion = useReducedMotion();
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const oldOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const first = ref.current?.querySelector<HTMLElement>('[autofocus], input, textarea, button');
-    first?.focus();
+  const present = useIsPresent();
+  const { reduced, transition } = useMotionPreferences();
+  const [portal] = useState(() => {
+    const element = document.createElement('div');
+    element.setAttribute('data-modal-portal', '');
+    return element;
+  });
+  useLayoutEffect(() => {
+    document.body.appendChild(portal);
+    return () => portal.remove();
+  }, [portal]);
+  useLayoutEffect(() => {
+    portal.inert = !present;
+    if (!present || !ref.current) return;
+    const unlock = lockModal({ portal, dialog: ref.current });
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeRef.current();
+      if (modalStack.at(-1)?.portal !== portal) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRef.current();
+      }
       if (event.key !== 'Tab') return;
       const focusable = Array.from(
-        ref.current?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]',
-        ) ?? [],
-      );
+        ref.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [],
+      ).filter((element) => {
+        const bounds = element.getBoundingClientRect();
+        return bounds.width > 2 && bounds.height > 2 && !element.closest('[inert]');
+      });
       const firstElement = focusable[0],
         lastElement = focusable.at(-1);
-      if (event.shiftKey && document.activeElement === firstElement) {
+      if (!firstElement) {
+        event.preventDefault();
+        ref.current?.focus();
+      } else if (event.shiftKey && document.activeElement === firstElement) {
         event.preventDefault();
         lastElement?.focus();
       } else if (!event.shiftKey && document.activeElement === lastElement) {
@@ -100,16 +181,21 @@ export function Modal({
     };
     document.addEventListener('keydown', handleKey);
     return () => {
-      document.body.style.overflow = oldOverflow;
       document.removeEventListener('keydown', handleKey);
-      previous?.focus();
+      unlock();
     };
-  }, []);
-  return (
-    <div
-      className="modal-backdrop"
+  }, [portal, present]);
+  return createPortal(
+    <motion.div
+      className="modal-backdrop motion-modal-backdrop"
+      inert={!present}
+      aria-hidden={!present || undefined}
+      initial={reduced ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={transition('fade')}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (present && event.target === event.currentTarget) onClose();
       }}
     >
       <motion.div
@@ -117,20 +203,50 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         className={`modal ${wide ? 'modal-wide' : ''}`}
-        initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.97, y: reducedMotion ? 0 : 8 }}
+        initial={reduced ? false : { opacity: 0, scale: 0.985, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 450, damping: 36 }}
+        exit={{ opacity: 0, scale: reduced ? 1 : 0.99, y: reduced ? 0 : 4 }}
+        transition={{ ...transition('panel'), opacity: transition('fade') }}
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          <button className="icon-button" onClick={onClose} aria-label="Dialog schließen">
+          <MotionButton className="icon-button" onClick={onClose} aria-label="Dialog schließen">
             <X size={19} />
-          </button>
+          </MotionButton>
         </div>
         {children}
       </motion.div>
-    </div>
+    </motion.div>,
+    portal,
+  );
+}
+
+function PickerPopover({
+  children,
+  id,
+  effort,
+}: {
+  children: ReactNode;
+  id: string;
+  effort: boolean;
+}) {
+  const present = useIsPresent();
+  const { reduced, transition } = useMotionPreferences();
+  return (
+    <motion.div
+      id={id}
+      className={`picker-popover motion-picker-popover ${effort ? 'effort-popover' : ''}`}
+      inert={!present}
+      aria-hidden={!present || undefined}
+      initial={reduced ? false : { opacity: 0, y: 5, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: reduced ? 0 : 3, scale: reduced ? 1 : 0.99 }}
+      transition={{ ...transition('panel'), opacity: transition('fade') }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -150,6 +266,7 @@ export function ModelPicker({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState<'model' | 'effort' | null>(null);
+  const { reduced, transition } = useMotionPreferences();
   const ref = useRef<HTMLDivElement>(null);
   const current = models.find((item) => item.id === model) ?? models[0];
   const menuId = useId();
@@ -176,7 +293,7 @@ export function ModelPicker({
         }
       }}
     >
-      <button
+      <MotionButton
         type="button"
         className="picker-button"
         data-picker="model"
@@ -186,10 +303,16 @@ export function ModelPicker({
         disabled={disabled}
       >
         <span>{current.name}</span>
-        <ChevronDown size={12} />
-      </button>
+        <motion.span
+          className="picker-chevron"
+          animate={{ rotate: reduced ? 0 : open === 'model' ? 180 : 0 }}
+          transition={transition('control')}
+        >
+          <ChevronDown size={12} />
+        </motion.span>
+      </MotionButton>
       <span className="picker-divider" />
-      <button
+      <MotionButton
         type="button"
         className="picker-button effort-picker"
         data-picker="effort"
@@ -200,21 +323,20 @@ export function ModelPicker({
         disabled={disabled}
       >
         <span>{EFFORT_NAMES[effort] ?? effort}</span>
-        <ChevronDown size={12} />
-      </button>
-      <AnimatePresence>
+        <motion.span
+          className="picker-chevron"
+          animate={{ rotate: reduced ? 0 : open === 'effort' ? 180 : 0 }}
+          transition={transition('control')}
+        >
+          <ChevronDown size={12} />
+        </motion.span>
+      </MotionButton>
+      <AnimatePresence initial={false}>
         {open && (
-          <motion.div
-            id={`${menuId}-${open}`}
-            className={`picker-popover ${open === 'effort' ? 'effort-popover' : ''}`}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 3 }}
-            transition={{ duration: 0.12 }}
-          >
+          <PickerPopover key="picker" id={`${menuId}-${open}`} effort={open === 'effort'}>
             {open === 'model' ? (
               models.map((item) => (
-                <button
+                <MotionButton
                   key={item.id}
                   type="button"
                   className="picker-option"
@@ -230,7 +352,7 @@ export function ModelPicker({
                     <strong>{item.name}</strong>
                   </span>
                   {model === item.id && <Check size={16} />}
-                </button>
+                </MotionButton>
               ))
             ) : (
               <div className="effort-control">
@@ -275,7 +397,7 @@ export function ModelPicker({
                 Höherer Denkaufwand kann länger dauern und mehr kosten.
               </p>
             )}
-          </motion.div>
+          </PickerPopover>
         )}
       </AnimatePresence>
     </div>

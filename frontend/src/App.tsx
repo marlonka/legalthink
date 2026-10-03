@@ -10,15 +10,17 @@ import {
   Settings2,
   X,
 } from 'lucide-react';
-import { MotionConfig } from 'motion/react';
+import { AnimatePresence, LayoutGroup, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
 import Review from './Review';
 import { History, Playbooks, Settings } from './WorkspacePages';
 import { api } from './types';
 import { useThemePreference } from './theme';
+import { MotionButton, useMotionPreferences } from './motion';
 import type { Analysis, DocumentRecord, Health, Model, Playbook, Workflow } from './types';
 import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
 import './polish.css';
+import './navigation-motion.css';
 
 function stored(key: string, fallback: string) {
   try {
@@ -45,10 +47,54 @@ type DeleteTarget =
   | { type: 'playbook'; item: Playbook }
   | { type: 'document'; item: DocumentRecord };
 
+function NavigationSelection({ id }: { id: string }) {
+  const { reduced, transition } = useMotionPreferences();
+  return (
+    <motion.span
+      className="nav-selection"
+      aria-hidden="true"
+      layoutId={reduced ? undefined : id}
+      initial={false}
+      transition={transition('layout')}
+    />
+  );
+}
+
+function Notification({ message, onClose }: { message: string; onClose: () => void }) {
+  const present = useIsPresent();
+  const { reduced, transition } = useMotionPreferences();
+  return (
+    <motion.div
+      className="toast motion-toast"
+      role="status"
+      aria-atomic="true"
+      aria-hidden={!present || undefined}
+      inert={!present}
+      initial={reduced ? false : { y: 6, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: reduced ? 0 : 4, opacity: 0 }}
+      transition={{ y: transition('control'), opacity: transition('fade') }}
+    >
+      <Check size={16} />
+      <span>{message}</span>
+      <MotionButton className="icon-button small" onClick={onClose} aria-label="Hinweis schließen">
+        <X size={14} />
+      </MotionButton>
+    </motion.div>
+  );
+}
+
 export default function App() {
+  const { transition } = useMotionPreferences();
   const [themePreference, setThemePreference] = useThemePreference();
   const [route, setRoute] = useState(routeFromHash);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileNavigation, setMobileNavigation] = useState(
+    () => window.matchMedia('(max-width: 700px)').matches,
+  );
+  const [drawerPresented, setDrawerPresented] = useState(false);
+  const mobileOpenRef = useRef(mobileOpen);
+  mobileOpenRef.current = mobileOpen;
   const [health, setHealth] = useState<Health | null>(null);
   const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
   const [model, setModelState] = useState(() => stored('legalthink-model', 'gpt-6.1-sol'));
@@ -79,6 +125,24 @@ export default function App() {
   const contentRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  function openNavigation() {
+    setDrawerPresented(true);
+    setMobileOpen(true);
+  }
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 700px)');
+    const onChange = () => {
+      setMobileNavigation(query.matches);
+      if (!query.matches) {
+        setMobileOpen(false);
+        setDrawerPresented(false);
+      }
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
 
   function setModel(value: string) {
     setModelState(value);
@@ -474,7 +538,7 @@ export default function App() {
     (route === 'playbooks' && loadFailures.includes('Playbooks') && !playbooks.length) ||
     (route === 'settings' && loadFailures.includes('Dokumente') && !documents.length);
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       <a
         className="skip-link"
         href="#main-content"
@@ -486,16 +550,18 @@ export default function App() {
         Zum Inhalt springen
       </a>
       <div className="app-shell">
-        {mobileOpen && (
-          <button
-            className="sidebar-overlay"
-            tabIndex={-1}
-            aria-hidden="true"
-            aria-label="Navigation schließen"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
-        <aside
+        <motion.button
+          className="sidebar-overlay navigation-backdrop"
+          tabIndex={-1}
+          aria-hidden="true"
+          aria-label="Navigation schließen"
+          onClick={() => setMobileOpen(false)}
+          initial={false}
+          animate={{ opacity: mobileOpen ? 1 : 0 }}
+          transition={transition('fade')}
+          style={{ pointerEvents: mobileOpen ? 'auto' : 'none' }}
+        />
+        <motion.aside
           ref={sidebarRef}
           id="workspace-navigation"
           role={mobileOpen ? 'dialog' : undefined}
@@ -503,91 +569,116 @@ export default function App() {
           tabIndex={mobileOpen ? -1 : undefined}
           className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}
           aria-label="Hauptnavigation"
+          aria-hidden={(mobileNavigation && !mobileOpen) || undefined}
+          inert={mobileNavigation && !mobileOpen}
+          data-motion-navigation="true"
+          data-presented={drawerPresented}
+          initial={false}
+          animate={{ x: mobileNavigation && !mobileOpen ? '-100%' : 0 }}
+          transition={mobileNavigation ? transition('panel') : { duration: 0 }}
+          onAnimationComplete={() => {
+            if (!mobileOpenRef.current) setDrawerPresented(false);
+          }}
         >
           <div className="sidebar-brand">
-            <button onClick={() => navigate('new')} aria-label="LegalThinkGPT Startseite">
+            <MotionButton onClick={() => navigate('new')} aria-label="LegalThinkGPT Startseite">
               <Brand />
-            </button>
-            <button
+            </MotionButton>
+            <MotionButton
               className="icon-button sidebar-mobile-close"
               aria-label="Navigation schließen"
               onClick={() => setMobileOpen(false)}
             >
               <X size={18} />
-            </button>
+            </MotionButton>
           </div>
-          <nav className="primary-nav">
-            <button
-              className={`nav-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
-              aria-current={route === 'new' ? 'page' : undefined}
-              onClick={() => navigate('new')}
-            >
-              <Plus size={18} strokeWidth={1.6} />
-              <span>Neue Analyse</span>
-            </button>
-            <button
-              className={`nav-item ${route === 'history' || isReview ? 'active' : ''}`}
-              aria-current={route === 'history' ? 'page' : undefined}
-              onClick={() => navigate('history')}
-            >
-              <HistoryIcon size={17} strokeWidth={1.6} />
-              <span>Analysen</span>
-              {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
-            </button>
-            <button
-              className={`nav-item ${route === 'playbooks' ? 'active' : ''}`}
-              aria-current={route === 'playbooks' ? 'page' : undefined}
-              onClick={() => navigate('playbooks')}
-            >
-              <BookOpen size={17} strokeWidth={1.6} />
-              <span>Kanzlei-Playbooks</span>
-            </button>
-          </nav>
+          <LayoutGroup id="primary-navigation">
+            <nav className="primary-nav">
+              <MotionButton
+                className={`nav-item nav-motion-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
+                aria-current={route === 'new' ? 'page' : undefined}
+                onClick={() => navigate('new')}
+              >
+                <Plus size={18} strokeWidth={1.6} />
+                <span>Neue Analyse</span>
+                {route === 'new' && <NavigationSelection id="primary-selection" />}
+              </MotionButton>
+              <MotionButton
+                className={`nav-item nav-motion-item ${route === 'history' || isReview ? 'active' : ''}`}
+                aria-current={route === 'history' ? 'page' : undefined}
+                onClick={() => navigate('history')}
+              >
+                <HistoryIcon size={17} strokeWidth={1.6} />
+                <span>Analysen</span>
+                {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
+                {(route === 'history' || isReview) && (
+                  <NavigationSelection id="primary-selection" />
+                )}
+              </MotionButton>
+              <MotionButton
+                className={`nav-item nav-motion-item ${route === 'playbooks' ? 'active' : ''}`}
+                aria-current={route === 'playbooks' ? 'page' : undefined}
+                onClick={() => navigate('playbooks')}
+              >
+                <BookOpen size={17} strokeWidth={1.6} />
+                <span>Kanzlei-Playbooks</span>
+                {route === 'playbooks' && <NavigationSelection id="primary-selection" />}
+              </MotionButton>
+            </nav>
+          </LayoutGroup>
           {analyses.length > 0 && (
-            <div className="sidebar-recent">
-              <div className="nav-section-label">Letzte Analysen</div>
-              {analyses.slice(0, 4).map((item) => (
-                <button
-                  className={`recent-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
-                  aria-current={analysis?.id === item.id && isReview ? 'page' : undefined}
-                  title={item.title}
-                  key={item.id}
-                  onClick={() => {
-                    setAnalysis(item);
-                    navigate(`analysis/${item.id}`);
-                  }}
-                >
-                  <FileText size={14} />
-                  <span>{item.title}</span>
-                  {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
-                </button>
-              ))}
-            </div>
+            <LayoutGroup id="recent-navigation">
+              <div className="sidebar-recent">
+                <div className="nav-section-label">Letzte Analysen</div>
+                {analyses.slice(0, 4).map((item) => (
+                  <MotionButton
+                    className={`recent-item nav-motion-item ${analysis?.id === item.id && isReview ? 'active' : ''}`}
+                    aria-current={analysis?.id === item.id && isReview ? 'page' : undefined}
+                    title={item.title}
+                    key={item.id}
+                    onClick={() => {
+                      setAnalysis(item);
+                      navigate(`analysis/${item.id}`);
+                    }}
+                  >
+                    <FileText size={14} />
+                    <span>{item.title}</span>
+                    {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
+                    {analysis?.id === item.id && isReview && (
+                      <NavigationSelection id="recent-selection" />
+                    )}
+                  </MotionButton>
+                ))}
+              </div>
+            </LayoutGroup>
           )}
-          <div className="sidebar-bottom">
-            <button
-              className={`nav-item ${route === 'settings' ? 'active' : ''}`}
-              aria-current={route === 'settings' ? 'page' : undefined}
-              onClick={() => navigate('settings')}
-            >
-              <Settings2 size={17} strokeWidth={1.6} />
-              <span>Einstellungen</span>
-            </button>
-          </div>
-        </aside>
+          <LayoutGroup id="settings-navigation">
+            <div className="sidebar-bottom">
+              <MotionButton
+                className={`nav-item nav-motion-item ${route === 'settings' ? 'active' : ''}`}
+                aria-current={route === 'settings' ? 'page' : undefined}
+                onClick={() => navigate('settings')}
+              >
+                <Settings2 size={17} strokeWidth={1.6} />
+                <span>Einstellungen</span>
+                {route === 'settings' && <NavigationSelection id="settings-selection" />}
+              </MotionButton>
+            </div>
+          </LayoutGroup>
+        </motion.aside>
         <div className="main-shell" inert={mobileOpen}>
           <header className="topbar">
             <div>
-              <button
+              <MotionButton
                 ref={menuTriggerRef}
                 className="icon-button mobile-menu"
                 aria-controls="workspace-navigation"
                 aria-label="Navigation öffnen"
                 aria-expanded={mobileOpen}
-                onClick={() => setMobileOpen(true)}
+                onClick={openNavigation}
               >
                 <Menu size={20} />
-              </button>
+              </MotionButton>
               <span className="mobile-page-name">LegalThinkGPT</span>
             </div>
             <button className="topbar-status" onClick={() => navigate('settings')}>
@@ -730,67 +821,63 @@ export default function App() {
             </PageTransition>
           </main>
         </div>
-        {toast && (
-          <div className="toast" role="status">
-            <Check size={16} />
-            <span>{toast}</span>
-            <button
-              className="icon-button small"
-              onClick={() => setToast('')}
-              aria-label="Hinweis schließen"
+        <AnimatePresence initial={false}>
+          {toast && (
+            <Notification key="notification" message={toast} onClose={() => setToast('')} />
+          )}
+        </AnimatePresence>
+        <AnimatePresence initial={false}>
+          {deleteTarget && (
+            <Modal
+              title={
+                deleteTarget.type === 'analysis'
+                  ? 'Analyse löschen?'
+                  : deleteTarget.type === 'playbook'
+                    ? 'Playbook löschen?'
+                    : 'Dokument löschen?'
+              }
+              onClose={() => {
+                if (!deleting) setDeleteTarget(null);
+              }}
             >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-        {deleteTarget && (
-          <Modal
-            title={
-              deleteTarget.type === 'analysis'
-                ? 'Analyse löschen?'
-                : deleteTarget.type === 'playbook'
-                  ? 'Playbook löschen?'
-                  : 'Dokument löschen?'
-            }
-            onClose={() => {
-              if (!deleting) setDeleteTarget(null);
-            }}
-          >
-            <div className="modal-body">
-              <p>
-                <strong>
-                  {'title' in deleteTarget.item ? deleteTarget.item.title : deleteTarget.item.name}
-                </strong>{' '}
-                wird dauerhaft von diesem Server gelöscht.
-              </p>
-              {deleteTarget.type === 'document' && (
-                <p className="field-help">
-                  Fundstellen in bestehenden Analysen können danach nicht mehr mit dem vollständigen
-                  Dokument abgeglichen werden. Gespeicherte Zitate in Analyseberichten bleiben
-                  erhalten.
+              <div className="modal-body">
+                <p>
+                  <strong>
+                    {'title' in deleteTarget.item
+                      ? deleteTarget.item.title
+                      : deleteTarget.item.name}
+                  </strong>{' '}
+                  wird dauerhaft von diesem Server gelöscht.
                 </p>
-              )}
-              {deleteError && <ErrorMessage>{deleteError}</ErrorMessage>}
-            </div>
-            <div className="modal-footer">
-              <button
-                className="button secondary"
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-              >
-                Abbrechen
-              </button>
-              <button
-                className="button danger"
-                onClick={() => void confirmDelete()}
-                disabled={deleting}
-              >
-                {deleting && <LoaderCircle className="spin" size={15} />}Endgültig löschen
-              </button>
-            </div>
-          </Modal>
-        )}
+                {deleteTarget.type === 'document' && (
+                  <p className="field-help">
+                    Fundstellen in bestehenden Analysen können danach nicht mehr mit dem
+                    vollständigen Dokument abgeglichen werden. Gespeicherte Zitate in
+                    Analyseberichten bleiben erhalten.
+                  </p>
+                )}
+                {deleteError && <ErrorMessage>{deleteError}</ErrorMessage>}
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="button secondary"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  className="button danger"
+                  onClick={() => void confirmDelete()}
+                  disabled={deleting}
+                >
+                  {deleting && <LoaderCircle className="spin" size={15} />}Endgültig löschen
+                </button>
+              </div>
+            </Modal>
+          )}
+        </AnimatePresence>
       </div>
-    </MotionConfig>
+    </>
   );
 }

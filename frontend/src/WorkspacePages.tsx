@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import {
   ArrowUpRight,
   BookOpen,
@@ -24,6 +25,7 @@ import type { ThemePreference } from './theme';
 import { api } from './types';
 import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui';
 import { workflowName } from './workflows';
+import { MotionButton, useMotionPreferences } from './motion';
 
 export function History({
   analyses,
@@ -51,10 +53,10 @@ export function History({
           <div>
             <h1>Analysen</h1>
           </div>
-          <button className="button primary" onClick={onNew}>
+          <MotionButton className="button primary" onClick={onNew}>
             <Plus size={16} />
             Neue Analyse
-          </button>
+          </MotionButton>
         </div>
       </header>
       <div className="list-toolbar">
@@ -67,13 +69,13 @@ export function History({
             aria-label="Analysen durchsuchen"
           />
           {search && (
-            <button
+            <MotionButton
               className="icon-button small"
               onClick={() => setSearch('')}
               aria-label="Suche zurücksetzen"
             >
               <X size={14} />
-            </button>
+            </MotionButton>
           )}
         </label>
         <span>
@@ -89,7 +91,11 @@ export function History({
         <div className="history-list">
           {filtered.map((analysis) => (
             <article className="history-item" key={analysis.id}>
-              <button className="history-item-main" onClick={() => onOpen(analysis)}>
+              <MotionButton
+                className="history-item-main"
+                whileTap={{ scale: 0.997 }}
+                onClick={() => onOpen(analysis)}
+              >
                 <span className="history-icon">
                   <FileText size={21} strokeWidth={1.4} />
                 </span>
@@ -111,14 +117,14 @@ export function History({
                   {analysis.findings.length} Befunde
                   <ChevronRight size={16} />
                 </span>
-              </button>
-              <button
+              </MotionButton>
+              <MotionButton
                 className="icon-button delete-hover"
                 onClick={() => onDelete(analysis)}
                 aria-label={`${analysis.title} löschen`}
               >
                 <Trash2 size={15} />
-              </button>
+              </MotionButton>
             </article>
           ))}
         </div>
@@ -216,7 +222,7 @@ export function Playbooks({
             <h1>Kanzlei-Playbooks</h1>
             <p>Prüfvorgaben speichern und vor einer Analyse auswählen.</p>
           </div>
-          <button
+          <MotionButton
             className="button primary"
             onClick={() => {
               setEditingId(null);
@@ -228,7 +234,7 @@ export function Playbooks({
           >
             <Plus size={16} />
             Playbook erstellen
-          </button>
+          </MotionButton>
         </div>
       </header>
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -236,23 +242,27 @@ export function Playbooks({
         <div className="playbooks-grid">
           {playbooks.map((playbook) => (
             <article className="playbook-card" key={playbook.id}>
-              <button onClick={() => setSelected(playbook)} className="playbook-card-content">
+              <MotionButton
+                onClick={() => setSelected(playbook)}
+                className="playbook-card-content"
+                whileTap={{ scale: 0.997 }}
+              >
                 <div>
                   <BookOpen size={22} strokeWidth={1.4} />
                   <ArrowUpRight size={15} />
                 </div>
                 <h2>{playbook.name}</h2>
                 <p>{playbook.content}</p>
-              </button>
+              </MotionButton>
               <footer>
                 <span>{playbook.content.length.toLocaleString('de-DE')} Zeichen</span>
-                <button
+                <MotionButton
                   className="icon-button small"
                   aria-label={`${playbook.name} löschen`}
                   onClick={() => onDelete(playbook)}
                 >
                   <Trash2 size={14} />
-                </button>
+                </MotionButton>
               </footer>
             </article>
           ))}
@@ -265,130 +275,142 @@ export function Playbooks({
           <h2>Noch keine Playbooks</h2>
         </div>
       )}
-      {open && (
-        <Modal
-          title={editingId ? 'Playbook bearbeiten' : 'Neues Playbook'}
-          onClose={() => {
-            if (!saving && !importing) setOpen(false);
-          }}
-          wide
-        >
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save();
+      <AnimatePresence initial={false}>
+        {open && (
+          <Modal
+            key="playbook-editor"
+            title={editingId ? 'Playbook bearbeiten' : 'Neues Playbook'}
+            onClose={() => {
+              if (!saving && !importing) setOpen(false);
             }}
+            wide
           >
-            <div className="modal-body">
-              <label className="field-label">
-                Name
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="z. B. SaaS-Verträge · Auftraggeber"
-                  maxLength={120}
-                  autoFocus
-                  required
-                  disabled={saving}
-                />
-              </label>
-              <div className="field-label-row">
-                <label htmlFor="playbook-content">Prüfvorgaben</label>
-                <button
-                  className="text-button"
-                  type="button"
-                  onClick={() => fileInput.current?.click()}
-                  disabled={importing || saving}
-                >
-                  {importing ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}
-                  Dokument importieren
-                </button>
-              </div>
-              <input
-                ref={fileInput}
-                type="file"
-                className="sr-only"
-                accept=".pdf,.docx,.txt,.md"
-                aria-label="Playbook-Dokument importieren"
-                onChange={(event) => {
-                  if (event.target.files?.[0]) void importFile(event.target.files[0]);
-                  event.target.value = '';
-                }}
-              />
-              <textarea
-                id="playbook-content"
-                className="playbook-textarea"
-                value={content}
-                onChange={(event) => setContent(event.target.value)}
-                placeholder={
-                  'Unsere Perspektive: Auftraggeber\n\nHaftung: …\nKündigung: …\nSprache und Stil: …'
-                }
-                rows={11}
-                maxLength={30000}
-                required
-                disabled={saving || importing}
-              />
-              <p className="field-help">
-                PDF, DOCX, TXT oder Markdown. Importierte Unterlagen werden auf diesem Server
-                gespeichert und können unter Einstellungen gelöscht werden.
-              </p>
-              {formError && <ErrorMessage>{formError}</ErrorMessage>}
-            </div>
-            <div className="modal-footer">
-              <button
-                className="button secondary"
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={saving || importing}
-              >
-                Abbrechen
-              </button>
-              <button className="button primary" type="submit" disabled={saving || importing}>
-                {saving && <LoaderCircle className="spin" size={15} />}Playbook speichern
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-      {selected && (
-        <Modal title={selected.name} onClose={() => setSelected(null)} wide>
-          <div className="modal-body">
-            <div className="playbook-read-content">{selected.content}</div>
-          </div>
-          <div className="modal-footer">
-            {onUpdate && (
-              <button
-                className="button secondary"
-                onClick={() => {
-                  setName(selected.name);
-                  setContent(selected.content);
-                  setEditingId(selected.id);
-                  setSelected(null);
-                  setOpen(true);
-                  setFormError('');
-                }}
-              >
-                Bearbeiten
-              </button>
-            )}
-            <button
-              className="button secondary"
-              onClick={() => {
-                setEditingId(null);
-                setName(`${selected.name} · Variante`);
-                setContent(selected.content);
-                setSelected(null);
-                setOpen(true);
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void save();
               }}
             >
-              Duplizieren
-            </button>
-            <button className="button primary" onClick={() => setSelected(null)}>
-              Schließen
-            </button>
-          </div>
-        </Modal>
-      )}
+              <div className="modal-body">
+                <label className="field-label">
+                  Name
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="z. B. SaaS-Verträge · Auftraggeber"
+                    maxLength={120}
+                    autoFocus
+                    required
+                    disabled={saving}
+                  />
+                </label>
+                <div className="field-label-row">
+                  <label htmlFor="playbook-content">Prüfvorgaben</label>
+                  <MotionButton
+                    className="text-button"
+                    type="button"
+                    onClick={() => fileInput.current?.click()}
+                    disabled={importing || saving}
+                  >
+                    {importing ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}
+                    Dokument importieren
+                  </MotionButton>
+                </div>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  className="sr-only"
+                  accept=".pdf,.docx,.txt,.md"
+                  aria-label="Playbook-Dokument importieren"
+                  onChange={(event) => {
+                    if (event.target.files?.[0]) void importFile(event.target.files[0]);
+                    event.target.value = '';
+                  }}
+                />
+                <textarea
+                  id="playbook-content"
+                  className="playbook-textarea"
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  placeholder={
+                    'Unsere Perspektive: Auftraggeber\n\nHaftung: …\nKündigung: …\nSprache und Stil: …'
+                  }
+                  rows={11}
+                  maxLength={30000}
+                  required
+                  disabled={saving || importing}
+                />
+                <p className="field-help">
+                  PDF, DOCX, TXT oder Markdown. Importierte Unterlagen werden auf diesem Server
+                  gespeichert und können unter Einstellungen gelöscht werden.
+                </p>
+                {formError && <ErrorMessage>{formError}</ErrorMessage>}
+              </div>
+              <div className="modal-footer">
+                <MotionButton
+                  className="button secondary"
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  disabled={saving || importing}
+                >
+                  Abbrechen
+                </MotionButton>
+                <MotionButton
+                  className="button primary"
+                  type="submit"
+                  disabled={saving || importing}
+                >
+                  {saving && <LoaderCircle className="spin" size={15} />}Playbook speichern
+                </MotionButton>
+              </div>
+            </form>
+          </Modal>
+        )}
+        {selected && (
+          <Modal
+            key="playbook-preview"
+            title={selected.name}
+            onClose={() => setSelected(null)}
+            wide
+          >
+            <div className="modal-body">
+              <div className="playbook-read-content">{selected.content}</div>
+            </div>
+            <div className="modal-footer">
+              {onUpdate && (
+                <MotionButton
+                  className="button secondary"
+                  onClick={() => {
+                    setName(selected.name);
+                    setContent(selected.content);
+                    setEditingId(selected.id);
+                    setSelected(null);
+                    setOpen(true);
+                    setFormError('');
+                  }}
+                >
+                  Bearbeiten
+                </MotionButton>
+              )}
+              <MotionButton
+                className="button secondary"
+                onClick={() => {
+                  setEditingId(null);
+                  setName(`${selected.name} · Variante`);
+                  setContent(selected.content);
+                  setSelected(null);
+                  setOpen(true);
+                }}
+              >
+                Duplizieren
+              </MotionButton>
+              <MotionButton className="button primary" onClick={() => setSelected(null)}>
+                Schließen
+              </MotionButton>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -420,6 +442,8 @@ export function Settings({
   onRefresh: () => void;
   refreshing: boolean;
 }) {
+  const appearanceId = useId();
+  const { reduced, transition } = useMotionPreferences();
   return (
     <div className="standard-page settings-page">
       <header className="standard-page-header">
@@ -434,32 +458,46 @@ export function Settings({
         </div>
         <div className="appearance-row">
           <span id="appearance-mode">Modus</span>
-          <div className="theme-options" role="radiogroup" aria-labelledby="appearance-mode">
-            {(
-              [
-                { value: 'system', label: 'System', icon: Monitor },
-                { value: 'light', label: 'Hell', icon: Sun },
-                { value: 'dark', label: 'Dunkel', icon: Moon },
-              ] as const
-            ).map(({ value, label, icon: Icon }) => (
-              <label className="theme-option" key={value}>
-                <input
-                  type="radio"
-                  name="appearance"
-                  value={value}
-                  checked={themePreference === value}
-                  onChange={() => onThemePreference(value)}
-                />
-                <Icon
-                  className="theme-option-icon"
-                  size={18}
-                  strokeWidth={1.6}
-                  aria-hidden="true"
-                />
-                <span className="theme-option-label">{label}</span>
-              </label>
-            ))}
-          </div>
+          <LayoutGroup id={appearanceId}>
+            <div
+              className="theme-options motion-theme-options"
+              role="radiogroup"
+              aria-labelledby="appearance-mode"
+            >
+              {(
+                [
+                  { value: 'system', label: 'System', icon: Monitor },
+                  { value: 'light', label: 'Hell', icon: Sun },
+                  { value: 'dark', label: 'Dunkel', icon: Moon },
+                ] as const
+              ).map(({ value, label, icon: Icon }) => (
+                <label className="theme-option" key={value}>
+                  {themePreference === value && (
+                    <motion.span
+                      aria-hidden="true"
+                      className="theme-selection-surface"
+                      layoutId={reduced ? undefined : 'appearance-selection'}
+                      transition={transition('control')}
+                    />
+                  )}
+                  <input
+                    type="radio"
+                    name="appearance"
+                    value={value}
+                    checked={themePreference === value}
+                    onChange={() => onThemePreference(value)}
+                  />
+                  <Icon
+                    className="theme-option-icon"
+                    size={18}
+                    strokeWidth={1.6}
+                    aria-hidden="true"
+                  />
+                  <span className="theme-option-label">{label}</span>
+                </label>
+              ))}
+            </div>
+          </LayoutGroup>
         </div>
       </section>
       <section className="settings-section">
@@ -489,10 +527,14 @@ export function Settings({
             <p className="field-help">Das Beispiel funktioniert ohne API-Schlüssel.</p>
           </div>
         )}
-        <button className="button secondary small-button" onClick={onRefresh} disabled={refreshing}>
+        <MotionButton
+          className="button secondary small-button"
+          onClick={onRefresh}
+          disabled={refreshing}
+        >
           {refreshing ? <LoaderCircle className="spin" size={14} /> : <Check size={14} />}Status
           aktualisieren
-        </button>
+        </MotionButton>
       </section>
       <section className="settings-section">
         <div className="settings-section-heading">
@@ -565,13 +607,13 @@ export function Settings({
                   <strong>{document.name}</strong>
                   <small>{document.char_count.toLocaleString('de-DE')} Zeichen</small>
                 </div>
-                <button
+                <MotionButton
                   className="icon-button"
                   onClick={() => onDeleteDocument(document)}
                   aria-label={`${document.name} endgültig löschen`}
                 >
                   <Trash2 size={15} />
-                </button>
+                </MotionButton>
               </div>
             ))}
           </div>

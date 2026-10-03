@@ -1,0 +1,70 @@
+/* Move selection surfaces independently of the labels they identify. */
+.motion-workflows > button {
+  position: relative;
+  isolation: isolate;
+}
+
+.workflow-selector.motion-workflows > button[aria-pressed='true'] {
+  background: transparent;
+  border-color: transparent;
+}
+
+.workflow-selection-surface {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border: 1px solid var(--border-selected);
+  border-radius: inherit;
+  background: var(--surface-selected);
+  pointer-events: none;
+}
+
+.workflow-selector.motion-workflows > button[aria-pressed='true']:hover {
+  background: transparent;
+}
+
+.workflow-selector.motion-workflows
+  > button[aria-pressed='true']:hover
+  .workflow-selection-surface {
+  background: var(--surface-hover);
+}
+
+.composer-disclosure-icon,
+.composer-drop-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.motion-document-list {
+  position: relative;
+}
+
+.composer-options-collapse {
+  border-radius: 0 0 var(--radius-composer) var(--radius-composer);
+}
+
+.drop-overlay.composer-drop-feedback {
+  border: 0;
+}
+
+.composer-drop-perimeter {
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--border-selected);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Reserving this small slot keeps filenames still while a selection changes. */
+.document-picker-status-slot {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+}
+
+.document-picker-status-slot > .document-picker-number {
+  grid-area: 1 / 1;
+}

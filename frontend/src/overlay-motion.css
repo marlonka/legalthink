@@ -1,0 +1,46 @@
+.picker-chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.motion-picker-popover {
+  transform-origin: bottom right;
+}
+
+.motion-modal-backdrop[aria-hidden='true'],
+.motion-picker-popover[aria-hidden='true'] {
+  pointer-events: none;
+}
+
+.motion-theme-options .theme-option {
+  position: relative;
+  isolation: isolate;
+}
+
+.motion-theme-options .theme-option:has(input:checked) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.motion-theme-options .theme-option > input,
+.motion-theme-options .theme-option > .theme-option-icon,
+.motion-theme-options .theme-option > .theme-option-label {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-selection-surface {
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border: 1px solid var(--border-selected);
+  border-radius: inherit;
+  background: var(--surface-selected);
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .motion-picker-popover {
+    transform-origin: bottom left;
+  }
+}

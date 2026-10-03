@@ -4,7 +4,10 @@ import AxeBuilder from '@axe-core/playwright';
 async function assertAccessible(page: Page) {
   // Audit the settled UI: alpha blending during a fade is not its final contrast.
   for (const surface of await page
-    .locator('.page-transition, .modal, .finding-content-motion, .picker-popover, .export-menu')
+    .locator(
+      '.page-transition, .modal, .finding-content-motion, .picker-popover, .export-popover, .review-workspace, .finding-list, #source-panel > div, .timeline-panel',
+    )
+    .filter({ visible: true })
     .all()) {
     await expect(surface).toHaveCSS('opacity', '1');
   }
@@ -325,6 +328,11 @@ test('stored documents survive reload and comparison preserves the chosen order'
       (id) => documents.find((document: { id: string }) => document.id === id).name,
     ),
   ).toEqual(['Fassung-B.txt', 'Fassung-A.txt']);
+  await page.getByRole('button', { name: 'Fassung-B.txt aus Auswahl entfernen' }).click();
+  const remaining = page.getByRole('button', { name: 'Fassung-A.txt aus Auswahl entfernen' });
+  await expect(remaining).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel(/^Prüfauftrag/)).toBeFocused();
 });
 
 test('failed initial data load can be retried without presenting an empty workspace as success', async ({
