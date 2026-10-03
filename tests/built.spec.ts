@@ -29,10 +29,11 @@ test('Python serves the built workspace with local assets, CSP and working expor
     page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Fundstelle ansehen', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Quellenansicht' })).toContainText(
+  await expect(page.getByRole('dialog', { name: /^Dokumentvorschau:/ })).toContainText(
     'Zitat im Dokument gefunden',
   );
-  await page.getByRole('button', { name: 'Dialog schließen', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('mark')).toBeVisible();
+  await page.getByRole('button', { name: 'Dokumentvorschau schließen', exact: true }).click();
   await page.getByRole('button', { name: 'Exportieren' }).click();
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: /Markdown/ }).click();

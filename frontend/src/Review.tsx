@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -13,14 +13,13 @@ import {
   FileText,
   ListFilter,
   LoaderCircle,
-  PanelRightClose,
   Quote,
   Search,
 } from 'lucide-react';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import type { Analysis, DocumentRecord, Finding, Severity } from './types';
-import { dateLabel, EFFORT_NAMES, ExternalLink, Modal } from './ui';
-import { SourceFile } from './SourceFile';
+import { dateLabel, EFFORT_NAMES, ExternalLink } from './ui';
+import { useDocumentPreview } from './DocumentPreview';
 import { workflowName } from './workflows';
 import { reviewLabels } from './review-workflows';
 import { WorkflowFindingContent } from './WorkflowFindingContent';
@@ -35,15 +34,6 @@ const SEVERITIES: Record<Severity, { label: string; short: string }> = {
   info: { label: 'Hinweis', short: 'Hinweise' },
 };
 type Tab = 'findings' | 'suggestions' | 'timeline';
-type SourceEvidence = Pick<
-  Finding,
-  | 'id'
-  | 'source_document_id'
-  | 'source_document_name'
-  | 'source_quote'
-  | 'source_location'
-  | 'verified'
->;
 
 export default function Review({
   analysis,
@@ -52,7 +42,6 @@ export default function Review({
   onExport,
   exporting,
   onCopy,
-  onDocumentUpdated,
 }: {
   analysis: Analysis;
   documents: DocumentRecord[];
@@ -60,8 +49,8 @@ export default function Review({
   onExport: (format: 'docx' | 'md') => void;
   exporting: boolean;
   onCopy: (text: string) => void;
-  onDocumentUpdated: (document: DocumentRecord) => void;
 }) {
+  const { openPreview } = useDocumentPreview();
   const [tab, setTab] = useState<Tab>(analysis.workflow === 'chronology' ? 'timeline' : 'findings');
   const [filter, setFilter] = useState<Severity | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -75,11 +64,6 @@ export default function Review({
     id: string;
     sequence: number;
   } | null>(null);
-  const [timelineSourceIndex, setTimelineSourceIndex] = useState<number | null>(null);
-  const [activeSource, setActiveSource] = useState<{
-    evidence: SourceEvidence;
-    role?: string;
-  } | null>(null);
   const labels = reviewLabels(analysis);
   const consumedSuggestionRequest = useRef(0);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -88,10 +72,6 @@ export default function Review({
   function closeExport(restoreFocus = false) {
     setExportOpen(false);
     if (restoreFocus) exportTrigger.current?.focus({ preventScroll: true });
-  }
-  function closeSource() {
-    setTimelineSourceIndex(null);
-    setActiveSource(null);
   }
   useEffect(() => {
     if (!exportOpen) return;
@@ -127,8 +107,6 @@ export default function Review({
     setSelectedId(analysis.findings[0]?.id ?? '');
     setExpandedFindings(new Set(analysis.findings.slice(0, 1).map((finding) => finding.id)));
     setMarked(new Set());
-    setTimelineSourceIndex(null);
-    setActiveSource(null);
     setSuggestionRequest(null);
     consumedSuggestionRequest.current = 0;
   }, [analysis.id, analysis.workflow, analysis.findings]);
@@ -138,17 +116,6 @@ export default function Review({
       ? ['Original', 'Gegenentwurf'][index]
       : undefined;
   }
-  const timelineEvent =
-    timelineSourceIndex === null ? undefined : analysis.timeline[timelineSourceIndex];
-  const timelineSource: SourceEvidence | undefined = timelineEvent
-    ? {
-        id: `${analysis.id}-timeline-${timelineSourceIndex}`,
-        source_document_id: timelineEvent.source_document_id ?? '',
-        source_quote: timelineEvent.source_quote ?? '',
-        source_location: timelineEvent.source,
-        verified: timelineEvent.verified ?? false,
-      }
-    : undefined;
   const comparisonDocumentNames =
     analysis.workflow === 'compare' && analysis.document_ids?.length === 2
       ? analysis.document_ids.map(
@@ -289,7 +256,14 @@ export default function Review({
           <ul>
             {analysisDocuments.map((doc) => (
               <li key={doc.id}>
-                <span>{doc.name}</span>
+                <button
+                  className="document-name-button"
+                  onClick={() =>
+                    openPreview({ source_document_id: doc.id, role: documentRole(doc.id) })
+                  }
+                >
+                  {doc.name}
+                </button>
                 <a
                   className="text-button"
                   href={`/api/documents/${doc.id}/text`}
@@ -447,16 +421,16 @@ export default function Review({
                     setSelectedId(finding.id);
                   }}
                   onShowSource={() => {
-                    setActiveSource({
-                      evidence: finding,
+                    openPreview({
+                      ...finding,
                       role: documentRole(finding.source_document_id),
                     });
                   }}
                   onComparisonSource={(side) => {
                     const source = finding.comparison?.[side];
                     if (source)
-                      setActiveSource({
-                        evidence: { ...source, id: `${finding.id}-${side}` },
+                      openPreview({
+                        ...source,
                         role: side === 'original' ? 'Original' : 'Gegenentwurf',
                       });
                   }}
@@ -548,8 +522,8 @@ export default function Review({
                     <MotionButton
                       className="text-button"
                       onClick={() =>
-                        setActiveSource({
-                          evidence: finding,
+                        openPreview({
+                          ...finding,
                           role: documentRole(finding.source_document_id),
                         })
                       }
@@ -621,14 +595,14 @@ export default function Review({
                 <tbody>
                   {analysis.timeline.map((event, index) => (
                     <tr key={`${event.date}-${index}`}>
-                      <td>
+                      <td data-label="Datum / Zeitraum">
                         <span className="timeline-date">
                           <span />
                           {event.date || 'Undatiert'}
                         </span>
                       </td>
-                      <td>{event.event}</td>
-                      <td>
+                      <td data-label="Ereignis">{event.event}</td>
+                      <td data-label="Beleg">
                         <span className="table-source">
                           <FileText size={14} />
                           {event.source || 'Kein Beleg zugeordnet'}
@@ -645,14 +619,21 @@ export default function Review({
                           <button
                             className="text-button timeline-source-action"
                             onClick={() => {
-                              setTimelineSourceIndex(index);
+                              openPreview({
+                                source_document_id: event.source_document_id ?? '',
+                                source_quote: event.source_quote,
+                                source_location: event.source,
+                                verified: event.verified,
+                              });
                             }}
                           >
                             <Quote size={13} /> Fundstelle ansehen
                           </button>
                         )}
                       </td>
-                      <td>{event.open_question || <span className="muted">—</span>}</td>
+                      <td data-label="Offene Frage">
+                        {event.open_question || <span className="muted">—</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -664,42 +645,10 @@ export default function Review({
               <h3>Keine zeitlichen Ereignisse erfasst</h3>
             </div>
           )}
-          {timelineSource && (
-            <Modal title="Fundstelle" onClose={closeSource} wide className="source-dialog">
-              <SourcePanel
-                finding={timelineSource}
-                document={documents.find(
-                  (document) => document.id === timelineSource.source_document_id,
-                )}
-                onClose={closeSource}
-                onDocumentUpdated={onDocumentUpdated}
-                embedded
-              />
-            </Modal>
-          )}
           {analysis.questions.length > 0 && (
             <OpenQuestions questions={analysis.questions} title={labels.questions} />
           )}
         </motion.section>
-      )}
-      {activeSource && (
-        <Modal
-          title={activeSource.role ? `Fundstelle · ${activeSource.role}` : 'Fundstelle'}
-          onClose={() => setActiveSource(null)}
-          wide
-          className="source-dialog"
-        >
-          <SourcePanel
-            finding={activeSource.evidence}
-            document={documents.find(
-              (document) => document.id === activeSource.evidence.source_document_id,
-            )}
-            documentRole={activeSource.role}
-            onClose={() => setActiveSource(null)}
-            onDocumentUpdated={onDocumentUpdated}
-            embedded
-          />
-        </Modal>
       )}
       {(analysis.sources ?? []).length > 0 && (
         <section className="external-sources">
@@ -896,180 +845,6 @@ function FindingCard({
         </div>
       </Collapse>
     </article>
-  );
-}
-
-function SourcePanel({
-  finding,
-  document,
-  documentRole,
-  onClose,
-  onDocumentUpdated,
-  embedded = false,
-}: {
-  finding?: SourceEvidence;
-  document?: DocumentRecord;
-  documentRole?: string;
-  onClose: () => void;
-  onDocumentUpdated: (document: DocumentRecord) => void;
-  embedded?: boolean;
-}) {
-  const [expandedFor, setExpandedFor] = useState('');
-  const [contextExpandedFor, setContextExpandedFor] = useState('');
-  const expanded = Boolean(finding?.id && expandedFor === finding.id);
-  const contextExpanded = Boolean(finding?.id && contextExpandedFor === finding.id);
-  const { reduced, transition } = useMotionPreferences();
-  const contextId = useId();
-  const documentTextId = useId();
-  useEffect(() => {
-    setExpandedFor('');
-    setContextExpandedFor('');
-  }, [finding?.id]);
-  let before = '',
-    after = '';
-  if (finding && document?.text && finding.source_quote) {
-    const index = document.text.indexOf(finding.source_quote);
-    if (index >= 0) {
-      before = document.text.slice(Math.max(0, index - 300), index);
-      after = document.text.slice(
-        index + finding.source_quote.length,
-        index + finding.source_quote.length + 450,
-      );
-    }
-  }
-  const hasContext = Boolean(before.trim() || after.trim());
-  return (
-    <aside className="source-panel" id="source-panel" aria-label="Quellenansicht" tabIndex={-1}>
-      <div className="source-panel-heading">
-        <span>
-          <FileText size={15} />
-          {documentRole ?? 'Im Dokument'}
-        </span>
-        <MotionButton
-          className="icon-button small"
-          aria-label="Quellenansicht schließen"
-          onClick={onClose}
-        >
-          <PanelRightClose size={15} />
-        </MotionButton>
-      </div>
-      {finding ? (
-        <motion.div
-          key={finding.id}
-          initial={reduced ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={transition('fade')}
-        >
-          <div className="source-document-name">
-            <div className="source-file-icon">
-              <FileText size={22} strokeWidth={1.3} />
-            </div>
-            <div>
-              <strong>
-                {document?.name ??
-                  (finding.source_document_name || 'Dokument nicht mehr verfügbar')}
-              </strong>
-              {finding.source_location !== document?.name && (
-                <span>{finding.source_location || 'Position nicht angegeben'}</span>
-              )}
-            </div>
-          </div>
-          {document && (
-            <SourceFile
-              key={document.id}
-              document={document}
-              quote={finding.source_quote}
-              location={finding.verified ? finding.source_location : ''}
-              embedded={embedded}
-              onUpdated={onDocumentUpdated}
-            />
-          )}
-          <div className="source-paper">
-            {finding.source_quote ? (
-              <>
-                {hasContext && (
-                  <button
-                    className="text-button source-context-toggle"
-                    onClick={() => setContextExpandedFor(contextExpanded ? '' : finding.id)}
-                    aria-expanded={contextExpanded}
-                    aria-controls={contextId}
-                  >
-                    <ReviewToggleLabel
-                      active={contextExpanded}
-                      on="Kontext ausblenden"
-                      off="Kontext anzeigen"
-                    />
-                    <ChevronDown size={13} />
-                  </button>
-                )}
-                <div id={contextId}>
-                  {contextExpanded && before && <p className="source-context">{before}</p>}
-                  <blockquote>{finding.source_quote}</blockquote>
-                  {contextExpanded && after && <p className="source-context">{after}</p>}
-                </div>
-              </>
-            ) : (
-              <div className="missing-source">
-                <Search size={25} />
-                <p>Kein Zitat hinterlegt.</p>
-              </div>
-            )}
-          </div>
-          {finding.source_quote && (
-            <div className={`source-verification ${finding.verified ? 'verified' : ''}`}>
-              {finding.verified ? <Check size={14} /> : <CircleHelp size={14} />}
-              <span>
-                {finding.verified
-                  ? document
-                    ? 'Zitat im Dokument gefunden'
-                    : 'Zitat bei der Analyse im Dokument gefunden'
-                  : 'Zitat nicht bestätigt – im Original prüfen'}
-              </span>
-            </div>
-          )}
-          {document?.text && (
-            <div className="document-expanded">
-              <button
-                className="text-button"
-                onClick={() => setExpandedFor(expanded ? '' : finding.id)}
-                aria-expanded={expanded}
-                aria-controls={documentTextId}
-              >
-                <ReviewToggleLabel
-                  active={expanded}
-                  on="Dokumenttext schließen"
-                  off="Dokumenttext öffnen"
-                />
-                <ChevronDown size={13} />
-              </button>
-              {expanded && (
-                <div className="full-document-text" id={documentTextId}>
-                  {document.text}
-                </div>
-              )}
-            </div>
-          )}
-          {!document && (
-            <p className="document-unavailable">
-              Die Quelle ist nicht verfügbar oder konnte diesem Beleg nicht zugeordnet werden.
-              {finding.source_quote && ' Das Zitat bleibt Teil dieses Berichts.'}
-            </p>
-          )}
-          <details className="source-note">
-            <summary>Zum Zitatabgleich</summary>
-            <p>
-              Geprüft wird der Wortlaut im Dokument. Behauptete Tatsachen, Daten und die rechtliche
-              Bewertung werden dadurch nicht bestätigt.
-            </p>
-          </details>
-        </motion.div>
-      ) : (
-        <div className="empty-source">
-          <Quote size={27} strokeWidth={1.2} />
-          <p>Befund auswählen, um die Fundstelle anzuzeigen.</p>
-        </div>
-      )}
-    </aside>
   );
 }
 

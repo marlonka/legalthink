@@ -1,41 +1,32 @@
 import { lazy, Suspense, useRef, useState } from 'react';
-import { ArrowDownToLine, FileText, LoaderCircle, Upload } from 'lucide-react';
+import { LoaderCircle, Upload } from 'lucide-react';
 import { api, type DocumentRecord } from './types';
-import { Modal } from './ui';
 import './source-preview.css';
 
 const PdfPreview = lazy(() => import('./PdfPreview'));
+const WordPreview = lazy(() => import('./WordPreview'));
+const TextPreview = lazy(() => import('./TextPreview'));
 
 export function SourceFile({
   document,
   quote,
   location,
-  embedded = false,
   onUpdated,
+  onClose,
 }: {
   document: DocumentRecord;
   quote: string;
   location: string;
-  embedded?: boolean;
   onUpdated: (document: DocumentRecord) => void;
+  onClose: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [textOnly, setTextOnly] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const isPdf = document.name.toLowerCase().endsWith('.pdf');
+  const extension = document.name.toLowerCase().split('.').pop();
+  const rich = extension === 'pdf' || extension === 'docx';
   const page = Number(/(?:^| · )Seite (\d+)\b/.exec(location)?.[1] ?? 1);
-  const preview = (
-    <Suspense
-      fallback={
-        <div className="pdf-loading" role="status">
-          PDF wird geöffnet …
-        </div>
-      }
-    >
-      <PdfPreview documentId={document.id} initialPage={page} quote={quote} />
-    </Suspense>
-  );
   async function attach(file?: File) {
     if (!file || busy) return;
     setBusy(true);
@@ -43,50 +34,53 @@ export function SourceFile({
     try {
       const form = new FormData();
       form.append('file', file);
-      const updated = await api<DocumentRecord>(`/documents/${document.id}/original`, {
-        method: 'PUT',
-        body: form,
-      });
-      onUpdated(updated);
-      if (!embedded) setOpen(true);
+      onUpdated(
+        await api<DocumentRecord>(`/documents/${document.id}/original`, {
+          method: 'PUT',
+          body: form,
+        }),
+      );
+      setTextOnly(false);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'PDF konnte nicht zugeordnet werden.');
+      setError(error instanceof Error ? error.message : 'Datei konnte nicht zugeordnet werden.');
     } finally {
       setBusy(false);
       if (input.current) input.current.value = '';
     }
   }
   return (
-    <div className="source-file-actions">
-      <div className="source-downloads">
-        {isPdf && document.original_available && !embedded && (
-          <button className="text-button" onClick={() => setOpen(true)}>
-            <FileText size={15} /> PDF ansehen
-          </button>
-        )}
-        {isPdf && document.original_available && (
-          <a className="text-button" href={`/api/documents/${document.id}/original`} download>
-            <ArrowDownToLine size={14} /> PDF herunterladen
-          </a>
-        )}
-        <a className="text-button" href={`/api/documents/${document.id}/text`} download>
-          <ArrowDownToLine size={14} /> TXT herunterladen
-        </a>
-      </div>
-      {isPdf && !document.original_available && (
-        <div className="source-original-missing">
-          <p>Für diesen früheren Upload ist nur der ausgelesene Text gespeichert.</p>
-          <input
-            hidden
-            type="file"
-            accept="application/pdf,.pdf"
-            ref={input}
-            onChange={(event) => void attach(event.target.files?.[0])}
-          />
-          <button className="text-button" onClick={() => input.current?.click()} disabled={busy}>
-            {busy ? <LoaderCircle size={14} className="spin" /> : <Upload size={14} />} Original-PDF
-            hinzufügen
-          </button>
+    <div className="source-viewer">
+      {rich && (
+        <div className="source-viewer-mode">
+          {document.original_available ? (
+            <div role="group" aria-label="Dokumentdarstellung">
+              <button aria-pressed={!textOnly} onClick={() => setTextOnly(false)}>
+                Dokument
+              </button>
+              <button aria-pressed={textOnly} onClick={() => setTextOnly(true)}>
+                Ausgelesener Text
+              </button>
+            </div>
+          ) : (
+            <>
+              <span>Nur ausgelesener Text gespeichert</span>
+              <input
+                hidden
+                type="file"
+                accept={`.${extension}`}
+                ref={input}
+                onChange={(event) => void attach(event.target.files?.[0])}
+              />
+              <button
+                className="text-button"
+                onClick={() => input.current?.click()}
+                disabled={busy}
+              >
+                {busy ? <LoaderCircle size={14} className="spin" /> : <Upload size={14} />} Datei
+                hinzufügen
+              </button>
+            </>
+          )}
         </div>
       )}
       {error && (
@@ -94,17 +88,26 @@ export function SourceFile({
           {error}
         </p>
       )}
-      {embedded && document.original_available && preview}
-      {open && (
-        <Modal title={document.name} onClose={() => setOpen(false)} className="source-dialog" wide>
-          <div className="modal-body">
-            <a className="text-button" href={`/api/documents/${document.id}/original`} download>
-              <ArrowDownToLine size={14} /> PDF herunterladen
-            </a>
-            {preview}
+      <Suspense
+        fallback={
+          <div className="preview-loading" role="status">
+            Dokument wird geöffnet …
           </div>
-        </Modal>
-      )}
+        }
+      >
+        {document.original_available && !textOnly && extension === 'pdf' ? (
+          <PdfPreview documentId={document.id} initialPage={page} quote={quote} />
+        ) : document.original_available && !textOnly && extension === 'docx' ? (
+          <WordPreview document={document} quote={quote} onEscape={onClose} />
+        ) : (
+          <TextPreview
+            document={document}
+            quote={quote}
+            original={!rich && Boolean(document.original_available)}
+            markdown={extension === 'md' && !textOnly}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

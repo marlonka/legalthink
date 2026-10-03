@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ErrorMessage, ModelPicker } from './ui';
 import DocumentPicker from './DocumentPicker';
+import { useDocumentPreview } from './DocumentPreview';
 import { COMPLIANCE_TASKS, WORKFLOWS } from './workflows';
 import type { ComplianceTask, DocumentRecord, Model, Playbook, Workflow } from './types';
 import { MAX_MATERIAL_CHARS } from './types';
@@ -460,13 +461,25 @@ function ComposerDocument({
   running: boolean;
   onRemove: (id: string) => void;
 }) {
+  const { openPreview } = useDocumentPreview();
   return (
     <div className="document-chip">
       <div className="document-chip-icon">
         <FileText size={18} />
       </div>
       <div>
-        <span title={document.name}>{document.name}</span>
+        <button
+          className="document-name-button"
+          title={document.name}
+          onClick={() =>
+            openPreview({
+              source_document_id: document.id,
+              role: compare ? (index === 0 ? 'Original' : 'Gegenentwurf') : undefined,
+            })
+          }
+        >
+          {document.name}
+        </button>
         <small>
           {compare
             ? index === 0
@@ -485,7 +498,7 @@ function ComposerDocument({
             button
               .closest('.uploaded-documents')
               ?.querySelectorAll<HTMLButtonElement>(
-                '.document-chip:not([inert]) button:not(:disabled)',
+                '.document-chip:not([inert]) .icon-button:not(:disabled)',
               ) ?? [],
           );
           const position = buttons.indexOf(button);

@@ -1,45 +1,3 @@
-.modal.source-dialog {
-  max-width: 1000px;
-}
-.source-dialog .modal-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--surface-popover);
-}
-.source-dialog .source-panel {
-  width: 100%;
-  padding: 20px 24px;
-  border: 0;
-  position: static;
-}
-.source-dialog .source-paper {
-  min-height: 0;
-  max-height: 220px;
-  overflow: auto;
-  scrollbar-gutter: stable;
-  margin-top: 16px;
-}
-.source-dialog .source-panel-heading {
-  display: none;
-}
-.source-downloads {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin: 12px 0;
-}
-.source-downloads a {
-  text-decoration: none;
-}
-.source-original-missing {
-  margin: 16px 0;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-.source-original-missing p {
-  margin-bottom: 8px;
-}
 .analysis-documents {
   margin: 0 0 24px;
   font-size: 13px;
@@ -224,9 +182,6 @@
   background: #007bff50;
 }
 @media (max-width: 700px) {
-  .source-dialog .source-panel {
-    padding: 16px;
-  }
   .pdf-toolbar .icon-button {
     min-width: 36px;
     min-height: 40px;

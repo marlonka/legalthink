@@ -146,7 +146,7 @@ Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im g
 - Prüfpunkte, Textvorschläge und Chronologie bleiben unterschiedliche Ansichten; ihre Beschriftungen richten sich nach der Aufgabe.
 - Prioritätszahlen stehen ausschließlich in den Filtern. Leere Nebenansichten entfallen; bei nur einer Ansicht ersetzt eine Abschnittsüberschrift die Tab-Leiste.
 - „Quellen“ führt gespeicherte Dokumente und eingefügten Text auf. TXT-Downloads erhalten den vollständigen Quelltext.
-- Fundstellen öffnen einen Dialog und erhalten die Leseposition. PDFs erscheinen mit stabiler Werkzeugleiste, Seitenwahl, Zoom und internem Scrollbereich; eine Zitatmarkierung setzt einen eindeutigen Texttreffer auf der angezeigten Seite voraus.
+- Fundstellen öffnen die gemeinsame Dokumentvorschau rechts oder bildschirmfüllend; siehe „Ergebnisansichten nach Aufgabe“. PDFs erscheinen mit stabiler Werkzeugleiste, Seitenwahl, Zoom und internem Scrollbereich; eine Zitatmarkierung setzt einen eindeutigen Texttreffer voraus.
 - Jeder Befund hat eine lesbare Priorität, Beschreibung und bei Bedarf einen Rechtsbezug.
 - Zitat und Änderungsvorschlag sind eindeutig bezeichnet. Keine bloße Farbmarkierung als angebliche Änderungsverfolgung.
 - Der Dokumentbereich zeigt den tatsächlichen Dateinamen, die Fundstelle und den Wortlaut. Weiterer Dokumenttext bleibt bei Bedarf aufklappbar.
@@ -295,7 +295,11 @@ Sind Original, Gegenentwurf, Zitat, Modellbewertung und Formulierungsvorschlag k
 - Im Vergleich stammen beide Wortlaute aus getrennten, fest zugeordneten Dokumentfassungen. Beide Zitate werden unabhängig abgeglichen. Alte Ergebnisse ohne dieses Datenpaar zeigen ihren bisherigen Beleg und keine erfundene zweite Fassung.
 - Die Änderungskategorie stammt aus der Analyse. Ein leeres Zitat allein beweist keine Streichung oder Ergänzung. Eingereichter Gegenentwurf und vorgeschlagene Verhandlungsfassung bleiben getrennt.
 - Ein Quellenzitat kann auch aus einem eingefügten E-Mail-Verlauf stammen. Rollenbezeichnungen dürfen aus einem allgemeinen Beleg keine rechtlich gesicherte Vertragsklausel oder Werbeaussage machen. Unbestätigte Zitate sind direkt gekennzeichnet.
-- Fundstellen öffnen im Dialog mit TXT-Zugriff und vorhandener PDF-Vorschau. Die Ergebnisliste behält dabei ihre Breite und Scrollposition; beim Schließen kehrt der Fokus zur auslösenden Textstelle zurück.
+- Fundstellen und Dokumentnamen öffnen dieselbe Dokumentvorschau. In Analysen ab 1400 px stehen Ergebnis und Dokument nebeneinander. Links bleiben mindestens 420 px; die Vorschau erhält höchstens die halbe Fensterbreite. Die Aufteilung ändert sich einmal beim Öffnen/Schließen, ohne Breitenanimation. Der sichtbare Quellen-Auslöser dient als Scrollanker. Bei weiteren Quellenwechseln bleibt die Aufteilung unverändert.
+- Auf schmaleren Fenstern und außerhalb der Analyse öffnet die Vorschau bildschirmfüllend. Ein nativer Dialog führt den Fokus; Escape funktioniert auch innerhalb des Word-Dokuments. Schließen stellt den Fokus ohne Scrollsprung wieder her. Am Desktop bleibt die Ergebnisliste während der geteilten Ansicht bedienbar.
+- Auf ausdrücklichen Nutzerwunsch fährt nur die Dokumentoberfläche beim Öffnen mit dem vorhandenen `panel`-Spring von rechts ein. Mit Reduced Motion entfällt diese Bewegung. Quellenwechsel animieren weder Rahmen noch Controls; die geschlossene Zitatzeile behält ihre Höhe.
+- PDF: fortlaufende Seiten, sichtbare Nachbarseiten rendern, Seitenwahl, Zoom und Sprung zur Fundstelle. Nur eindeutige Texttreffer markieren; mehrdeutige Treffer benennen. Word: lokal gerenderte DOCX-Datei mit Tabellen, Bildern und sichtbaren Änderungen; keine behauptete Übereinstimmung mit Word-Seitenumbrüchen. TXT und Markdown: vollständiger Text; Markdown zusätzlich als Leseansicht ohne eingebettetes HTML oder externe Bilder. Zitate führen zum unveränderten Quelltext.
+- Originaldateien bleiben als Download verfügbar. Alte PDF-/Word-Quellen ohne Original zeigen ihren ausgelesenen Text; eine passende Datei kann ergänzt werden. Der Textabgleich bestätigt den Wortlaut, keine Dateiauthentizität. Gespeicherte Originalbytes werden nicht ersetzt.
 - Mobil stehen Vergleichsfassungen untereinander: Original, Gegenentwurf, Bewertung. Keine horizontale Seitenverschiebung. Leere Nebenansichten entfallen.
 
 ### Interface-Design
