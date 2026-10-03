@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LoaderCircle, Quote } from 'lucide-react';
 import {
   getDocument,
@@ -176,7 +176,6 @@ function PdfPage({
       live = false;
       render?.cancel();
       textLayer?.cancel();
-      if (!active) paper.replaceChildren();
     };
   }, [pdf, page, size.width, active, quote, onHighlight]);
 
@@ -428,23 +427,15 @@ export default function PdfPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [citation]);
 
-  const onHighlightRef = useRef((number: number, offset: number) => {
-    setMarkedPage(number);
-    if (!pendingCitation.current || userNavigated.current || !viewport.current) return;
-    const layout = layouts[number - 1];
-    if (layout) viewport.current.scrollTop = Math.max(0, layout.top + offset - 80);
-    pendingCitation.current = false;
-  });
-  onHighlightRef.current = (number, offset) => {
-    setMarkedPage(number);
-    if (!pendingCitation.current || userNavigated.current || !viewport.current) return;
-    const layout = layouts[number - 1];
-    if (layout) viewport.current.scrollTop = Math.max(0, layout.top + offset - 80);
-    pendingCitation.current = false;
-  };
-  const onHighlight = useMemo(
-    () => (number: number, offset: number) => onHighlightRef.current(number, offset),
-    [],
+  const onHighlight = useCallback(
+    (number: number, offset: number) => {
+      setMarkedPage(number);
+      if (!pendingCitation.current || userNavigated.current || !viewport.current) return;
+      const layout = layouts[number - 1];
+      if (layout) viewport.current.scrollTop = Math.max(0, layout.top + offset - 80);
+      pendingCitation.current = false;
+    },
+    [layouts],
   );
 
   function jumpToCitation() {

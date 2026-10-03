@@ -217,7 +217,7 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
         "workflow": "compare",
         "document_ids": document_ids,
         "source_text": text,
-        "context": "Bitte Zugang und widersprechende Angaben prüfen.",
+        "context": "Bitte Zugang und widersprechende Angaben prüfen.".ljust(10_000),
     }
     response = client.post("/api/analyses", json=body)
     assert response.status_code == 201, response.text
@@ -328,12 +328,21 @@ def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkey
 
 
 def test_validation_errors_never_echo_document_text(client):
+    service = CompletedService()
+    client.app.state.analysis_service = service
     response = client.post(
         "/api/analyses",
-        json={"workflow": "contract", "document_ids": ["a"], "context": "PRIVATE" * 4000},
+        json={
+            "workflow": "contract",
+            "source_text": "Sachverhalt",
+            "context": "PRIVATE" + "x" * 9994,
+        },
     )
     assert response.status_code == 422
+    assert "Prüfauftrag" in response.json()["detail"] and "10.000" in response.json()["detail"]
     assert "PRIVATE" not in response.text
+    assert not service.calls
+    assert client.get("/api/analyses").json() == []
 
 
 def test_legacy_timeline_quotes_survive_read_and_export_without_rewriting(client):

@@ -36,9 +36,7 @@ export function Brand() {
   return (
     <span className="brand">
       <BrandMark />
-      <span>
-        LegalThink<span className="brand-suffix">GPT</span>
-      </span>
+      <span>LegalThink</span>
     </span>
   );
 }
@@ -284,11 +282,11 @@ function StablePickerLabel({ value, alternatives }: { value: string; alternative
 
 const EFFORT_FLOW: Record<string, { count: number; speed: number }> = {
   none: { count: 0, speed: 1 },
-  low: { count: 4, speed: 2.5 },
-  medium: { count: 6, speed: 4.5 },
-  high: { count: 8, speed: 7 },
-  xhigh: { count: 10, speed: 10 },
-  max: { count: 12, speed: 15 },
+  low: { count: 6, speed: 2.5 },
+  medium: { count: 8, speed: 4.5 },
+  high: { count: 11, speed: 7 },
+  xhigh: { count: 14, speed: 10 },
+  max: { count: 18, speed: 15 },
 };
 
 function EffortParticles({ effort, disabled }: { effort: string; disabled: boolean }) {
@@ -314,13 +312,14 @@ function EffortParticles({ effort, disabled }: { effort: string; disabled: boole
       {Array.from({ length: flow.count }, (_, index) => (
         <span
           key={index}
-          className={`effort-particle${index % 3 === 1 ? ' effort-particle-star' : ''}`}
+          className={`effort-particle${index % 4 !== 3 ? ' effort-particle-star' : ''}`}
           style={
             {
               '--particle-delay': `${-((index * 0.618 + 0.12) % 1) * 6}s`,
               '--particle-rest-x': `${((index * 0.618 + 0.12) % 1) * 100}%`,
-              '--particle-lane': `${3 + ((index * 7) % 15)}px`,
-              '--particle-opacity': 0.32 + (index % 3) * 0.12,
+              '--particle-lane': `${3 + ((index * 5) % 12)}px`,
+              '--particle-size': index % 3 === 0 ? '7px' : '6px',
+              '--particle-opacity': 0.78 + (index % 3) * 0.1,
             } as CSSProperties
           }
         />
@@ -499,7 +498,8 @@ export function ModelPicker({
             )}
             {open === 'effort' && (
               <p className="popover-note" id={`${menuId}-cost`}>
-                Höherer Denkaufwand kann länger dauern und mehr kosten.
+                Höherer Denkaufwand kann bei komplexen Aufgaben helfen, aber länger dauern und mehr
+                kosten.
               </p>
             )}
           </PickerPopover>

@@ -48,25 +48,25 @@
   content: '';
   position: absolute;
   top: var(--particle-lane);
-  left: -4px;
-  width: 2px;
-  height: 2px;
+  left: -7px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: currentColor;
   opacity: var(--particle-opacity);
 }
 .effort-particle-star::before {
-  width: 4px;
-  height: 4px;
+  width: var(--particle-size);
+  height: var(--particle-size);
   border-radius: 0;
-  clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+  clip-path: polygon(50% 0%, 68% 32%, 100% 50%, 68% 68%, 50% 100%, 32% 68%, 0% 50%, 32% 32%);
 }
 @keyframes effort-flow {
   from {
     transform: translateX(0);
   }
   to {
-    transform: translateX(calc(100% + 4px));
+    transform: translateX(calc(100% + 7px));
   }
 }
 .effort-range {

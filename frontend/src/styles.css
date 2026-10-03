@@ -271,12 +271,6 @@ code {
   white-space: nowrap;
   color: var(--text-primary);
 }
-.brand-suffix {
-  font-weight: 400;
-  color: var(--text-secondary);
-  font-size: 15px;
-  margin-left: 1px;
-}
 .primary-nav {
   display: flex;
   flex-direction: column;

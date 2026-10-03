@@ -116,3 +116,12 @@ Drei unabhängige Reviews: Frontend-Zustand, Backend-Lifecycle und Dokumentvorsc
 - Ungültige Provider-Quellenlinks werden verworfen, statt einen fertigen Bericht abzubrechen. Annotationen und Suchquellen verwenden dieselbe Prüfung.
 - Die beiden Backend-Lifecycle-Fehler und der Fehler bei kaputten URLs wurden vor der Korrektur reproduziert. Bestehende Tests erweitert, einen Lifecycle-Fall ergänzt; weiterhin nur ein Browser-Smoke-Test.
 - 70 Offline-Backendfälle, Browser-Smoke-Test, Produktionsbuild, Ruff, Prettier und `git diff --check` bestanden. Keine echten OpenAI-Anfragen.
+
+## Eingabegrenzen, Partikel und Veröffentlichungshinweise – 3. Oktober 2026
+
+- Prüfauftrag auf 10.000 Unicode-Codepoints begrenzt: Formular, Vorlagenübernahme, Startprüfung und API-Schema. Überlange Eingaben bleiben erhalten; nach Korrektur verschwindet die Fehlermeldung. Bestehende Fälle für exakt 10.000 und 10.001 Zeichen angepasst, keine neuen Testfälle.
+- Partikel kontrastreicher und größer; schneller Fluss in Hell und Dunkel sichtbar. Zwei Aufnahmen derselben Spur zeigen 2.746 veränderte Pixel von 4.120. Controls und Popover blieben auf Desktop und bei 390 px über jeweils acht Abfragen größen- und positionsstabil (0 px Abweichung). Kein horizontaler Überlauf auf Mobilgeräten.
+- Synthetische PDF: drei Originalseiten gerendert, Seitenwechsel und 50-%-Zoom nach Callback-Bereinigung geprüft. Keine Browserfehler in den geprüften Abläufen.
+- Sichtbarer Produktname auf LegalThink geändert; vorhandene Speicher- und Schnittstellennamen bleiben erhalten. Nutzungshinweise, MIT-Lizenz und quellenbasierte rechtliche Bestandsaufnahme ergänzt.
+- Lizenzartefakte per HTTP geprüft: beide 200, Root-Lizenz bytegleich; Hinweise für 95 ausgelieferte Bibliotheken/Fonts einschließlich PDF-Ressourcen. Fehlende Lizenztexte lassen den Build scheitern. Ungenutzte QuickJS-Assets werden nicht ausgeliefert.
+- Aktueller reduzierter Bestand: **50 Offline-Backendfälle und ein Build-Smoke-Test bestanden**. Produktionsbuild, TypeScript, Ruff, Prettier und Diffprüfung bestanden. Keine echten OpenAI-Anfragen.

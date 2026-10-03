@@ -1,4 +1,4 @@
-# LegalThinkGPT
+# LegalThink
 
 Lokale Anwendung für Vertragsprüfung, Versionsvergleich, Chronologie, Datenschutz- und Werbeprüfung. Ergebnisse enthalten Fundstellen und Formulierungsvorschläge; Export als Word oder Markdown.
 
@@ -22,7 +22,7 @@ npm run dev
 Kopieren Sie `backend/.env.example` nach `backend/.env`. Tragen Sie Ihren OpenAI-Projektschlüssel ausschließlich dort als `OPENAI_API_KEY` ein. Starten Sie den Server neu. Die Datei ist von Git ausgeschlossen.
 
 1. Arbeitsweise wählen und Dokumente hinzufügen: PDF mit Textebene, DOCX, TXT oder Markdown.
-2. Perspektive und Prüfauftrag ergänzen; optional ein Kanzlei-Playbook auswählen.
+2. Zusätzlichen Kontext ergänzen, etwa E-Mails oder Gesprächsnotizen. Prüfauftrag bei Bedarf anpassen (maximal 10.000 Zeichen); optional ein Kanzlei-Playbook auswählen.
 3. Modell und Denktiefe wählen. Die Analyse beginnt erst nach dem ausdrücklichen Start.
 4. Befunde, Originalstellen und Formulierungsvorschläge prüfen. Ergebnis als Word oder Markdown exportieren.
 
@@ -78,6 +78,16 @@ Bei einer gestarteten KI-Analyse werden die ausgewählten Dokumenttexte, der Pr�
 
 Fundstellenprüfung bedeutet, dass ein Zitat im ausgewählten Dokument gefunden wurde. Sie bestätigt weder die Richtigkeit einer Rechtsauffassung noch die Aktualität einer Norm. Ergebnisse sind Arbeitsentwürfe für die anwaltliche Prüfung. Die Beispieldaten belegen keine Modellqualität.
 
+## Nutzung, Verantwortung und Lizenz
+
+Betreiber verantworten ihre Installation, OpenAI-Konfiguration, Datenübermittlung und Verwendung der Ergebnisse. Vor dem Übermitteln von Mandatsdaten sind Berechtigung zur Weitergabe, anwaltliche Verschwiegenheit, Datenschutz und erforderliche Verträge zu prüfen. Nur erforderliche Inhalte übermitteln; Quellen, Rechtslage und Fristen vor Verwendung der Ergebnisse selbst prüfen. Zugriffsschutz, Datensicherung und Löschung bleiben Aufgaben des Betreibers. Diese Hinweise lassen gesetzliche Rechte und Haftung unberührt.
+
+Das Projekt ist unabhängig von OpenAI. OpenAI-Verträge und API-Datenkontrollen gelten gesondert: [Vertragsbedingungen](https://openai.com/policies/services-agreement/), [Datenverarbeitung](https://developers.openai.com/api/docs/guides/your-data).
+
+Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE), Copyright © 2026 Marlon Kaulich. Bibliotheken und Fonts behalten ihre eigenen Lizenzen; der Frontend-Build liefert die vollständigen Hinweise unter `/third-party-licenses.txt` aus. Bei Weitergabe einer Python-Installation müssen auch deren Paketlizenzen erhalten bleiben.
+
+Der frühere sichtbare Name „LegalThinkGPT“ wurde auf „LegalThink“ geändert. Vor Veröffentlichung bleiben insbesondere Namensrechte und Rechte an allen Beiträgen zu prüfen. Befunde, Quellen und Grenzen: [rechtliche Bestandsaufnahme](docs/legal-review.md).
+
 ## Qualität prüfen
 
 ```sh
@@ -113,4 +123,4 @@ docs/          Architektur und verifizierte API-Entscheidungen
 scripts/       Lokaler Start
 ```
 
-Die frühere Gemini-Anwendung diente als Funktionsreferenz. LegalThinkGPT wurde neu implementiert. Designreferenz: [OpenAI UI Skills](https://github.com/ihlamury/design-skills/blob/main/skills/openai/SKILL.md), mit Anpassungen für nutzbare Eingaben, Kontrast und responsive Dokumentarbeit.
+Die frühere Gemini-Anwendung diente als Funktionsreferenz. LegalThink wurde neu implementiert. Designreferenz: [OpenAI UI Skills](https://github.com/ihlamury/design-skills/blob/main/skills/openai/SKILL.md), mit Anpassungen für nutzbare Eingaben, Kontrast und responsive Dokumentarbeit.

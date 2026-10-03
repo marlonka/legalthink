@@ -16,7 +16,7 @@ import Start from './Start';
 import Review from './Review';
 import { DocumentPreviewProvider } from './DocumentPreview';
 import { History, Playbooks, Settings } from './WorkspacePages';
-import { api, MAX_MATERIAL_CHARS } from './types';
+import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
 import { useThemePreference } from './theme';
 import { MotionButton, useMotionPreferences } from './motion';
 import type {
@@ -306,7 +306,7 @@ export default function App() {
   }, [models, model, effort]);
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
-    document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Neue Analyse'} · LegalThinkGPT`;
+    document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Neue Analyse'} · LegalThink`;
   }, [route]);
   useEffect(() => {
     if (!route.startsWith('analysis/')) return;
@@ -466,6 +466,13 @@ export default function App() {
         `Text und Dokumente dürfen zusammen höchstens ${MAX_MATERIAL_CHARS.toLocaleString('de-DE')} Zeichen enthalten. Bitte den Umfang reduzieren.`,
       );
       document.getElementById('analysis-source-text')?.focus();
+      return;
+    }
+    if (Array.from(context).length > MAX_INSTRUCTION_CHARS) {
+      setError(
+        `Der Prüfauftrag darf höchstens ${MAX_INSTRUCTION_CHARS.toLocaleString('de-DE')} Zeichen enthalten. Bitte kürzen Sie den Prüfauftrag.`,
+      );
+      document.getElementById('analysis-context')?.focus();
       return;
     }
     if (!health?.api_configured) {
@@ -763,7 +770,7 @@ export default function App() {
           }}
         >
           <div className="sidebar-brand">
-            <MotionButton onClick={() => navigate('new')} aria-label="LegalThinkGPT Startseite">
+            <MotionButton onClick={() => navigate('new')} aria-label="LegalThink Startseite">
               <Brand />
             </MotionButton>
             <MotionButton
@@ -846,7 +853,7 @@ export default function App() {
               >
                 <Menu size={20} />
               </MotionButton>
-              <span className="mobile-page-name">LegalThinkGPT</span>
+              <span className="mobile-page-name">LegalThink</span>
             </div>
             {health?.api_configured === false && (
               <button className="topbar-status" onClick={() => navigate('settings')}>
@@ -977,7 +984,10 @@ export default function App() {
                   }
                   onReorder={() => setSelectedIds((previous) => [...previous].reverse())}
                   context={context}
-                  onContext={(value) => updateDraft({ context: value })}
+                  onContext={(value) => {
+                    updateDraft({ context: value });
+                    setError('');
+                  }}
                   sourceText={sourceText}
                   onSourceText={(value) => updateDraft({ sourceText: value })}
                   materialCharCount={materialCharCount}

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { thirdPartyLicenses } from './third-party-licenses.ts';
 
 // PDF fonts, character maps and image decoders stay on the application server.
 function pdfAssets(): Plugin {
@@ -9,6 +10,8 @@ function pdfAssets(): Plugin {
   for (const directory of ['cmaps', 'standard_fonts', 'wasm']) {
     const base = new URL(`./node_modules/pdfjs-dist/${directory}/`, import.meta.url);
     for (const entry of readdirSync(base, { withFileTypes: true })) {
+      // PDF scripting belongs to the full upstream viewer, which this app does not use.
+      if (directory === 'wasm' && entry.name.startsWith('quickjs-')) continue;
       if (entry.isFile())
         assets.set(`/pdfjs/${directory}/${entry.name}`, fileURLToPath(new URL(entry.name, base)));
     }
@@ -17,7 +20,12 @@ function pdfAssets(): Plugin {
     name: 'local-pdf-assets',
     generateBundle() {
       for (const [url, path] of assets)
-        this.emitFile({ type: 'asset', fileName: url.slice(1), source: readFileSync(path) });
+        this.emitFile({
+          type: 'asset',
+          fileName: url.slice(1),
+          originalFileName: path,
+          source: readFileSync(path),
+        });
     },
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
@@ -34,7 +42,7 @@ function pdfAssets(): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), pdfAssets()],
+  plugins: [react(), pdfAssets(), thirdPartyLicenses()],
   server: {
     port: 5175,
     strictPort: true,
