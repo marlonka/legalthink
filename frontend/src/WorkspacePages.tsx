@@ -8,15 +8,19 @@ import {
   FileText,
   FolderOpen,
   LoaderCircle,
+  Monitor,
+  Moon,
   Plus,
   Search,
   Server,
   ShieldCheck,
+  Sun,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import type { Analysis, DocumentRecord, Health, Model, Playbook } from './types';
+import type { ThemePreference } from './theme';
 import { api } from './types';
 import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui';
 import { workflowName } from './workflows';
@@ -390,6 +394,8 @@ export function Playbooks({
 }
 
 export function Settings({
+  themePreference,
+  onThemePreference,
   health,
   models,
   model,
@@ -401,6 +407,8 @@ export function Settings({
   onRefresh,
   refreshing,
 }: {
+  themePreference: ThemePreference;
+  onThemePreference: (preference: ThemePreference) => void;
   health: Health | null;
   models: Model[];
   model: string;
@@ -417,6 +425,43 @@ export function Settings({
       <header className="standard-page-header">
         <h1>Einstellungen</h1>
       </header>
+      <section
+        className="settings-section appearance-settings"
+        aria-labelledby="appearance-heading"
+      >
+        <div className="settings-section-heading">
+          <h2 id="appearance-heading">Erscheinungsbild</h2>
+        </div>
+        <div className="appearance-row">
+          <span id="appearance-mode">Modus</span>
+          <div className="theme-options" role="radiogroup" aria-labelledby="appearance-mode">
+            {(
+              [
+                { value: 'system', label: 'System', icon: Monitor },
+                { value: 'light', label: 'Hell', icon: Sun },
+                { value: 'dark', label: 'Dunkel', icon: Moon },
+              ] as const
+            ).map(({ value, label, icon: Icon }) => (
+              <label className="theme-option" key={value}>
+                <input
+                  type="radio"
+                  name="appearance"
+                  value={value}
+                  checked={themePreference === value}
+                  onChange={() => onThemePreference(value)}
+                />
+                <Icon
+                  className="theme-option-icon"
+                  size={18}
+                  strokeWidth={1.6}
+                  aria-hidden="true"
+                />
+                <span className="theme-option-label">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </section>
       <section className="settings-section">
         <div className="settings-section-heading">
           <Server size={20} strokeWidth={1.4} />

@@ -117,10 +117,11 @@ export default function Start(props: Props) {
             key={item.id}
             onClick={() => onWorkflow(item.id)}
             aria-pressed={workflow === item.id}
+            title={item.short}
             disabled={running || uploading}
           >
             <item.icon size={17} strokeWidth={1.6} />
-            {item.short}
+            {item.label}
           </button>
         ))}
       </div>

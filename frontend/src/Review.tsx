@@ -642,11 +642,13 @@ function SourcePanel({
             </div>
           </div>
           <div className="source-paper">
-            <div className="source-paper-eyebrow">
-              {finding.source_location || 'Dokumentausschnitt'}
-            </div>
             {finding.source_quote ? (
               <>
+                <div id={contextId}>
+                  {contextExpanded && before && <p className="source-context">{before}</p>}
+                  <blockquote>{finding.source_quote}</blockquote>
+                  {contextExpanded && after && <p className="source-context">{after}</p>}
+                </div>
                 {hasContext && (
                   <button
                     className="text-button source-context-toggle"
@@ -658,11 +660,6 @@ function SourcePanel({
                     <ChevronDown size={13} />
                   </button>
                 )}
-                <div id={contextId}>
-                  {contextExpanded && before && <p className="source-context">{before}</p>}
-                  <blockquote>{finding.source_quote}</blockquote>
-                  {contextExpanded && after && <p className="source-context">{after}</p>}
-                </div>
               </>
             ) : (
               <div className="missing-source">

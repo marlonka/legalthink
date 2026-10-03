@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 async function assertAccessible(page: Page) {
   // Audit the settled UI: alpha blending during a fade is not its final contrast.
   for (const surface of await page
-    .locator('.page-transition, .modal, .finding-content-motion')
+    .locator('.page-transition, .modal, .finding-content-motion, .picker-popover, .export-menu')
     .all()) {
     await expect(surface).toHaveCSS('opacity', '1');
   }
@@ -44,16 +44,123 @@ test('model selection resets an incompatible reasoning effort', async ({ page })
   await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
   await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
   await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
-  await page.getByRole('button', { name: 'Ohne', exact: true }).click();
+  const slider = page.getByRole('slider', { name: 'Denkaufwand' });
+  await slider.focus();
+  await page.keyboard.press('Home');
+  await expect(slider).toHaveAttribute('aria-valuetext', 'Ohne');
+  await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Denkaufwand: Ohne' })).toBeVisible();
   await page.getByRole('button', { name: 'GPT-6 Luna', exact: true }).click();
   await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Denkaufwand: Mittel' })).toBeVisible();
   await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
-  await expect(page.getByRole('button', { name: 'Ohne', exact: true })).toHaveCount(0);
+  await slider.focus();
+  await page.keyboard.press('Home');
+  await expect(slider).toHaveAttribute('aria-valuetext', 'Niedrig');
+  await page.keyboard.press('ArrowRight');
+  await expect(slider).toHaveAttribute('aria-valuetext', 'Mittel');
+  await assertAccessible(page);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Denkaufwand: Mittel' })).toBeFocused();
 });
+
+test('appearance persists and follows the OS only when System is selected', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/#settings');
+  await expect(page.getByRole('radio', { name: 'Dunkel', exact: true })).toBeChecked();
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+  await page.getByRole('radio', { name: 'Hell', exact: true }).check();
+  await page.reload();
+  await expect(page.getByRole('radio', { name: 'Hell', exact: true })).toBeChecked();
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+  await page.getByRole('radio', { name: 'System', exact: true }).check();
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+  await page.getByRole('radio', { name: 'System', exact: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('radio', { name: 'Hell', exact: true })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Hell', exact: true })).toBeFocused();
+});
+
+test('appearance remains usable when browser storage is blocked', async ({ page }) => {
+  await page.addInitScript(() => {
+    Storage.prototype.getItem = () => {
+      throw new DOMException('Blocked', 'SecurityError');
+    };
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Blocked', 'SecurityError');
+    };
+  });
+  await page.goto('/#settings');
+  await expect(page.getByRole('radio', { name: 'Dunkel', exact: true })).toBeChecked();
+  await page.getByRole('radio', { name: 'Hell', exact: true }).check();
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+  await page.getByRole('button', { name: 'Neue Analyse', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Neue Analyse', exact: true })).toBeVisible();
+});
+
+for (const theme of ['Dunkel', 'Hell'] as const) {
+  test(`${theme} theme: settings, menus, review and mobile remain readable`, async ({ page }) => {
+    test.setTimeout(60_000);
+    const name = theme === 'Dunkel' ? 'dark' : 'light';
+    await page.setViewportSize(
+      theme === 'Dunkel' ? { width: 1233, height: 1017 } : { width: 1242, height: 1061 },
+    );
+    await page.goto('/#settings');
+    await page.getByRole('radio', { name: theme, exact: true }).check();
+    await page
+      .getByRole('heading', { name: 'Einstellungen', exact: true })
+      .scrollIntoViewIfNeeded();
+    await assertAccessible(page);
+    await page.screenshot({ path: `artifacts/settings-${name}.png` });
+    await page.getByRole('button', { name: 'Neue Analyse', exact: true }).click();
+    await assertAccessible(page);
+    await page.screenshot({ path: `artifacts/start-${name}.png` });
+    await page.getByRole('button', { name: 'Denkaufwand: Mittel' }).click();
+    await expect(page.getByRole('slider', { name: 'Denkaufwand' })).toBeVisible();
+    await assertAccessible(page);
+    await page.screenshot({ path: `artifacts/effort-${name}.png` });
+    await page
+      .locator('.effort-popover')
+      .screenshot({ path: `artifacts/effort-${name}-detail.png` });
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Beispiel öffnen' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Cloud-Vertrag · Beispielprüfung' }),
+    ).toBeVisible();
+    await assertAccessible(page);
+    await page.screenshot({ path: `artifacts/review-${name}.png` });
+    await page.getByRole('tab', { name: /Formulierungen/ }).click();
+    await assertAccessible(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.getByRole('button', { name: 'Navigation öffnen', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Hauptnavigation' })
+      .getByRole('button', { name: 'Neue Analyse', exact: true })
+      .click();
+    await assertAccessible(page);
+    await page.screenshot({ path: `artifacts/mobile-${name}.png` });
+    for (const width of [320, 390, 568, 768, 1024]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+        false,
+      );
+      const runButton = page.getByRole('button', { name: 'Analyse starten', exact: true });
+      await runButton.scrollIntoViewIfNeeded();
+      await expect(runButton).toBeInViewport();
+      await page.getByRole('button', { name: 'Denkaufwand: Mittel', exact: true }).click();
+      await expect(page.locator('.effort-popover')).toBeInViewport({ ratio: 1 });
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'GPT-6.1 Sol', exact: true }).click();
+      await expect(page.locator('.picker-popover')).toBeInViewport({ ratio: 1 });
+      await page.keyboard.press('Escape');
+    }
+  });
+}
 
 test('upload stays local and unavailable AI produces a recoverable error', async ({ page }) => {
   await page.goto('/');
@@ -193,7 +300,7 @@ test('stored documents survive reload and comparison preserves the chosen order'
   ]);
   await expect(page.getByText('Fassung-B.txt', { exact: true })).toBeVisible();
   await page.reload();
-  await page.getByRole('button', { name: /Versionen vergleichen/ }).click();
+  await page.getByRole('button', { name: 'Vergleich', exact: true }).click();
   await page.getByRole('button', { name: 'Gespeicherte auswählen' }).click();
   const picker = page.getByRole('dialog', { name: 'Gespeicherte Dokumente' });
   await picker.getByRole('checkbox', { name: /Fassung-A.txt/ }).check();
