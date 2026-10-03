@@ -54,10 +54,16 @@ def _page_location(document: Document, quote: str) -> str | None:
     if not document.name.lower().endswith(".pdf"):
         return None
     pages = re.split(r"\[Seite (\d+)\]\n", document.text)
+    location = None
     for i in range(1, len(pages), 2):
-        if quote in normalized(pages[i + 1]):
-            return f"Seite {pages[i]}"
-    return None
+        text = normalized(pages[i + 1])
+        first = text.find(quote)
+        if first < 0:
+            continue
+        if location is not None or text.find(quote, first + 1) >= 0:
+            return None
+        location = f"Seite {pages[i]}"
+    return location
 
 
 def resolve_source(document_id: str, quote: str, documents: list[Document]) -> Document | None:

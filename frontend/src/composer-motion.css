@@ -137,7 +137,6 @@
   flex: 1;
 }
 
-.composer-document-list .document-chip > div > span,
 .composer-document-list .document-chip small {
   max-width: none;
   overflow: hidden;

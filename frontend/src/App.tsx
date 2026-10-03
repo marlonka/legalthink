@@ -491,7 +491,7 @@ export default function App() {
     } catch (error) {
       setError(
         error instanceof DOMException && error.name === 'AbortError'
-          ? 'Das Warten wurde abgebrochen. Eine bereits gestartete Verarbeitung auf dem Server kann noch weiterlaufen. Prüfen Sie später Ihre Analysen.'
+          ? 'Das Warten auf die Antwort wurde abgebrochen.'
           : message(error),
       );
     } finally {

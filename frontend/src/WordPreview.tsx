@@ -164,19 +164,28 @@ type Position = { node: Text; offset: number };
 function markQuote(container: HTMLElement, quote: string) {
   const needle = quote.normalize('NFC').replace(/\s+/g, ' ').trim();
   if (needle.length < 12) return null;
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+  );
   const nodes: Text[] = [];
   let raw = '';
   const rawPositions: Position[] = [];
   let previousBlock: Element | null = null;
+  let lineBreak = false;
   while (walker.nextNode()) {
+    if (walker.currentNode.nodeType === Node.ELEMENT_NODE) {
+      if ((walker.currentNode as Element).localName === 'br') lineBreak = true;
+      continue;
+    }
     const node = walker.currentNode as Text;
     if (node.parentElement?.closest('style, script')) continue;
     const block = node.parentElement?.closest('p, td, li, h1, h2, h3, header, footer') || null;
-    if (raw && block !== previousBlock) {
+    if (raw && (lineBreak || block !== previousBlock)) {
       raw += '\n';
       rawPositions.push({ node, offset: 0 });
     }
+    lineBreak = false;
     previousBlock = block;
     nodes.push(node);
     for (let offset = 0; offset < node.length; offset++) {

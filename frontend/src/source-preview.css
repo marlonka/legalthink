@@ -19,9 +19,6 @@
   gap: 16px;
   padding: 8px 0;
 }
-.analysis-documents li > span {
-  overflow-wrap: anywhere;
-}
 .analysis-documents a {
   white-space: nowrap;
 }
@@ -82,8 +79,7 @@
   border-radius: 8px;
   background: var(--surface-input);
 }
-.pdf-viewport,
-.pdf-loading {
+.pdf-viewport {
   height: clamp(240px, 58dvh, 660px);
 }
 .pdf-viewport {
@@ -129,12 +125,6 @@
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
-}
-.pdf-loading {
-  display: grid;
-  place-items: center;
-  color: var(--text-secondary);
-  font-size: 14px;
 }
 .pdf-quote-mark {
   position: absolute;

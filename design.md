@@ -148,6 +148,7 @@ Zusätzliche Prüfoptionen bleiben aufklappbar. Aktive Optionen werden auch im g
 - „Quellen“ führt gespeicherte Dokumente und eingefügten Text auf. TXT-Downloads erhalten den vollständigen Quelltext.
 - Fundstellen öffnen die gemeinsame Dokumentvorschau rechts oder bildschirmfüllend; siehe „Ergebnisansichten nach Aufgabe“. PDFs erscheinen mit stabiler Werkzeugleiste, Seitenwahl, Zoom und internem Scrollbereich; eine Zitatmarkierung setzt einen eindeutigen Texttreffer voraus.
 - Jeder Befund hat eine lesbare Priorität, Beschreibung und bei Bedarf einen Rechtsbezug.
+- Zwischen der anklickbaren Kopfzeile eines Befunds und dem aufgeklappten Inhalt bleiben 16 px Innenabstand. Der Abstand gehört zum Inhalt und bleibt bei Hover und Tastaturfokus unverändert; mobile Regeln ändern nur die seitlichen und unteren Abstände.
 - Zitat und Änderungsvorschlag sind eindeutig bezeichnet. Keine bloße Farbmarkierung als angebliche Änderungsverfolgung.
 - Der Dokumentbereich zeigt den tatsächlichen Dateinamen, die Fundstelle und den Wortlaut. Weiterer Dokumenttext bleibt bei Bedarf aufklappbar.
 - „Zitat im Dokument gefunden“ bezeichnet einen Textabgleich. Die Einschränkung auf den Wortlaut wird direkt dort zugänglich erklärt.

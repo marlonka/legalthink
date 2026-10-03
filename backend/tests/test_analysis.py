@@ -5,8 +5,8 @@ import httpx
 import pytest
 from openai import AsyncOpenAI
 
-from app.analysis import AnalysisError, AnalysisService, recover_source_references
-from app.schemas import Analysis, AnalysisRequest, Document, Playbook
+from app.analysis import AnalysisError, AnalysisService, recover_source_references, verify_findings
+from app.schemas import Analysis, AnalysisRequest, Document, ModelAnalysis, Playbook
 
 QUOTE = "Die Haftung ist auf eine Monatsvergütung beschränkt."
 DOC = Document(id="doc-1", name="Vertrag.txt", text=QUOTE, page_count=1, char_count=len(QUOTE))
@@ -121,6 +121,16 @@ async def test_serialized_openai_request_and_verified_evidence():
     assert result.provider_request_id == "req_offline"
     assert result.document_ids == [DOC.id]
     assert result.compliance_task == "general"
+
+
+@pytest.mark.parametrize("repetition", [f"\n{QUOTE}", f"\n[Seite 2]\n{QUOTE}"])
+def test_repeated_pdf_quote_has_no_unique_page_location(repetition):
+    document = DOC.model_copy(
+        update={"name": "Vertrag.pdf", "text": f"[Seite 1]\n{QUOTE}{repetition}"}
+    )
+    finding = verify_findings(ModelAnalysis.model_validate(model_result()), [document])[0]
+    assert finding.verified
+    assert finding.source_location == "Textfundstelle"
 
 
 async def test_research_retains_only_provider_attributed_urls():

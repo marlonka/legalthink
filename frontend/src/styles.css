@@ -137,12 +137,6 @@ code {
 .muted {
   color: var(--text-muted);
 }
-.eyebrow {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
 .icon-button {
   width: 36px;
   height: 36px;
@@ -636,13 +630,6 @@ code {
   font-size: 14px;
   font-weight: 400;
 }
-.picker-option small {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
 .popover-note {
   margin-top: 5px;
   padding: 12px 10px 7px;
@@ -683,13 +670,6 @@ code {
   font-size: 14px;
   font-weight: 400;
 }
-.research-option small {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
 .uploaded-documents {
   display: flex;
   align-items: center;
@@ -712,14 +692,6 @@ code {
 }
 .document-chip > div:nth-child(2) {
   min-width: 0;
-}
-.document-chip > div > span {
-  display: block;
-  max-width: 250px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 13px;
 }
 .document-chip small {
   display: block;
@@ -789,13 +761,6 @@ code {
 .analysis-progress strong {
   font-size: 14px;
   font-weight: 400;
-}
-.analysis-progress small {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
 }
 .analysis-progress > button {
   font-size: 13px;
@@ -1090,9 +1055,6 @@ code {
   .uploaded-documents {
     padding: 0 19px 20px;
   }
-  .document-chip > div > span {
-    max-width: 200px;
-  }
   .analysis-data-note {
     padding: 0 19px 15px;
   }
@@ -1216,9 +1178,6 @@ code {
   }
   .document-input-heading .library-button {
     min-height: 40px;
-  }
-  .document-chip > div > span {
-    max-width: 180px;
   }
   .picker-popover {
     right: auto;
