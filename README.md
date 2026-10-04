@@ -119,6 +119,7 @@ React und TypeScript bilden die Oberfläche; FastAPI und SQLite das Backend. API
 | [Architektur](docs/architecture.md) | Komponenten, Speicherung, Quellenmodell und Betriebsgrenzen |
 | [OpenAI-Integration](docs/openai-integration.md) | API-Vertrag, Modelle, Prompt-Caching, Webrecherche und Regionen |
 | [Gestaltung](design.md) | Themes, Komponenten, Barrierefreiheit und Bewegung |
+| [Designsystem für andere Projekte](docs/reusable/design.md) | Eigenständige Regeln, Tokens und Interaktionsmuster für Weboberflächen |
 | [Prüfprotokoll](docs/validation.md) | Ausgeführte Prüfungen und verbleibende Grenzen |
 | [Performance](docs/performance.md) | Messbedingungen und Ergebnisse |
 | [Modellbewertung](evals/README.md) | Synthetische Fälle und Bewertungskriterien |
