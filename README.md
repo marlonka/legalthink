@@ -41,7 +41,7 @@ Originaldateien bleiben zum Download erhalten. Eine bestätigte Fundstelle beleg
 
 ## Lokal starten
 
-Voraussetzungen: **Node.js 22.12+** und [uv](https://docs.astral.sh/uv/getting-started/installation/). Python 3.12 wird empfohlen und in CI verwendet; das Backend unterstützt Python ab 3.11.
+Voraussetzungen: **Node.js 22.12+** und [uv](https://docs.astral.sh/uv/getting-started/installation/). Node.js 26 und Python 3.15 werden empfohlen und in CI verwendet; das Backend unterstützt Python ab 3.11.
 
 ```sh
 git clone https://github.com/marlonka/legalthink.git
