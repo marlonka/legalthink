@@ -133,3 +133,13 @@ Drei unabhängige Reviews: Frontend-Zustand, Backend-Lifecycle und Dokumentvorsc
 - [Lighthouse](performance.md): Performance 97 mobil / 100 Desktop, Best Practices 100, CLS 0. Der lokale Ladeaudit ist kein Nachweis für einen späteren öffentlich gehosteten Betrieb.
 - Repository und Paketnamen auf `legalthink` umgestellt; GitHub bleibt privat, vorhandene Browserpräferenzen bleiben erhalten. [Namensvorprüfung](name-check.md) dokumentiert konkrete Registerabfragen ohne Markenfreigabe.
 - Bestehende API- und Downloadschutzfälle erweitert, keine neuen Testfälle. **50 Offline-Backendfälle und ein Build-Smoke-Test bestanden**, außerdem Produktionsbuild, TypeScript, Ruff, Prettier und Diffprüfung. Keine echten OpenAI-Anfragen.
+
+## Abhängigkeiten und Laufzeiten – 22. Oktober 2026
+
+- Direkte npm- und Python-Abhängigkeiten auf die aktuell veröffentlichten stabilen Versionen aktualisiert, einschließlich transitiver Updates in beiden npm-Lockdateien und `backend/uv.lock`. Keine Vorabversionen oder erzwungenen Peer-Overrides. Für die direkten Bibliotheken war kein weiterer Major-Sprung verfügbar.
+- Frontend: React/React DOM 19.3.1, Motion 14.6.0, Lucide React 1.61.0, PDF.js 6.4.299, Vite 8.3.5, React-Plugin 6.1.2 und Node-Typen 26.6.5. Workspace: Playwright 1.64.1 und Prettier 3.9.10.
+- Backend: FastAPI 0.161.0, OpenAI Python 3.37.0, Pydantic 2.14.1, pypdf 6.21.2, HTTPX2 2.16.0 und Ruff 0.17.2. Die unteren Versionsgrenzen wurden entsprechend angehoben.
+- CI: Node 22 → 26, Python 3.12 → 3.15 und uv 0.12.22 → 0.13.5. `setup-node` 7.1.0 und `setup-uv` 10.3.2 bleiben mit verifizierten Commit-SHAs fixiert. README nennt die neuen empfohlenen Laufzeiten; die Mindestversionen bleiben erhalten.
+- Produktionsbuild mit Node 26.11.0, TypeScript, Prettier, Ruff, Lockdateikonsistenz und `git diff --check` bestanden. **50 Backendfälle und ein Build-Smoke-Test mit Python 3.15.1 bestanden.** Netzwerkzugriffe des Providers bleiben in den Tests gesperrt; keine echten OpenAI-Anfragen.
+- Zusätzliche lokale Prüfung mit synthetischen Dateien: PDF-Canvas und Textebene sowie Word-Absätze und Tabelle auf Desktop (1600 px, Hell) und Mobil (390 px, Dunkel) gerendert. Keine Browserfehler, externen Browseranfragen oder horizontalen Seitenüberläufe. Vorschau geöffnet und geschlossen; Schließen-Button über acht Frames positions- und größenstabil (höchstens 0,5 px Abweichung). Keine zusätzlichen dauerhaften Testfälle.
+- npm meldet für Workspace und Frontend keine veralteten direkten Pakete und keine bekannten Schwachstellen. `pip-audit` prüfte alle 42 festgeschriebenen Python-Drittanbieterpakete einschließlich plattformspezifischer Einträge: keine bekannten Schwachstellen.
