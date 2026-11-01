@@ -151,10 +151,12 @@ def _original_file(suffix, text):
 )
 def test_original_roundtrip_legacy_attachment_and_deletion(local_client, suffix, media_type):
     original = _original_file(suffix, "Vertragstext")
-    name = f"Vertrag{suffix}"
-    response = local_client.post("/api/documents", files={"file": (name, original)})
+    long_name = f"{'Vertrag' * 30}{suffix}"
+    response = local_client.post("/api/documents", files={"file": (long_name, original)})
     assert response.status_code == 201
     uploaded = response.json()
+    name = uploaded["name"]
+    assert len(name) == 180 and name.endswith(suffix)
     if suffix == ".docx":
         assert uploaded["text"].splitlines() == [
             "Vertragstext",
@@ -180,7 +182,7 @@ def test_original_roundtrip_legacy_attachment_and_deletion(local_client, suffix,
     assert local_client.put(legacy_url, files={"file": (name, wrong_original)}).status_code == 422
     assert local_client.get(legacy_url).status_code == 404
     assert local_client.put(legacy_url, files={"file": ("Wrong.exe", original)}).status_code == 422
-    attached = local_client.put(legacy_url, files={"file": (name, original)})
+    attached = local_client.put(legacy_url, files={"file": (long_name, original)})
     assert attached.status_code == 200 and attached.json()["original_available"] is True
     assert local_client.get(legacy_url).content == original
     assert local_client.put(legacy_url, files={"file": (name, original)}).status_code == 409
