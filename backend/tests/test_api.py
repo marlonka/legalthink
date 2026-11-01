@@ -4,6 +4,7 @@ import sqlite3
 import threading
 from dataclasses import replace
 
+import httpx2
 import pytest
 from docx import Document as WordDocument
 from docx.oxml import OxmlElement
@@ -509,6 +510,31 @@ def test_failed_upstream_analysis_is_not_persisted(client):
     assert response.status_code == 502
     assert client.get("/api/analyses").json() == []
     assert client.get("/api/documents").json() == [document]
+
+
+def test_production_client_does_not_retry_provider_failure(tmp_path, monkeypatch):
+    calls = []
+
+    async def provider_error(transport, request):
+        calls.append(request)
+        return httpx2.Response(
+            503,
+            json={"error": {"code": "server_is_overloaded", "message": "Unavailable"}},
+            request=request,
+        )
+
+    # Replace only the network transport: the app constructs the real SDK client.
+    monkeypatch.setattr(httpx2.AsyncHTTPTransport, "handle_async_request", provider_error)
+    app = create_app(Settings(data_dir=tmp_path, api_key="synthetic-offline-key"))
+    with TestClient(app, base_url="http://localhost", client=("127.0.0.1", 12345)) as client:
+        response = client.post(
+            "/api/analyses", json={"workflow": "chronology", "source_text": "Testnachricht."}
+        )
+        assert response.status_code == 503
+        assert "vorübergehend" in response.json()["detail"]
+        assert len(calls) == 1
+        assert client.get("/api/analyses").json() == []
+        assert client.get("/api/documents").json() == []
 
 
 def test_unexpected_exception_never_escapes_to_asgi_server_logging(client, monkeypatch):

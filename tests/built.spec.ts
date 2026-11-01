@@ -68,3 +68,61 @@ test('Python serves the built workspace with local assets, CSP and working expor
   expect(errors).toEqual([]);
   expect(externalRequests).toEqual([]);
 });
+
+test('comparison sends selected versions and context to the local API', async ({ page }) => {
+  const uploads: { id: string; name: string }[] = [];
+  const externalRequests: string[] = [];
+  page.on('response', async (response) => {
+    if (response.url().endsWith('/api/documents') && response.request().method() === 'POST') {
+      uploads.push(await response.json());
+    }
+  });
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(url.href);
+      await route.abort();
+    } else if (url.pathname === '/api/health') {
+      // Enable the form; the actual server still has no API key.
+      await route.fulfill({
+        json: { status: 'ok', api_configured: true, default_processing_region: 'global' },
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Vergleich', exact: true }).click();
+  await page.getByLabel('Dokumente auswählen').setInputFiles([
+    { name: 'Original.txt', mimeType: 'text/plain', buffer: Buffer.from('Originaltext.') },
+    { name: 'Gegenentwurf.txt', mimeType: 'text/plain', buffer: Buffer.from('Gegenentwurf.') },
+  ]);
+  await expect(page.getByRole('button', { name: 'Original.txt', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Gegenentwurf.txt', exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: /Zusätzlicher Kontext/ }).fill('Ergänzende Nachricht.');
+  await page.getByRole('textbox', { name: 'Prüfauftrag (optional)' }).fill('Haftung vergleichen.');
+  await page.getByRole('button', { name: 'Webrecherche' }).click();
+  await expect(page.getByRole('button', { name: 'Webrecherche' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+
+  const analysisResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/analyses') && response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Analyse starten' }).click();
+  const response = await analysisResponse;
+  expect(response.status()).toBe(503);
+  expect(uploads.map((document) => document.name)).toEqual(['Original.txt', 'Gegenentwurf.txt']);
+  expect(response.request().postDataJSON()).toMatchObject({
+    workflow: 'compare',
+    document_ids: uploads.map((document) => document.id),
+    source_text: 'Ergänzende Nachricht.',
+    context: 'Haftung vergleichen.',
+    research: false,
+  });
+  await expect(page.getByRole('alert')).toContainText('OpenAI ist noch nicht eingerichtet');
+  expect(externalRequests).toEqual([]);
+});
