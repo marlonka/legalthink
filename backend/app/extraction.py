@@ -47,6 +47,9 @@ def safe_filename(name: str | None) -> str:
     # Names are presentation metadata only; uploaded bytes are never written under this name.
     name = PurePosixPath((name or "Dokument.txt").replace("\\", "/")).name
     name = re.sub(r"[\x00-\x1f\x7f<>:\"|?*]", "_", name).strip(" .")
+    suffix = PurePosixPath(name).suffix
+    if len(name) > 180 and 0 < len(suffix) < 180:
+        name = name[: 180 - len(suffix)] + suffix
     return name[:180] or "Dokument.txt"
 
 
