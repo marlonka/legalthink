@@ -17,7 +17,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from . import export
 from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
-from .config import OPENAI_BASE_URLS, Settings
+from .config import Settings
 from .demo import demo_analysis, demo_documents, restore_demo_sources
 from .extraction import ExtractionError, extract_isolated, safe_filename
 from .schemas import (
@@ -60,7 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if config.api_key:
             client = AsyncOpenAI(
                 api_key=config.api_key,
-                base_url=OPENAI_BASE_URLS[config.processing_region],
+                data_residency=config.processing_region,
                 max_retries=0,
                 timeout=config.request_timeout,
             )
@@ -75,7 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="LegalThink",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
