@@ -122,6 +122,13 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
 def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     analysis = client.post("/api/demo").json()
     client.post("/api/playbooks", json={"name": "Standard", "content": "Haftung prüfen."})
+    # A row from another app version must not hide every other saved record.
+    for table in ("analyses", "documents", "playbooks"):
+        client.app.state.store.put(table, {"id": f"damaged-{table}", "unknown": True})
+    assert [item["id"] for item in client.get("/api/analyses").json()] == [analysis["id"]]
+    assert len(client.get("/api/playbooks").json()) == 1
+    for table in ("analyses", "documents", "playbooks"):
+        client.app.state.store.delete(table, f"damaged-{table}")
     example = client.get("/api/documents").json()[0]
     # User uploads remain deletable even with the same filename and text as an example.
     uploaded = Document(
