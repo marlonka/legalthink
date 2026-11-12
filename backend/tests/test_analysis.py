@@ -79,6 +79,19 @@ def provider_response(result=None, status="completed", refusal=False, annotation
     }
 
 
+def two_differing_reports():
+    response = provider_response()
+    other = {**model_result(), "summary": "PRIVATE abweichender Bericht."}
+    response["output"].append(
+        {
+            **response["output"][0],
+            "id": "msg_second",
+            "content": [{"type": "output_text", "text": json.dumps(other), "annotations": []}],
+        }
+    )
+    return response
+
+
 def service_with_handler(handler, timeout=5):
     client = AsyncOpenAI(
         api_key="offline-test-key",
@@ -246,6 +259,19 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 for cited_url in [*invalid_urls, url]
             ]
         )
+        response["output"][0]["phase"] = "final_answer"
+        # GPT-6 can precede a hosted search with commentary; output_text would join both.
+        response["output"].insert(
+            0,
+            {
+                "id": "msg_commentary",
+                "type": "message",
+                "role": "assistant",
+                "status": "completed",
+                "phase": "commentary",
+                "content": [{"type": "output_text", "text": "Ich prüfe § 276.", "annotations": []}],
+            },
+        )
         response["output"].append(
             {
                 "id": "search_offline",
@@ -275,6 +301,7 @@ async def test_default_research_retains_only_provider_attributed_urls():
     finally:
         await client.close()
     assert captured[0]["tools"][0]["type"] == "web_search"
+    assert captured[0]["tools"][0]["user_location"]["country"] == "DE"
     assert captured[0]["include"] == ["web_search_call.action.sources"]
     assert captured[0]["service_tier"] == "flex"
     assert result.processing_region == "eu"
@@ -458,8 +485,16 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     "payload,expected",
     [
         (provider_response(status="incomplete"), "unvollständig"),
+        (
+            {
+                **provider_response(status="incomplete"),
+                "incomplete_details": {"reason": "max_output_tokens"},
+            },
+            "Ausgabelimit",
+        ),
         (provider_response(refusal=True), "abgelehnt"),
         (provider_response(result={"unexpected": "PRIVATE CONTENT"}), "Format"),
+        (two_differing_reports(), "Format"),
     ],
 )
 async def test_provider_non_results_fail_closed(payload, expected):

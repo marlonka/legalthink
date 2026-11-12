@@ -1,14 +1,14 @@
 [project]
 name = "legalthink-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "LegalThink document review API with source-linked analysis"
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi>=0.162,<1",
+  "fastapi>=0.162.5,<1",
   "uvicorn[standard]>=0.54,<1",
-  "openai>=3.42,<4",
-  "pydantic>=2.14.2,<3",
+  "openai>=3.49,<4",
+  "pydantic>=2.14.3,<3",
   "python-multipart>=0.0.33,<1",
   "python-dotenv>=1.2.4,<2",
   "pypdf>=6.21.4,<7",

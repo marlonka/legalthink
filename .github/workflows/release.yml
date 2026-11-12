@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create tag and release from package.json version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          notes=".github/release-notes/${version}.md"
+          test -f "$notes" || { echo "Missing $notes"; exit 1; }
+          if gh release view "$version" >/dev/null 2>&1; then
+            echo "$version already exists"; exit 1
+          fi
+          gh release create "$version" --target "$GITHUB_SHA" --title "LegalThink ${version#v}" --notes-file "$notes"

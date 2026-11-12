@@ -20,7 +20,6 @@ from openai import (
 )
 from pydantic import ValidationError
 
-from .config import OPENAI_BASE_URLS
 from .prompts import COMPLIANCE_TASK_PROMPTS, PROMPT_VERSION, SYSTEM_PROMPT, WORKFLOW_PROMPTS
 from .schemas import (
     Analysis,
@@ -40,6 +39,14 @@ from .schemas import (
     new_id,
     now,
 )
+
+# Reasoning tokens count toward this limit. A 1M-character matter at xhigh can need
+# substantially more than the visible report; an incomplete response is not saved.
+MAX_OUTPUT_TOKENS = 64_000
+STANDARD_TIMEOUT_SECONDS = 600.0
+FLEX_TIMEOUT_SECONDS = 900.0
+# Localize hosted search; the tool otherwise assumes a user in the United States.
+WEB_SEARCH_LOCATION = {"type": "approximate", "country": "DE", "timezone": "Europe/Berlin"}
 
 
 class AnalysisError(Exception):
@@ -211,6 +218,47 @@ def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[Ti
     return events
 
 
+def final_output_texts(response: Any) -> list[str]:
+    """Return the text of each final assistant message.
+
+    GPT-6 models can add `commentary` messages (for example before a hosted web
+    search) or, occasionally, an empty or repeated message. `response.output_text`
+    joins all of them, which is not one JSON value.
+    """
+    messages = [item for item in response.output if getattr(item, "type", "") == "message"]
+    final = [item for item in messages if getattr(item, "phase", None) == "final_answer"]
+    texts = []
+    for item in final or messages:
+        if getattr(item, "phase", None) == "commentary":
+            continue
+        text = "".join(
+            getattr(content, "text", "") or ""
+            for content in getattr(item, "content", [])
+            if getattr(content, "type", "") == "output_text"
+        )
+        if text.strip():
+            texts.append(text)
+    return texts
+
+
+def parse_result(response: Any, schema: type[ModelAnalysis]) -> ModelAnalysis:
+    """Accept exactly one distinct valid report; never choose between differing reports."""
+    results: list[ModelAnalysis] = []
+    for text in final_output_texts(response):
+        try:
+            result = schema.model_validate_json(text)
+        except (ValidationError, ValueError):
+            continue
+        if result not in results:
+            results.append(result)
+    if len(results) != 1:
+        raise AnalysisError(
+            "Die Modellantwort entspricht nicht dem erforderlichen Format. "
+            "Bitte die Analyse erneut starten."
+        )
+    return results[0]
+
+
 def provider_sources(response: Any) -> list[Source]:
     found: dict[str, Source] = {}
 
@@ -256,7 +304,7 @@ class AnalysisService:
     def __init__(
         self,
         client: AsyncOpenAI,
-        timeout: float = 180.0,
+        timeout: float = STANDARD_TIMEOUT_SECONDS,
         processing_region: ProcessingRegion = "global",
     ):
         self.client = client
@@ -275,9 +323,9 @@ class AnalysisService:
         client = (
             self.client
             if region == self.processing_region
-            else self.client.with_options(base_url=OPENAI_BASE_URLS[region])
+            else self.client.with_options(data_residency=region)
         )
-        timeout = 900.0 if request.service_tier == "flex" else self.timeout
+        timeout = FLEX_TIMEOUT_SECONDS if request.service_tier == "flex" else self.timeout
         evidence_documents = [*documents, *([pasted_document] if pasted_document else [])]
         scope = WORKFLOW_PROMPTS[request.workflow]
         if request.workflow == "compliance":
@@ -326,7 +374,7 @@ class AnalysisService:
                 }
             },
             "store": False,
-            "max_output_tokens": 24000,
+            "max_output_tokens": MAX_OUTPUT_TOKENS,
             "truncation": "disabled",
             "prompt_cache_key": hashlib.sha256(
                 f"{PROMPT_VERSION}:{request.model}".encode()
@@ -356,6 +404,7 @@ class AnalysisService:
                             "bfdi.bund.de",
                         ]
                     },
+                    "user_location": WEB_SEARCH_LOCATION,
                 }
             ]
             kwargs["include"] = ["web_search_call.action.sources"]
@@ -515,17 +564,24 @@ class AnalysisService:
                         422,
                     )
         if response.status != "completed":
+            reason = getattr(getattr(response, "incomplete_details", None), "reason", None)
+            if reason == "max_output_tokens":
+                raise AnalysisError(
+                    "Die Modellantwort hat das Ausgabelimit erreicht; Denkschritte zählen mit. "
+                    "Es wurde kein Ergebnis gespeichert. Bitte den Prüfungsumfang reduzieren "
+                    "oder eine niedrigere Denkstufe wählen."
+                )
+            if reason == "content_filter":
+                raise AnalysisError(
+                    "OpenAI hat die Ausgabe durch einen Inhaltsfilter beendet. Es wurde kein "
+                    "Ergebnis gespeichert.",
+                    422,
+                )
             raise AnalysisError(
                 "Die Modellantwort ist unvollständig. Es wurde kein Ergebnis "
                 "gespeichert. Bitte den Prüfungsumfang reduzieren."
             )
-        try:
-            result = result_schema.model_validate_json(response.output_text)
-        except (ValidationError, ValueError):
-            raise AnalysisError(
-                "Die Modellantwort entspricht nicht dem erforderlichen Format. "
-                "Bitte die Analyse erneut starten."
-            ) from None
+        result = parse_result(response, result_schema)
         usage = None
         if response.usage:
             usage = Usage(
