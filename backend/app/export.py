@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from datetime import UTC, datetime
 
 from docx import Document
@@ -42,30 +43,51 @@ def has_revision(finding: Finding) -> bool:
     )
 
 
+_MD_SPECIAL = re.compile(r"([\\`*_\[\]<>!|])")
+_MD_LINE_START = re.compile(r"^(\s*)([#>+=-])", re.MULTILINE)
+
+
+def md(text: str) -> str:
+    """Escape model or document text so exported Markdown renders it literally.
+
+    Prevents injected HTML, remote images, links and fake headings in viewers
+    that render Markdown (some load remote images automatically).
+    """
+    return _MD_LINE_START.sub(r"\1\\\2", _MD_SPECIAL.sub(r"\\\1", text))
+
+
+def md_line(text: str) -> str:
+    return md(" ".join(text.split()))
+
+
+def md_quote(text: str) -> str:
+    return "> " + md(text).replace("\n", "\n> ")
+
+
 def markdown(analysis: Analysis) -> bytes:
     proposal_label = (
         "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
     )
-    lines = [f"# {analysis.title}", "", DISCLAIMER, ""]
+    lines = [f"# {md_line(analysis.title)}", "", DISCLAIMER, ""]
     if analysis.is_demo:
         lines += ["**SYNTHETISCHES BEISPIEL · Keine Modellanalyse**", ""]
     lines += [
         f"Erstellt: {analysis.created_at}",
-        f"Modell: {analysis.model}",
+        f"Modell: {md_line(analysis.model)}",
         f"Denktiefe: {analysis.effort}",
         "",
         "## Überblick",
         "",
-        analysis.summary,
+        md(analysis.summary),
         "",
     ]
     for index, finding in enumerate(analysis.findings, 1):
         lines += [
-            f"## {index}. {finding.title}",
+            f"## {index}. {md_line(finding.title)}",
             "",
-            f"Priorität: {PRIORITIES[finding.severity]} · {finding.category}",
+            f"Priorität: {PRIORITIES[finding.severity]} · {md_line(finding.category)}",
             "",
-            finding.description,
+            md(finding.description),
             "",
         ]
         if finding.comparison:
@@ -75,12 +97,12 @@ def markdown(analysis: Analysis) -> bytes:
                 ("Original", comparison.original),
                 ("Gegenentwurf", comparison.counterdraft),
             ):
-                lines += [f"**{label}** · {side.source_document_name}", ""]
+                lines += [f"**{label}** · {md_line(side.source_document_name)}", ""]
                 if side.source_quote.strip():
                     lines += [
-                        f"Fundstelle: {side.source_location}",
+                        f"Fundstelle: {md_line(side.source_location)}",
                         "",
-                        "> " + side.source_quote.replace("\n", "\n> "),
+                        md_quote(side.source_quote),
                         "",
                         quote_confirmation(side.verified),
                         "",
@@ -90,41 +112,49 @@ def markdown(analysis: Analysis) -> bytes:
         else:
             source = finding_source(finding)
             if source:
-                lines += [f"Fundstelle: {source}", ""]
+                lines += [f"Fundstelle: {md_line(source)}", ""]
             if finding.source_quote.strip():
                 lines += [
-                    "> " + finding.source_quote.replace("\n", "\n> "),
+                    md_quote(finding.source_quote),
                     "",
                     quote_confirmation(finding.verified),
                     "",
                 ]
         if finding.suggestion.strip():
-            lines += [f"**{proposal_label}**", "", finding.suggestion, ""]
+            lines += [f"**{proposal_label}**", "", md(finding.suggestion), ""]
         if finding.legal_basis.strip():
-            lines += ["**Rechtlicher Bezug (zu prüfen)**", "", finding.legal_basis, ""]
+            lines += ["**Rechtlicher Bezug (zu prüfen)**", "", md(finding.legal_basis), ""]
         if finding.source_urls:
-            lines += ["Recherchequellen zum Befund:", *[f"- {u}" for u in finding.source_urls], ""]
+            lines += [
+                "Recherchequellen zum Befund:",
+                *[f"- <{u}>" for u in finding.source_urls],
+                "",
+            ]
     if analysis.timeline:
         lines += ["## Chronologie", ""]
         for event in analysis.timeline:
             lines += [
-                f"### {event.date} · {event.event}",
-                f"Quelle: {event.source}",
+                f"### {md_line(event.date)} · {md_line(event.event)}",
+                f"Quelle: {md_line(event.source)}",
                 "",
             ]
             if event.source_quote.strip():
                 lines += [
-                    "> " + event.source_quote.replace("\n", "\n> "),
+                    md_quote(event.source_quote),
                     "",
                     quote_confirmation(event.verified),
                     "",
                 ]
             if event.open_question:
-                lines += [f"Offen: {event.open_question}", ""]
+                lines += [f"Offen: {md_line(event.open_question)}", ""]
     if analysis.questions:
-        lines += ["## Offene Fragen", "", *[f"- {q}" for q in analysis.questions], ""]
+        lines += ["## Offene Fragen", "", *[f"- {md_line(q)}" for q in analysis.questions], ""]
     if analysis.sources:
-        lines += ["## Recherchequellen", "", *[f"- {s.title}: {s.url}" for s in analysis.sources]]
+        lines += [
+            "## Recherchequellen",
+            "",
+            *[f"- {md_line(s.title)}: <{s.url}>" for s in analysis.sources],
+        ]
     return "\n".join(lines).encode("utf-8")
 
 

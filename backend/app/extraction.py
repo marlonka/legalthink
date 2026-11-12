@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import os
 import re
 import subprocess
 import sys
@@ -172,8 +173,13 @@ def extract(data: bytes, suffix: str) -> tuple[str, int]:
     raise ExtractionError("Unterstützt werden PDF, DOCX, TXT und Markdown.")
 
 
+_CHILD_ENV = ("PATH", "SYSTEMROOT", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL")
+
+
 async def extract_isolated(data: bytes, suffix: str) -> tuple[str, int]:
     options = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+    # The parser handles untrusted files: give it no API key or other configuration.
+    env = {key: os.environ[key] for key in _CHILD_ENV if key in os.environ}
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
@@ -183,6 +189,7 @@ async def extract_isolated(data: bytes, suffix: str) -> tuple[str, int]:
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
+        env=env,
         **options,
     )
     try:
@@ -201,7 +208,20 @@ async def extract_isolated(data: bytes, suffix: str) -> tuple[str, int]:
     return result["text"], result["page_count"]
 
 
+def _limit_resources() -> None:
+    try:
+        import resource
+    except ImportError:  # Windows
+        return
+    limit = 2 * 1024**3
+    try:
+        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+    except (ValueError, OSError):
+        pass
+
+
 if __name__ == "__main__":
+    _limit_resources()
     try:
         text, pages = extract(sys.stdin.buffer.read(12 * 1024 * 1024 + 1), sys.argv[1])
         result = {"text": text, "page_count": pages}
