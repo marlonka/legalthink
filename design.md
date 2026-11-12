@@ -1,39 +1,19 @@
 # LegalThink – Gestaltung
 
-## Grundlage und Geltungsbereich
+## Geltungsbereich
 
-Grundlage sind die 13 vom Nutzer bereitgestellten ChatGPT-Screenshots: dunkle und helle Oberfläche, Navigation, Dokumentkarten, Eingabe, Menüs, Denkaufwand und Darstellungseinstellungen. Die Referenzen bleiben außerhalb des Repositories. Private Gesprächsinhalte, Namen und Verlaufstitel werden nicht übernommen.
+Dieses Dokument legt Flächen, Farben, Abstände, Zustände und Bewegung der LegalThink-Oberfläche fest. Es dient der Arbeit an den vorhandenen Abläufen: Dokumente auswählen, Prüfauftrag eingeben, Analyse starten, Befunde und Zitate prüfen, Berichte exportieren und Playbooks verwalten.
 
-Die Screenshots zeigen die visuelle Richtung. LegalThink behält seine vorhandenen Arbeitsabläufe: Dokumente auswählen, Prüfauftrag eingeben, Analyse starten, Befunde und Zitate prüfen, Berichte exportieren und Playbooks verwalten.
-
-### Was die Referenzen belegen
+Grundsätze:
 
 - Dunkle Flächen sind neutral und nahezu schwarz. Karten und Menüs heben sich durch geringe Helligkeitsunterschiede ab.
-- Eine schmale schwarze App-Leiste und eine breitere Inhaltsnavigation stehen links. Inhalt und Eingabe bilden eine gemeinsame, begrenzte Spalte.
+- Die Navigation steht links. Inhalt und Eingabe bilden eine gemeinsame, begrenzte Spalte.
 - Normale Navigationseinträge haben keine eigene Karte. Auswahl und Hover füllen die ganze Zeile mit einer dezenten Fläche.
 - Text ist linksbündig. Überschriften bleiben im Maßstab der Anwendung. Icons sind kleine, schlichte Linienzeichen.
 - Der Composer ist stark gerundet. Hinzufügen, Denkaufwand und Senden liegen in seiner Bedienzeile.
 - Menüs verwenden volle, gut anklickbare Zeilen. Zusatzinformationen sind dem Aktionsnamen untergeordnet.
 - Einstellungen verwenden beschriftete Gruppen, zeilenweise angeordnete Werte und dünne Trennlinien.
-- Die helle Darstellung nennt in den sichtbaren Einstellungen `#FCFCFC` als Hintergrund und `#0D0D0D` als Vordergrund.
-- Blau ist in mehreren Bildern als Akzent sichtbar. Die letzte Referenz zeigt die Bedienung monochrom. Blau ist deshalb keine feste Markenfarbe für LegalThink.
-
-### Was aus Screenshots nicht feststeht
-
-Schriftfamilie, CSS-Maße, Breakpoints, Hover-Verhalten, Fokusführung und Animationsparameter lassen sich daraus nicht zuverlässig bestimmen. Die folgenden Maße sind umsetzbare Festlegungen für LegalThink. Sie sind keine Behauptung über den Originalcode von ChatGPT.
-
-### Gemessene Bildwerte
-
-Die Pixel wurden mit `System.Drawing.GetPixel` in einem Raster von 4 px abgetastet. Die Werte beschreiben die gelieferten Bilddateien; sie beweisen keine identischen CSS-Werte im Original.
-
-| Referenz                                             | Gemessene, wiederkehrende Bildwerte                                                                                                                   |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dunkle Vollansichten, 1260 × 1301 und 1272 × 1295 px | Hauptfläche `#0E0E0E`, Karte `#1E1E1E`, äußere Leiste `#000000`, Composer `#212121`, Kontur `#323232`, Zeilenauswahl `#262626`, heller Text `#EDEDED` |
-| Letzte dunkle Vollansicht                            | Monochrome Nachrichtenfläche `#2D2D2D`                                                                                                                |
-| Helle Einstellungen, 1242 × 1061 px                  | Hauptfläche `#FCFCFC`, äußere Leiste `#F9F9F9`, Zeilenauswahl `#EFEFEF`, Kontur `#E2E2E2`, Text `#0D0D0D`                                             |
-| Denkaufwand, 483 × 191 px                            | Popover `#303030`, Wertanzeige `#383838`, inaktive Spur `#454545`, blauer Akzent `#3A83F7`                                                            |
-
-Die in den hellen Einstellungen eingeblendeten Farbwerte bestätigen Hintergrund und Vordergrund. Die dunkle Hauptfläche wird entsprechend den Bildpixeln auf `#0E0E0E` festgelegt. Der monochrome Akzent folgt der letzten Referenz.
+- Die Bedienung ist monochrom; es gibt keine Akzent- oder Markenfarbe.
 
 ## Flächen und Farben
 
@@ -55,13 +35,13 @@ Monochrome Bedienoberfläche. Farbe bleibt für Zustände und die Priorität ein
 
 Die Palette übernimmt gemessene Flächenwerte; Nebeninformationen und Primäraktionen sind daraus abgeleitete Implementierungswerte. Transparenz darf Text nicht unlesbar machen. Kontrast wird am gerenderten Ergebnis geprüft: mindestens 4,5:1 für normalen Text und 3:1 für große Schrift sowie relevante Bedienelemente. Rahmen zur rein dekorativen Trennung müssen nicht künstlich verstärkt werden.
 
-Die einzelne LegalThink-Navigation übernimmt die Hauptnavigation der Referenz. Schwarz beziehungsweise `#F9F9F9` gehören zur dortigen äußeren App-Leiste, die hier entfällt.
+LegalThink hat eine einzelne Navigation ohne zusätzliche äußere App-Leiste.
 
 ### Darstellung wählen
 
 Dunkel ist die Voreinstellung. In den Einstellungen stehen „Hell“, „Dunkel“ und „System“ zur Wahl. Die Auswahl bleibt im Browser gespeichert. „System“ folgt auch Änderungen der Betriebssystemdarstellung während einer geöffneten Sitzung. Ohne verfügbaren Browserspeicher bleibt die aktuelle Sitzung bedienbar; die Auswahl kann dann nach dem Neuladen zurückfallen.
 
-Das gewählte Erscheinungsbild gilt bereits beim ersten Rendern, damit kein heller Zwischenzustand vor einer dunklen Seite erscheint. Die statischen Referenzen belegen weder die Originalimplementierung dieser Umschaltung noch Schriftfamilie und Übergangsdauer.
+Das gewählte Erscheinungsbild gilt bereits beim ersten Rendern, damit kein heller Zwischenzustand vor einer dunklen Seite erscheint.
 
 Priorität wird durch Text und ein kleines Farbsignal vermittelt. Ein roter Punkt allein erklärt keinen Befund. Verifiziertes Zitat und juristische Einschätzung erhalten keine gemeinsame Erfolgsfarbe.
 
@@ -69,7 +49,7 @@ Priorität wird durch Text und ein kleines Farbsignal vermittelt. Ein roter Punk
 
 ### Desktop
 
-- Eine echte Navigation für LegalThink. Die zusätzliche App-Leiste aus der Referenz wird nicht nachgebaut; ihre Funktionen existieren hier nicht.
+- Eine Navigation für LegalThink ohne zusätzliche App-Leiste.
 - Zielbreite der Navigation: 288 px. Neue Analyse, Analysen, Playbooks und Einstellungen bleiben direkt erreichbar.
 - Keine erfundenen Projekte, Nutzerprofile, Aktivitätszahlen oder Verlaufseinträge.
 - Hauptinhalt mit 24–48 px seitlichem Abstand. Die sichtbare Breite bestimmt den Abstand, nicht ein großer fester Außenrand.
@@ -77,8 +57,6 @@ Priorität wird durch Text und ein kleines Farbsignal vermittelt. Ein roter Punk
 - Befundansicht: bis zu 1440 px. Befund und zugehöriger Dokumentausschnitt stehen nebeneinander, solange beide sinnvoll lesbar bleiben.
 - Fließtext möglichst 60–85 Zeichen je Zeile. Lange Klauseln erhalten ausreichend Breite; Zeilen werden nicht zur Erzeugung leerer Flächen eingeengt.
 - Navigation und Hauptinhalt können unabhängig scrollen. Fixierte Bedienelemente dürfen keine letzte Zeile verdecken.
-
-In den großen Referenzen ist die äußere App-Leiste ungefähr 48 px breit, die anschließende Navigation ungefähr 288 px. Die Inhaltsspalte ist ungefähr 768 px breit. Das sind visuelle Näherungen aus den gelieferten Bildern, keine ausgelesenen CSS-Werte.
 
 ### Größenraster
 
@@ -102,7 +80,7 @@ Radien folgen der Größe des Elements. Kleine Schaltflächen werden nicht zu Mi
 
 ## Typografie und Icons
 
-- Die bereits lokal eingebundene Inter bleibt die Implementierungsschrift. Die Originalschrift der Referenz ist aus den Bildern nicht sicher bestimmbar.
+- Schrift ist die lokal eingebundene Inter.
 - Fließtext und Texteingaben: 15–16 px, Zeilenhöhe 1,5–1,65.
 - Navigation, Buttons und kompakte Feldwerte: 14 px, mindestens 20 px Zeilenhöhe.
 - Ergänzende Metadaten: 12–13 px. Kein wesentlicher Zustand wird nur als kaum lesbare Kleinschrift dargestellt.
@@ -224,7 +202,7 @@ Tastaturfokus erhält eine sichtbare, kontrastreiche Kontur mit Abstand zur Elem
 
 ### Bewegung
 
-Die Screenshots belegen keine Dauer oder Physik von ChatGPT. Die folgenden Werte sind die abgestimmte Implementierung von LegalThink. Sie stehen zentral in `frontend/src/motion.tsx`. Verwendet wird `motion/react` (Motion, vormals Framer Motion).
+Die folgenden Werte sind die abgestimmte Implementierung von LegalThink. Sie stehen zentral in `frontend/src/motion.tsx`. Verwendet wird `motion/react` (Motion, vormals Framer Motion).
 
 | Preset | Steifigkeit | Dämpfung | Masse | Verwendung |
 | --- | --- | --- | --- | --- |
@@ -357,6 +335,5 @@ Hat jedes Element einen sinnvollen Platz und eine erkennbare Gewichtung? Tragen 
 - Dunkle und helle Darstellung auf harte Farbreste, Textkontrast und Fokus prüfen.
 - Bestehende Abläufe für Upload, Vergleichsreihenfolge, Analyseauswahl, Export und Playbook-Bearbeitung erhalten.
 - Tastaturfokus, Escape, Fokuswiederherstellung und reduzierte Bewegung prüfen.
-- Keine privaten Referenzinhalte oder Screenshot-Dateien einchecken.
 - Keine echten OpenAI-Anfragen während Entwicklung oder Tests.
 - Gestaltung und Implementierung gemeinsam aktualisieren, wenn sich Zielwerte bei der visuellen Prüfung ändern.

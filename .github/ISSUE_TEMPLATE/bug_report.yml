@@ -3,7 +3,7 @@ description: Reproduzierbaren Fehler in LegalThink beschreiben.
 body:
   - type: markdown
     attributes:
-      value: Verwende synthetische Beispiele, auch im privaten Repository. Keine Mandatsdaten, API-Schlüssel, `.env`-Dateien, Datenbanken oder vollständigen API-Anfragen hochladen.
+      value: Issues sind öffentlich. Verwende synthetische Beispiele. Keine Mandatsdaten, API-Schlüssel, `.env`-Dateien, Datenbanken oder vollständigen API-Anfragen hochladen.
   - type: textarea
     id: behavior
     attributes:

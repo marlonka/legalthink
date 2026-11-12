@@ -1,4 +1,4 @@
-<!-- Nur synthetische Daten verwenden, auch im privaten Repository. Keine Mandatsdaten, Schlüssel, .env-Dateien, Datenbanken oder vollständigen API-Anfragen anhängen. -->
+<!-- Pull Requests sind öffentlich. Nur synthetische Daten verwenden. Keine Mandatsdaten, Schlüssel, .env-Dateien, Datenbanken oder vollständigen API-Anfragen anhängen. -->
 
 ## Änderung
 

@@ -131,7 +131,7 @@ Drei unabhängige Reviews: Frontend-Zustand, Backend-Lifecycle und Dokumentvorsc
 - Vorlage links, Prüfauftragszähler rechts; Übertragungshinweis neben „Erweiterte Einstellungen“, auf schmalen Displays darunter. Hell/Dunkel sowie 320 und 390 px geprüft, kein horizontaler Überlauf. Fußzeile und Zähler beim Aufklappen über acht Desktop- und sechs Mobilabfragen unverändert (0 px Abweichung).
 - Synthetisches Modellprofil im isolierten Browser hinzugefügt, explizit ausgewählt und neu geladen: ID und Modellstandard erhalten, konfigurierte Denkstufe angeboten. Hinzufügen ändert die Auswahl nicht. Fehlende Websuche-Freigabe stoppt den Start vor einem API-Aufruf. Nach Wechsel zu Luna ließ sich das Testprofil entfernen. Keine Browserwarnungen oder -fehler in diesen Abläufen.
 - [Lighthouse](performance.md): Performance 97 mobil / 100 Desktop, Best Practices 100, CLS 0. Der lokale Ladeaudit ist kein Nachweis für einen späteren öffentlich gehosteten Betrieb.
-- Repository und Paketnamen auf `legalthink` umgestellt; GitHub bleibt privat, vorhandene Browserpräferenzen bleiben erhalten. [Namensvorprüfung](name-check.md) dokumentiert konkrete Registerabfragen ohne Markenfreigabe.
+- Repository und Paketnamen auf `legalthink` umgestellt; vorhandene Browserpräferenzen bleiben erhalten.
 - Bestehende API- und Downloadschutzfälle erweitert, keine neuen Testfälle. **50 Offline-Backendfälle und ein Build-Smoke-Test bestanden**, außerdem Produktionsbuild, TypeScript, Ruff, Prettier und Diffprüfung. Keine echten OpenAI-Anfragen.
 
 ## Abhängigkeiten und Laufzeiten – 22. Oktober 2026

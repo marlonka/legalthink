@@ -2,9 +2,11 @@
 
 # LegalThink
 
+[![Quality](https://github.com/marlonka/legalthink/actions/workflows/ci.yml/badge.svg)](https://github.com/marlonka/legalthink/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/marlonka/legalthink)](https://github.com/marlonka/legalthink/releases) [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-blue)](LICENSE)
+
 Lokal betriebene Webanwendung für juristische Dokumentarbeit: Verträge prüfen, Fassungen vergleichen, Sachverhalte ordnen und Datenschutz- oder Werbefragen bearbeiten. Dokumente und eingefügte Texte bilden die Quellen der Analyse; Fundstellen lassen sich neben dem Ergebnis öffnen. Die KI-Analyse nutzt die OpenAI Responses API.
 
-[Lokal starten](#lokal-starten) · [Aufgaben](#aufgaben) · [Konfiguration](#konfiguration) · [Daten und Grenzen](#daten-und-grenzen) · [Mitwirken](CONTRIBUTING.md)
+[Stand](#stand) · [Lokal starten](#lokal-starten) · [Aufgaben](#aufgaben) · [Konfiguration](#konfiguration) · [Daten und Grenzen](#daten-und-grenzen) · [Mitwirken](#mitwirken) · [English](#english)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/analysis-dark.jpg">
@@ -13,6 +15,13 @@ Lokal betriebene Webanwendung für juristische Dokumentarbeit: Verträge prüfen
 </picture>
 
 Die Screenshots zeigen die Anwendung mit synthetischen Beispieldaten.
+
+## Stand
+
+- Version 0.x: Funktionen und Datenformat können sich zwischen Releases ändern. Änderungen stehen unter [Releases](https://github.com/marlonka/legalthink/releases).
+- Für lokalen Einzelbenutzerbetrieb gebaut, nicht für einen gehosteten oder geteilten Dienst.
+- Die Ergebnisqualität mit echten Modellantworten ist nicht systematisch evaluiert. Die automatisierten Tests nutzen synthetische Daten und simulierte Providerantworten.
+- LegalThink richtet sich an juristisch qualifizierte Nutzer und erbringt keine Rechtsberatung. Ergebnisse sind Arbeitsentwürfe und ersetzen keine anwaltliche Prüfung.
 
 ## Aufgaben
 
@@ -41,14 +50,13 @@ Originaldateien bleiben zum Download erhalten. Eine bestätigte Fundstelle beleg
 
 ## Lokal starten
 
-Voraussetzungen: **Node.js 22.12+** und [uv](https://docs.astral.sh/uv/getting-started/installation/). Node.js 26 und Python 3.15 werden empfohlen und in CI verwendet; das Backend unterstützt Python ab 3.11.
+Voraussetzungen: **Node.js 22.12+** und [uv](https://docs.astral.sh/uv/getting-started/installation/). uv installiert bei Bedarf ein passendes Python (3.11 oder neuer). CI prüft mit Node.js 26 und Python 3.15 sowie das Backend zusätzlich mit Python 3.11.
 
 ```sh
 git clone https://github.com/marlonka/legalthink.git
 cd legalthink
-npm ci
 npm --prefix frontend ci
-uv sync --project backend --extra dev --frozen
+uv sync --project backend --frozen
 npm run dev
 ```
 
@@ -108,27 +116,43 @@ Weitere Betriebsoptionen stehen in der [Konfigurationsvorlage](backend/.env.exam
 | Material einer Analyse | Bis zu 1.000.000 Zeichen aus ausgewählten Dokumenten und eingefügtem Text zusammen |
 | Prüfauftrag | Separat bis zu 10.000 Zeichen |
 
-Vor dem Übermitteln von Mandatsdaten müssen Übermittlungsberechtigung, anwaltliche Verschwiegenheit, Datenschutz und erforderliche Verträge geklärt sein. Zugriffsschutz, Datensicherung und die Verwendung der Ergebnisse liegen beim Betreiber. Ausführliche Einordnung: [rechtliche Bestandsaufnahme](docs/legal-review.md) und [API-Datenverarbeitung](docs/openai-integration.md#data-handling-claims).
+Vor dem Übermitteln von Mandatsdaten müssen Übermittlungsberechtigung, anwaltliche Verschwiegenheit, Datenschutz und erforderliche Verträge geklärt sein. Zugriffsschutz, Datensicherung und die Verwendung der Ergebnisse liegen beim Betreiber. Ausführliche Einordnung: [rechtliche Hinweise für Betreiber](docs/legal-review.md) und [API-Datenverarbeitung](docs/openai-integration.md#data-handling-claims).
 
-## Entwicklung und Dokumentation
+## Sicherheitslücken melden
 
-React und TypeScript bilden die Oberfläche; FastAPI und SQLite das Backend. API-Schlüssel werden nicht an den Browser ausgeliefert. Die automatisierten Tests nutzen synthetische Daten und simulierte Providerantworten.
+Nicht als Issue, sondern vertraulich über [GitHub Private Vulnerability Reporting](https://github.com/marlonka/legalthink/security/advisories/new). Einzelheiten und Schutzgrenzen: [SECURITY.md](SECURITY.md).
+
+## Mitwirken
+
+Fehlerberichte brauchen reproduzierbare Schritte und synthetische Beispieldaten. Issues und Pull Requests sind öffentlich: keine Mandatsunterlagen, Zugangsdaten oder lokalen Datenbanken veröffentlichen. Größere Änderungen zuerst in einem Issue beschreiben. Einrichtung, Prüfungen und Beitragsregeln: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Dokumentation
+
+React und TypeScript bilden die Oberfläche; FastAPI und SQLite das Backend. API-Schlüssel werden nicht an den Browser ausgeliefert.
 
 | Dokument | Inhalt |
 | --- | --- |
 | [Architektur](docs/architecture.md) | Komponenten, Speicherung, Quellenmodell und Betriebsgrenzen |
 | [OpenAI-Integration](docs/openai-integration.md) | API-Vertrag, Modelle, Prompt-Caching, Webrecherche und Regionen |
+| [Rechtliche Hinweise für Betreiber](docs/legal-review.md) | Lizenz, Haftung, Mandatsgeheimnis und Datenschutz beim Einsatz |
 | [Gestaltung](design.md) | Themes, Komponenten, Barrierefreiheit und Bewegung |
 | [Designsystem für andere Projekte](docs/reusable/design.md) | Eigenständige Regeln, Tokens und Interaktionsmuster für Weboberflächen |
 | [Prüfprotokoll](docs/validation.md) | Ausgeführte Prüfungen und verbleibende Grenzen |
 | [Performance](docs/performance.md) | Messbedingungen und Ergebnisse |
 | [Modellbewertung](evals/README.md) | Synthetische Fälle und Bewertungskriterien |
-| [Sicherheit](SECURITY.md) | Sicherheitsprobleme melden und Schutzgrenzen der Anwendung |
 
-## Mitwirken und Lizenz
+## Lizenz
 
-Fehlerberichte brauchen reproduzierbare Schritte und synthetische Beispieldaten. Keine Mandatsunterlagen, Zugangsdaten oder lokalen Datenbanken in Issues und Pull Requests veröffentlichen. Einrichtung, relevante Prüfungen und Beitragsregeln: [CONTRIBUTING.md](CONTRIBUTING.md).
+Der Projektcode steht unter der [MIT-Lizenz](LICENSE), Copyright © 2026 Marlon Kaulich, und wird ohne Gewährleistung bereitgestellt. Ausnahme: Teile von `frontend/src/source-preview.css` stammen aus PDF.js (Apache-2.0). Bibliotheken und Fonts behalten ihre eigenen Lizenzen; der Frontend-Build liefert die Hinweise unter `/third-party-licenses.txt` aus. LegalThink ist ein unabhängiges Projekt und nicht mit OpenAI verbunden.
 
-Der Projektcode steht unter der [MIT-Lizenz](LICENSE), Copyright © 2026 Marlon Kaulich. Bibliotheken und Fonts behalten ihre eigenen Lizenzen; der Frontend-Build liefert die Hinweise unter `/third-party-licenses.txt` aus. Das Projekt ist unabhängig von OpenAI.
+## English
 
-Die [Namensvorprüfung](docs/name-check.md) dokumentiert den bisherigen Rechercheumfang und offene Fragen; sie bestätigt keine Markenfreiheit.
+LegalThink is a locally run web app for German legal document work: contract review, comparison of two drafts, chronologies, data-protection (DPA/DPIA) and advertising checks. Uploaded documents (PDF, DOCX, TXT, Markdown) and pasted text are the sources; every finding links to its quote, and each quote is checked for a verbatim match in the source text. Analysis uses the OpenAI Responses API with a server-side key; starting an analysis sends the selected content to OpenAI and may incur API costs. The bundled examples work without a key.
+
+```sh
+npm --prefix frontend ci
+uv sync --project backend --frozen
+npm run dev   # http://localhost:5175
+```
+
+Status: version 0.x, single-user local operation, output quality not systematically evaluated. LegalThink is a tool for legal professionals and does not provide legal advice. The interface and documentation are in German. Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/marlonka/legalthink/security/advisories/new). Licensed under [MIT](LICENSE).

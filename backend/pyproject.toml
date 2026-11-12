@@ -1,6 +1,6 @@
 [project]
 name = "legalthink-api"
-version = "0.2.0"
+version = "0.3.0"
 description = "LegalThink document review API with source-linked analysis"
 license = "MIT"
 requires-python = ">=3.11"

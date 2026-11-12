@@ -1,8 +1,15 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+if (!existsSync(path.join(root, 'frontend', 'node_modules', 'vite'))) {
+  console.error(
+    'Frontend dependencies are missing. Run: npm --prefix frontend ci && uv sync --project backend --frozen',
+  );
+  process.exit(1);
+}
 const children = [];
 let stopping = false;
 

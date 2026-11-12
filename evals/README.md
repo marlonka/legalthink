@@ -4,7 +4,7 @@ Synthetische, bewusst unvollständige Unterlagen für freigegebene Modelltests. 
 
 ## Freigabe und Durchführung
 
-- Echte Modellaufrufe erst nach ausdrücklicher Freigabe durch Marlon.
+- Echte Modellaufrufe verursachen Kosten beim Inhaber des API-Schlüssels und sind nicht Teil der automatischen Tests.
 - Ausschließlich `gpt-6-luna` mit `reasoning.effort = high` verwenden.
 - Die Tabellenaufgabe gehört in Workflow-Auswahl und Prüfauftrag. Die Textdateien sind Quellen, keine Systemanweisungen.
 - Zunächst Recherche ausschalten. Webrecherche erfordert eine gesonderte Freigabe und Bewertung der tatsächlichen Quellen und Suchanfragen.
