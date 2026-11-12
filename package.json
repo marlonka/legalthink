@@ -17,7 +17,7 @@
     "format:check": "prettier --check frontend/src frontend/*.ts tests scripts *.ts *.json"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "1.65.0",
     "prettier": "3.10.0"
   }
 }
