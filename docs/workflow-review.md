@@ -24,7 +24,7 @@
 
 ## Zustände und Umfang
 
-- Luna/Hoch ist der Code-Standard im Frontend und Backend, auch bei eigener Installation. Eine bewusste Modellauswahl bleibt im betreffenden Browser gespeichert; sie ändert andere Browserprofile nicht.
+- Luna/Sehr hoch (`xhigh`) ist der Code-Standard im Frontend und Backend, auch bei eigener Installation. Eine bewusste Modellauswahl bleibt im betreffenden Browser gespeichert; sie ändert andere Browserprofile nicht.
 - Der Prüfauftrag ist optional. Workflow und Datenschutz-Aufgabe bestimmen die Prüfanweisungen im Backend. Platzhalter sind Beispiele und werden nicht mitgeschickt.
 - Dokumente, Prüfauftrag, Playbook und Rechercheeinstellung bleiben je Aufgabe während der geöffneten Sitzung erhalten. Neuladen setzt diese Entwürfe zurück.
 - Ein Beispiel verändert keinen eigenen Entwurf und benötigt keinen API-Schlüssel. Die Beispielfälle verwenden ausschließlich synthetische Dokumente und vorgegebene Ergebnisse.
@@ -36,4 +36,4 @@ Die Browserläufe speichern neue Start- und Ergebnisaufnahmen für alle sieben S
 
 Die damaligen Browserprüfungen wurden am 3. Oktober 2026 entfernt. Erhalten bleiben ein Start-/Exporttest sowie Backendprüfungen für Datenspeicherung, Quellenzuordnung und die OpenAI-Anbindung. Aktueller Umfang und Grenzen: [Prüfprotokoll](validation.md).
 
-Diese Prüfung belegt Bedienverhalten und deterministische Anwendungseigenschaften. Rechtliche Ergebnisqualität, reale Modellantworten, Recherche und Kosten bleiben Gegenstand späterer freigegebener Tests mit Luna/Hoch.
+Diese Prüfung belegt Bedienverhalten und deterministische Anwendungseigenschaften. Rechtliche Ergebnisqualität, reale Modellantworten, Recherche und Kosten bleiben Gegenstand späterer freigegebener Tests mit Luna/`high`.

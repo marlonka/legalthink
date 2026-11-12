@@ -3,12 +3,13 @@ name: Release
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 5
     if: github.ref == 'refs/heads/main'
     steps:
