@@ -15,6 +15,12 @@ class ProtectedDocumentError(ValueError):
     pass
 
 
+def _check_table(table: str) -> None:
+    # Table names are interpolated into SQL; this must hold even under `python -O`.
+    if table not in TABLES:
+        raise ValueError("Unknown table")
+
+
 class Store:
     def __init__(self, data_dir: Path):
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -45,7 +51,7 @@ class Store:
             db.close()
 
     def put(self, table: str, value: dict[str, Any]) -> None:
-        assert table in TABLES
+        _check_table(table)
         with self.connection() as db:
             db.execute(
                 f"INSERT INTO {table} (id,body) VALUES (?,?) "
@@ -55,7 +61,7 @@ class Store:
 
     def update(self, table: str, value: dict[str, Any]) -> bool:
         """Replace an existing record without resurrecting concurrently deleted content."""
-        assert table in TABLES
+        _check_table(table)
         with self.connection() as db:
             return (
                 db.execute(
@@ -122,13 +128,13 @@ class Store:
             )
 
     def get(self, table: str, item_id: str) -> dict[str, Any] | None:
-        assert table in TABLES
+        _check_table(table)
         with self.connection() as db:
             row = db.execute(f"SELECT body FROM {table} WHERE id=?", (item_id,)).fetchone()
         return json.loads(row[0]) if row else None
 
     def list(self, table: str) -> list[dict[str, Any]]:
-        assert table in TABLES
+        _check_table(table)
         with self.connection() as db:
             rows = db.execute(f"SELECT body FROM {table} ORDER BY created_at DESC, rowid DESC")
             return [json.loads(row[0]) for row in rows]
@@ -140,9 +146,10 @@ class Store:
                 "DELETE FROM documents WHERE id=? AND COALESCE(json_extract(body,'$.is_demo'),0)=0",
                 [(item,) for item in document_ids],
             )
+        self._checkpoint()
 
     def delete(self, table: str, item_id: str) -> bool:
-        assert table in TABLES
+        _check_table(table)
         with self.connection() as db:
             if table == "documents":
                 db.execute("BEGIN IMMEDIATE")
@@ -150,4 +157,14 @@ class Store:
                 if row and json.loads(row[0]).get("is_demo"):
                     raise ProtectedDocumentError("Systembeispiele können nicht gelöscht werden.")
             deleted = db.execute(f"DELETE FROM {table} WHERE id=?", (item_id,)).rowcount > 0
+        if deleted:
+            self._checkpoint()
         return deleted
+
+    def _checkpoint(self) -> None:
+        """Move deleted pages out of the WAL file so secure_delete also covers it."""
+        db = sqlite3.connect(self.path, timeout=10)
+        try:
+            db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            db.close()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
@@ -11,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from openai import AsyncOpenAI
+from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
@@ -46,6 +48,25 @@ DOCUMENT_MEDIA_TYPES = {
 }
 
 
+logger = logging.getLogger("legalthink")
+
+
+def skipped_record(table: str) -> None:
+    # Record content may be confidential; log only that a row was unreadable.
+    logger.warning("Skipped an unreadable stored record in %s", table)
+
+
+def readable(model: type[BaseModel], rows: list[dict]) -> list:
+    """Validate stored rows one by one so one damaged row cannot hide all others."""
+    items = []
+    for row in rows:
+        try:
+            items.append(model.model_validate(row))
+        except ValidationError:
+            skipped_record(model.__name__)
+    return items
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     config = settings or Settings.from_env()
 
@@ -75,7 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="LegalThink",
-        version="0.2.0",
+        version="0.3.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -133,7 +154,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unexpected_error(request: Request, exc: Exception):
-        # No provider exceptions, document content or keys leave the API.
+        # No provider exceptions, document content or keys leave the API or the log.
+        logger.error("Unexpected %s on %s %s", type(exc).__name__, request.method, request.url.path)
         return JSONResponse(
             {"detail": "Die Anfrage konnte nicht verarbeitet werden. Bitte erneut versuchen."},
             status_code=500,
@@ -153,7 +175,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/documents", response_model=list[Document])
     def list_documents():
-        return app.state.store.list("documents")
+        return readable(Document, app.state.store.list("documents"))
 
     @app.post("/api/documents", response_model=Document, status_code=201)
     async def upload(file: Annotated[UploadFile, File()]):
@@ -277,8 +299,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/analyses", response_model=list[Analysis])
     def list_analyses():
-        documents = {doc["id"]: doc for doc in app.state.store.list("documents")}
-        return [prepare_analysis(value, documents) for value in app.state.store.list("analyses")]
+        documents = {
+            doc.id: doc.model_dump()
+            for doc in readable(Document, app.state.store.list("documents"))
+        }
+        analyses = []
+        for value in app.state.store.list("analyses"):
+            try:
+                analyses.append(prepare_analysis(value, documents))
+            except ValidationError:
+                skipped_record("analyses")
+        return analyses
 
     def prepare_analysis(value: dict, documents: dict | None = None) -> Analysis:
         def source_document(source_id):
@@ -374,7 +405,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 done, _ = await asyncio.wait(
                     {task, disconnect}, return_when=asyncio.FIRST_COMPLETED
                 )
-                if disconnect in done or await request.is_disconnected():
+                # A finished provider call is paid for; keep its result even if the
+                # browser disconnected at the same moment.
+                if task not in done:
                     raise HTTPException(499, "Analyse abgebrochen.")
                 result = await task
                 if pasted_document:
@@ -413,7 +446,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/playbooks", response_model=list[Playbook])
     def list_playbooks():
-        return app.state.store.list("playbooks")
+        return readable(Playbook, app.state.store.list("playbooks"))
 
     @app.post("/api/playbooks", response_model=Playbook, status_code=201)
     def save_playbook(body: PlaybookInput):

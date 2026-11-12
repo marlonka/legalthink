@@ -91,7 +91,9 @@ export default function TextPreview({
     const controller = new AbortController();
     setLoading(true);
     setText('');
-    fetch(`/api/documents/${document.id}/original`, { signal: controller.signal })
+    fetch(`/api/documents/${encodeURIComponent(document.id)}/original`, {
+      signal: controller.signal,
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error('Die Originaldatei konnte nicht geladen werden.');
         return response.text();

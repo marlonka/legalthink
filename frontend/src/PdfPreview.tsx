@@ -246,7 +246,7 @@ export default function PdfPreview({
     userNavigated.current = false;
     scrollAnchor.current = { page: initialPageRef.current, fraction: 0 };
     const task = getDocument({
-      url: `/api/documents/${documentId}/original`,
+      url: `/api/documents/${encodeURIComponent(documentId)}/original`,
       enableXfa: false,
       cMapUrl: '/pdfjs/cmaps/',
       cMapPacked: true,

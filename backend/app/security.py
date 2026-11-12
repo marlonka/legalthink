@@ -22,7 +22,7 @@ class SecurityBoundary:
         self.settings = settings
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
+        if scope["type"] not in {"http", "websocket"}:
             await self.app(scope, receive, send)
             return
         headers = {
@@ -38,7 +38,31 @@ class SecurityBoundary:
         if origin and origin not in self.settings.allowed_origins:
             await JSONResponse({"detail": "Origin nicht freigegeben."}, 403)(scope, receive, send)
             return
+        if scope["type"] == "websocket":
+            # No WebSocket routes exist; never let one bypass the HTTP boundary.
+            await send({"type": "websocket.close", "code": 1008})
+            return
+        method = scope.get("method", "GET")
         if scope.get("path", "").startswith("/api/"):
+            if headers.get("sec-fetch-site") == "cross-site" or (
+                method not in {"GET", "HEAD", "OPTIONS"}
+                and not origin
+                and headers.get("sec-fetch-site") not in {None, "same-origin", "none"}
+            ):
+                await JSONResponse({"detail": "Origin nicht freigegeben."}, 403)(
+                    scope, receive, send
+                )
+                return
+            forwarded = any(
+                name in headers for name in ("forwarded", "x-forwarded-for", "x-real-ip")
+            )
+            if not self.settings.allow_remote and forwarded:
+                # A tunnel or proxy on this machine connects from loopback. Its
+                # forwarding headers reveal that the request did not start locally.
+                await JSONResponse(
+                    {"detail": "Dieser Arbeitsbereich ist nur lokal erreichbar."}, 403
+                )(scope, receive, send)
+                return
             client = scope.get("client")
             try:
                 loopback = bool(client and ipaddress.ip_address(client[0]).is_loopback)
@@ -51,7 +75,7 @@ class SecurityBoundary:
                 return
             token = self.settings.api_token
             # Preflight does not read data or perform a mutation.
-            if token and scope["method"] != "OPTIONS":
+            if token and method != "OPTIONS":
                 actual = headers.get("authorization", "")
                 if not hmac.compare_digest(actual.encode(), f"Bearer {token}".encode()):
                     await JSONResponse({"detail": "Zugriffstoken erforderlich."}, 401)(

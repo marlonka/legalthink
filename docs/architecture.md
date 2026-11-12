@@ -40,7 +40,7 @@ The server provides the built-in model catalog. Users can add model IDs and decl
 
 ## Lessons from the previous application
 
-Reviewed the private [LegalThink repository](https://github.com/marlonka/LegalThink-KI-Intelligenz-f-r-Juristen), including `services/geminiService.ts`, `constants.ts`, `contexts/AppContext.tsx`, `views/ContractReview.tsx`, and `vite.config.ts`.
+An earlier, unpublished browser-only version of LegalThink called a hosted model directly from the frontend. Its design decisions were reviewed for this rewrite.
 
 | Observed implementation | Rewrite decision |
 | --- | --- |
@@ -56,7 +56,7 @@ These are code-review findings; the old application was not run or assessed with
 
 ## Operational scope
 
-The initial delivery is a local, single-user workspace. Access is restricted to loopback by default. The optional remote **API** mode requires `LEGALTHINK_ALLOW_REMOTE`, a bearer token of at least 32 characters in `LEGALTHINK_API_TOKEN`, and explicit `LEGALTHINK_ALLOWED_HOSTS` and `LEGALTHINK_ALLOWED_ORIGINS`. The browser UI does not implement a bearer-token login and is delivered for local operation. A shared bearer token does not provide tenant separation. A production multi-user service additionally needs authenticated user sessions, tenant authorization on every object, encrypted storage, retention/deletion controls, audit events, abuse/rate controls, and an approved deployment configuration. A private GitHub repository does not provide these application controls.
+The initial delivery is a local, single-user workspace. Access is restricted to loopback by default. The optional remote **API** mode requires `LEGALTHINK_ALLOW_REMOTE`, a bearer token of at least 32 characters in `LEGALTHINK_API_TOKEN`, and explicit `LEGALTHINK_ALLOWED_HOSTS` and `LEGALTHINK_ALLOWED_ORIGINS`. The browser UI does not implement a bearer-token login and is delivered for local operation. A shared bearer token does not provide tenant separation. A production multi-user service additionally needs authenticated user sessions, tenant authorization on every object, encrypted storage, retention/deletion controls, audit events, abuse/rate controls, and an approved deployment configuration.
 
 Document extraction accepts PDF, DOCX, TXT, and Markdown, with a 12 MiB upload limit, 200,000 extracted characters per document, and 120 PDF pages. Extraction runs in a disposable subprocess with a 25-second limit. An analysis accepts up to 1,000,000 Unicode code points across selected documents and pasted source text, plus the separate bounded analysis instructions. Inputs above the limit are rejected without truncation. The asynchronous provider request has a 600-second timeout (900 seconds for Flex) and no automatic retries. Confirm the current values in backend configuration when changing deployment limits.
 

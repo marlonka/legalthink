@@ -1,23 +1,19 @@
-# Rechtliche Prüfung vor einer Veröffentlichung
+# Rechtliche Hinweise für Betreiber
 
-Stand: 3. Oktober 2026. Geprüft wurden Anwendung, README, Lizenzbestand und die unten verlinkten Primärquellen. Dies ist eine technische und dokumentarische Bestandsaufnahme, keine anwaltliche Freigabe. Verträge, Rechteinhaberschaft und konkrete Mandate wurden nicht geprüft.
+Stand: 12. November 2026. Dies ist eine technische und dokumentarische Einordnung, keine Rechtsberatung und keine anwaltliche Freigabe eines konkreten Einsatzes.
 
-## Ergebnis
+## Lizenz und Zielgruppe
 
-Ein Hinweis „auf eigene Verantwortung“ verhindert weder Ansprüche noch Klagen. Der eigene Projektcode erhält auf Entscheidung des Projektinhabers die MIT-Lizenz. Die sichtbare Anwendung heißt künftig „LegalThink“. Vor einer Veröffentlichung bleiben insbesondere **Namensrechte und Rechte an Beiträgen** zu klären; eine rechtliche Freigabe folgt daraus nicht.
-
-| Befund | Maßnahme / verbleibende Entscheidung |
-| --- | --- |
-| Keine Lizenz für den eigenen Projektcode vorhanden. | Unveränderte [MIT-Lizenz](../LICENSE) mit Copyright „2026 Marlon Kaulich“ ergänzt. Herkunft und Nutzungsrechte aller Beiträge, Grafiken und übernommenen Texte bleiben vor Veröffentlichung zu prüfen. |
-| Lizenzhinweise von Frontend-Bibliotheken fehlten teilweise im Build. | Der Build liefert vollständige Hinweise unter `/third-party-licenses.txt`; PDF-Ressourcen behalten zusätzlich ihre jeweiligen Lizenzdateien. Python-Pakete behalten die Lizenzdateien ihrer Distributionen. Bei eigenen Installationspaketen/Containern müssen diese mitgeliefert werden. |
-| Nutzer konnten Verantwortung für eingegebene Daten und Ergebnisverwendung nur aus verstreuten Hinweisen erkennen. | Einstellungen und README benennen Übermittlungsberechtigung, Verschwiegenheit, Datenschutz, Betriebsschutz und eigene Ergebnisprüfung. Diese Informationen sind kein pauschaler Haftungsausschluss. |
-| Einzelbenutzer-Anwendung ohne Benutzeranmeldung oder Datenbankverschlüsselung. | Keine ungeschützte Internetfreigabe. Mehrbenutzerbetrieb und gehostetes Angebot benötigen eine gesonderte technische und rechtliche Prüfung. |
+- Der Projektcode steht unter der [MIT-Lizenz](../LICENSE). Ausnahme: Teile von `frontend/src/source-preview.css` stammen aus PDF.js (Apache-2.0, Mozilla Foundation); der Hinweis steht in der Datei.
+- Der Build schreibt die Lizenzen aller ausgelieferten Frontend-Bibliotheken nach `dist/third-party-licenses.txt`; PDF-Ressourcen behalten zusätzlich ihre Lizenzdateien. Wer gebaute Pakete oder Container weitergibt, muss diese Dateien mitliefern.
+- LegalThink ist ein Werkzeug für juristisch qualifizierte Nutzer. Es erbringt keine Rechtsdienstleistung; Ergebnisse sind Arbeitsentwürfe und ersetzen keine anwaltliche Prüfung.
+- LegalThink ist ein unabhängiges Projekt und nicht mit OpenAI verbunden. „GPT“ und „OpenAI“ werden nur zur Beschreibung der genutzten API verwendet ([OpenAI-Markenrichtlinien](https://openai.com/brand/)).
 
 ## Haftung und Lizenz
 
 Der eigene Projektcode steht unter der unveränderten MIT-Lizenz. Ihre Erlaubnis zur Nutzung und Weitergabe ist von der Wirksamkeit einzelner Haftungsklauseln zu unterscheiden. Keine selbst formulierte Zusage „unter keinen Umständen haftbar“ ergänzen.
 
-Vorsatz lässt sich nach [§ 276 Abs. 3 BGB](https://www.gesetze-im-internet.de/bgb/__276.html) nicht im Voraus ausschließen. Vorformulierte Bedingungen unterliegen je nach Vertragsverhältnis der Inhaltskontrolle; maßgeblich sind insbesondere [§ 307 BGB](https://www.gesetze-im-internet.de/bgb/__307.html), [§ 309 BGB](https://www.gesetze-im-internet.de/bgb/__309.html) und der unterschiedliche Anwendungsbereich nach [§ 310 BGB](https://www.gesetze-im-internet.de/bgb/__310.html). Eine kostenlose Bereitstellung oder Open-Source-Lizenz bedeutet deshalb keine pauschale Haftungsfreiheit. Vor Veröffentlichung Lizenz und begleitende Aussagen anwaltlich auf das konkrete Vertriebsmodell prüfen lassen.
+Vorsatz lässt sich nach [§ 276 Abs. 3 BGB](https://www.gesetze-im-internet.de/bgb/__276.html) nicht im Voraus ausschließen. Vorformulierte Bedingungen unterliegen je nach Vertragsverhältnis der Inhaltskontrolle; maßgeblich sind insbesondere [§ 307 BGB](https://www.gesetze-im-internet.de/bgb/__307.html), [§ 309 BGB](https://www.gesetze-im-internet.de/bgb/__309.html) und der unterschiedliche Anwendungsbereich nach [§ 310 BGB](https://www.gesetze-im-internet.de/bgb/__310.html). Eine kostenlose Bereitstellung oder Open-Source-Lizenz bedeutet deshalb keine pauschale Haftungsfreiheit. Wer LegalThink weitergibt, hostet oder kommerziell anbietet, sollte Lizenz und begleitende Aussagen für das konkrete Modell anwaltlich prüfen lassen.
 
 ## Mandatsdaten und OpenAI
 
@@ -27,10 +23,8 @@ Bei personenbezogenen Daten sind unter anderem Rechtsgrundlage, Datenminimierung
 
 Die [OpenAI-Vertragsbedingungen](https://openai.com/policies/services-agreement/) ordnen dem API-Kunden insbesondere die notwendigen Rechte an Eingaben und die Bewertung der Ausgaben zu. Maßgeblich bleiben die eigenen Verträge und [OpenAI-Datenkontrollen](https://developers.openai.com/api/docs/guides/your-data). Die App bestätigt weder Vertragsabschluss noch Projektfreigaben. Webrecherche kann aus Unterlagen abgeleitete Suchanfragen erzeugen; ihre Zulässigkeit ist mitzuprüfen.
 
-## Grenzen dieser Prüfung
+## Was diese Hinweise nicht abdecken
 
-- Keine vollständige Prüfung der Rechtekette früherer Beiträge, Referenzen und KI-generierter Bestandteile.
 - Keine Freigabe eines gehosteten oder kostenpflichtigen Angebots. Anbieterpflichten, Datenschutzhinweise, Vertragsgestaltung und eine mögliche Einordnung nach RDG und KI-Verordnung hängen vom tatsächlichen Angebot und Einsatz ab.
+- Keine Prüfung von Markenrechten am Namen „LegalThink“.
 - Keine Zertifizierung der Ausgabequalität. Zitatabgleich bestätigt Textfundstellen; Rechtslage, Tatsachen, Fristen und Handlungsempfehlungen müssen fachlich geprüft werden.
-
-Die Nutzungshinweise dokumentieren Grenzen und Zuständigkeiten. Sie ersetzen keine technischen Schutzmaßnahmen oder projektbezogenen Verträge.

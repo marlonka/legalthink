@@ -27,7 +27,7 @@ Umsetzung: [Prompts](../backend/app/prompts.py), [Anfrageaufbau](../backend/app/
 
 ## Verbleibende Grenze bei Webrecherche
 
-Recherche ist standardmäßig ausgeschaltet. Der ausdrückliche Schalter und die UI-Warnung weisen darauf hin, dass Suchanfragen Dokumentinhalte enthalten können. Bei aktivierter Recherche erhält derselbe Modellaufruf Dokumente und Suchwerkzeug. Datenminimierung in Suchanfragen wird per Prompt angewiesen, nicht technisch erzwungen. Eine Beschränkung auf amtliche Suchziele trennt den vertraulichen Kontext nicht vom Suchwerkzeug.
+Recherche ist standardmäßig aktiviert und über das Globussymbol neben der Modellauswahl abschaltbar. Der Schalter und die UI-Warnung weisen darauf hin, dass Suchanfragen Dokumentinhalte enthalten können. Bei aktivierter Recherche erhält derselbe Modellaufruf Dokumente und Suchwerkzeug. Datenminimierung in Suchanfragen wird per Prompt angewiesen, nicht technisch erzwungen. Eine Beschränkung auf amtliche Suchziele trennt den vertraulichen Kontext nicht vom Suchwerkzeug.
 
 Eine getrennte Recherche mit begrenztem Kontext wäre eine weitere Architekturentscheidung. Automatisch erzeugte „anonyme“ Fragen garantieren ebenfalls keine Geheimhaltung: Details können erhalten bleiben oder Rückschlüsse ermöglichen. Statische Rechtsfragen verringern die Fallspezifität. In dieser Änderung wurde keine zusätzliche kostenpflichtige Recherchephase gebaut.
 
