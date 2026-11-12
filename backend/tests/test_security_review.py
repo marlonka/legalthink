@@ -59,6 +59,19 @@ def test_remote_client_cannot_spoof_loopback_using_forwarded_headers(tmp_path):
     assert response.status_code == 403
 
 
+def test_local_tunnel_and_cross_site_requests_are_not_treated_as_local(local_client):
+    # A tunnel or proxy on this machine connects from loopback and may rewrite Host.
+    tunnelled = local_client.get("/api/documents", headers={"X-Forwarded-For": "203.0.113.9"})
+    # Browsers mark cross-site requests even where an Origin header is absent.
+    cross_site = local_client.post(
+        "/api/playbooks",
+        json={"name": "Untrusted", "content": "Must never persist"},
+        headers={"Sec-Fetch-Site": "cross-site"},
+    )
+    assert tunnelled.status_code == cross_site.status_code == 403
+    assert local_client.get("/api/playbooks").json() == []
+
+
 def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tmp_path):
     token = "synthetic-token-for-offline-tests-only"
     app = create_app(
