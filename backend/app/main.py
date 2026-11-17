@@ -36,7 +36,7 @@ from .schemas import (
     new_id,
     now,
 )
-from .security import RequestTooLarge, SecurityBoundary
+from .security import SecurityBoundary
 from .static_assets import BuildAssets
 from .store import ProtectedDocumentError, Store
 
@@ -144,21 +144,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=422,
         )
 
-    @app.exception_handler(RequestTooLarge)
-    async def body_too_large(request: Request, exc: RequestTooLarge):
-        return JSONResponse({"detail": "Die Anfrage ist zu groß."}, status_code=413)
-
+    # Unexpected errors are answered and logged by SecurityBoundary, which catches them
+    # before Starlette's error middleware could log confidential exception values.
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException):
-        return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
-
-    @app.exception_handler(Exception)
-    async def unexpected_error(request: Request, exc: Exception):
-        # No provider exceptions, document content or keys leave the API or the log.
-        logger.error("Unexpected %s on %s %s", type(exc).__name__, request.method, request.url.path)
         return JSONResponse(
-            {"detail": "Die Anfrage konnte nicht verarbeitet werden. Bitte erneut versuchen."},
-            status_code=500,
+            {"detail": str(exc.detail)}, status_code=exc.status_code, headers=exc.headers
         )
 
     @app.get("/api/health")
@@ -494,17 +485,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 GZipMiddleware(BuildAssets(directory=assets), minimum_size=1000, compresslevel=6),
                 name="assets",
             )
+        # Public build files are known at startup. Request paths never reach the file
+        # system, so they cannot point outside the build or at a network share.
+        public_files = {
+            file.relative_to(config.frontend_dir).as_posix(): file
+            for file in config.frontend_dir.rglob("*")
+            if file.is_file() and not file.is_relative_to(assets)
+        }
 
         @app.get("/{path:path}")
         def frontend(path: str):
             if path.startswith("api/"):
                 raise HTTPException(404, "API-Endpunkt nicht gefunden.")
-            target = (config.frontend_dir / path).resolve()
-            if target.is_relative_to(config.frontend_dir.resolve()) and target.is_file():
-                return FileResponse(target, headers={"Cache-Control": "no-cache"})
-            return FileResponse(
-                config.frontend_dir / "index.html", headers={"Cache-Control": "no-cache"}
-            )
+            target = public_files.get(path, config.frontend_dir / "index.html")
+            return FileResponse(target, headers={"Cache-Control": "no-cache"})
 
     return app
 

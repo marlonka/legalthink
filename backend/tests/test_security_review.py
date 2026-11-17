@@ -106,6 +106,14 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
             client.get("/api/playbooks", headers={**authorized, "Origin": "null"}).status_code
             == 403
         )
+    # Behind a proxy with a path prefix, routes still match /api/…; so must the boundary.
+    with TestClient(
+        app,
+        base_url="https://review.example",
+        root_path="/legalthink",
+        client=("198.51.100.24", 12345),
+    ) as prefixed:
+        assert prefixed.get("/legalthink/api/playbooks").status_code == 401
 
 
 _PDF_TEXT = b"BT /F1 12 Tf 72 720 Td (Ein pruefbarer Vertragstext.) Tj ET"

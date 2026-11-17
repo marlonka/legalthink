@@ -2,11 +2,23 @@ from __future__ import annotations
 
 import hmac
 import ipaddress
+import logging
 
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 from .config import Settings
+
+logger = logging.getLogger("legalthink")
+
+
+def route_path(scope) -> str:
+    """The path routes match: without a proxy's root path, as in Starlette's routing."""
+    path: str = scope.get("path", "")
+    root: str = scope.get("root_path", "")
+    if root and path.startswith(root) and (path == root or path[len(root)] == "/"):
+        return path[len(root) :]
+    return path
 
 
 class RequestTooLarge(HTTPException):
@@ -42,8 +54,14 @@ class SecurityBoundary:
             # No WebSocket routes exist; never let one bypass the HTTP boundary.
             await send({"type": "websocket.close", "code": 1008})
             return
+        path = route_path(scope)
+        # No route uses these characters. On Windows they form drive and UNC paths, and
+        # merely resolving a UNC path sends the user's credentials to the remote host.
+        if any(character in path for character in "\\:\x00"):
+            await JSONResponse({"detail": "Nicht gefunden."}, 404)(scope, receive, send)
+            return
         method = scope.get("method", "GET")
-        if scope.get("path", "").startswith("/api/"):
+        if path.startswith("/api/"):
             if headers.get("sec-fetch-site") == "cross-site" or (
                 method not in {"GET", "HEAD", "OPTIONS"}
                 and not origin
@@ -121,7 +139,7 @@ class SecurityBoundary:
                         b"frame-ancestors 'none'; form-action 'self'",
                     ),
                 ]
-                if scope.get("path", "").startswith("/api/"):
+                if path.startswith("/api/"):
                     extra.append((b"cache-control", b"no-store"))
                 message["headers"] = list(message.get("headers", [])) + extra
             if message["type"] == "http.response.body" and not message.get("more_body", False):
@@ -130,9 +148,11 @@ class SecurityBoundary:
 
         try:
             await self.app(scope, bounded_receive, secured_send)
-        except Exception:
+        except Exception as error:
             # Catch inside ServerErrorMiddleware: Starlette otherwise re-raises after
             # its 500 handler, allowing Uvicorn to log confidential exception values.
+            # Log the type only; messages can contain document content or keys.
+            logger.error("Unexpected %s on %s %s", type(error).__name__, method, path)
             if not response_started:
                 await JSONResponse(
                     {
