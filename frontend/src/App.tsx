@@ -98,6 +98,37 @@ function initialDraft(scenario: DemoScenario): Draft {
   };
 }
 
+type Drafts = Partial<Record<DemoScenario, Draft>>;
+/** Remove documents and playbooks from every draft that no longer exist. */
+function pruneDrafts(
+  drafts: Drafts,
+  documentExists: (id: string) => boolean,
+  playbookExists: (id: string) => boolean,
+): Drafts {
+  return Object.fromEntries(
+    Object.entries(drafts).map(([key, draft]) => [
+      key,
+      {
+        ...draft,
+        selectedIds:
+          key === 'compare'
+            ? draft.selectedIds.map((id) => (documentExists(id) ? id : ''))
+            : draft.selectedIds.filter(documentExists),
+        playbookId: playbookExists(draft.playbookId) ? draft.playbookId : '',
+      },
+    ]),
+  );
+}
+/** A server list plus local records added while it was being loaded. */
+function withNewer<T extends { id: string }>(
+  server: T[],
+  local: T[],
+  newer: (id: string) => boolean,
+) {
+  const ids = new Set(server.map((item) => item.id));
+  return [...local.filter((item) => !ids.has(item.id) && newer(item.id)), ...server];
+}
+
 function Notification({ message, onClose }: { message: string; onClose: () => void }) {
   const present = useIsPresent();
   const { reduced, transition } = useMotionPreferences();
@@ -169,7 +200,13 @@ export default function App() {
   const [complianceTask, setComplianceTask] = useState<ComplianceTask>('general');
   const scenario: DemoScenario =
     workflow === 'compliance' && complianceTask !== 'general' ? complianceTask : workflow;
-  const [drafts, setDrafts] = useState<Partial<Record<DemoScenario, Draft>>>({});
+  const [drafts, setDrafts] = useState<Drafts>({});
+  // When this browser added a record. A workspace load that started earlier keeps it.
+  const added = useRef(new Map<string, number>());
+  function markAdded(...ids: string[]) {
+    const time = performance.now();
+    for (const id of ids) added.current.set(id, time);
+  }
   const { context, sourceText, selectedIds, playbookId, research } =
     drafts[scenario] ?? initialDraft(scenario);
   const sourceTextCharCount = useMemo(() => Array.from(sourceText).length, [sourceText]);
@@ -295,6 +332,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', listener);
   }, []);
   const loadWorkspace = useCallback(async (signal?: AbortSignal) => {
+    const started = performance.now();
     const [healthResult, modelResult, documentsResult, analysesResult, playbookResult] =
       await Promise.allSettled([
         api<Health>('/health', { signal }),
@@ -304,6 +342,7 @@ export default function App() {
         api<Playbook[]>('/playbooks', { signal }),
       ]);
     if (signal?.aborted) return false;
+    const newer = (id: string) => (added.current.get(id) ?? -Infinity) > started;
     const failures: string[] = [];
     if (healthResult.status === 'fulfilled') setHealth(healthResult.value);
     else {
@@ -313,41 +352,30 @@ export default function App() {
     if (modelResult.status === 'fulfilled' && modelResult.value.models?.length)
       setModels(modelResult.value.models);
     else failures.push('Modelle');
-    if (documentsResult.status === 'fulfilled') {
-      setDocuments(documentsResult.value);
-      const available = new Set(documentsResult.value.map((document) => document.id));
-      setDrafts((previous) =>
-        Object.fromEntries(
-          Object.entries(previous).map(([key, draft]) => [
-            key,
-            {
-              ...draft,
-              selectedIds:
-                key === 'compare'
-                  ? draft.selectedIds.map((id) => (available.has(id) ? id : ''))
-                  : draft.selectedIds.filter((id) => available.has(id)),
-            },
-          ]),
-        ),
-      );
-    } else failures.push('Dokumente');
-    if (analysesResult.status === 'fulfilled') setAnalyses(analysesResult.value);
+    const documentIds =
+      documentsResult.status === 'fulfilled'
+        ? new Set(documentsResult.value.map((document) => document.id))
+        : null;
+    const playbookIds =
+      playbookResult.status === 'fulfilled'
+        ? new Set(playbookResult.value.map((playbook) => playbook.id))
+        : null;
+    if (documentsResult.status === 'fulfilled')
+      setDocuments((previous) => withNewer(documentsResult.value, previous, newer));
+    else failures.push('Dokumente');
+    if (analysesResult.status === 'fulfilled')
+      setAnalyses((previous) => withNewer(analysesResult.value, previous, newer));
     else failures.push('Analysen');
-    if (playbookResult.status === 'fulfilled') {
-      setPlaybooks(playbookResult.value);
-      const available = new Set(playbookResult.value.map((playbook) => playbook.id));
-      setDrafts((previous) =>
-        Object.fromEntries(
-          Object.entries(previous).map(([key, draft]) => [
-            key,
-            {
-              ...draft,
-              playbookId: available.has(draft.playbookId) ? draft.playbookId : '',
-            },
-          ]),
-        ),
-      );
-    } else failures.push('Playbooks');
+    if (playbookResult.status === 'fulfilled')
+      setPlaybooks((previous) => withNewer(playbookResult.value, previous, newer));
+    else failures.push('Playbooks');
+    setDrafts((previous) =>
+      pruneDrafts(
+        previous,
+        (id) => !documentIds || documentIds.has(id) || newer(id),
+        (id) => !playbookIds || playbookIds.has(id) || newer(id),
+      ),
+    );
     setLoadFailures(failures);
     setLoading(false);
     return failures.length === 0;
@@ -483,6 +511,7 @@ export default function App() {
         errors.push(`${file.name}: ${message(error)}`);
       }
     }
+    markAdded(...uploaded.map((item) => item.id));
     setDocuments((previous) => [
       ...uploaded,
       ...previous.filter((item) => !uploaded.some((newItem) => newItem.id === item.id)),
@@ -574,7 +603,9 @@ export default function App() {
         }),
       });
       setAnalysis(result);
+      markAdded(result.id);
       if (result.source_text_document_id) {
+        markAdded(result.source_text_document_id);
         // The server preserves the submitted text and returns its saved source ID.
         // Populate the local source view immediately without another loading state.
         const sourceDocument: DocumentRecord = {
@@ -628,10 +659,19 @@ export default function App() {
         method: 'POST',
         body: JSON.stringify({ scenario }),
       });
+      markAdded(result.id);
       setAnalysis(result);
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
-      const docs = await api<DocumentRecord[]>('/documents');
-      setDocuments(docs);
+      // Add the example's sources without replacing records added in the meantime.
+      const sources = new Set(result.document_ids);
+      const examples = (await api<DocumentRecord[]>('/documents')).filter((document) =>
+        sources.has(document.id),
+      );
+      markAdded(...examples.map((document) => document.id));
+      setDocuments((previous) => [
+        ...examples,
+        ...previous.filter((document) => !sources.has(document.id)),
+      ]);
       navigate(`analysis/${result.id}`);
     } catch (error) {
       setError(message(error));
@@ -655,6 +695,7 @@ export default function App() {
       method: 'POST',
       body: JSON.stringify({ name, content }),
     });
+    markAdded(result.id);
     setPlaybooks((previous) => [result, ...previous]);
     setToast('Playbook gespeichert.');
   }
@@ -693,16 +734,13 @@ export default function App() {
         setAnalyses((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
         setAnalysis((previous) => (previous?.id === deleteTarget.item.id ? null : previous));
       } else if (deleteTarget.type === 'playbook') {
-        setPlaybooks((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
+        const removed = deleteTarget.item.id;
+        setPlaybooks((previous) => previous.filter((item) => item.id !== removed));
         setDrafts((previous) =>
-          Object.fromEntries(
-            Object.entries(previous).map(([key, draft]) => [
-              key,
-              {
-                ...draft,
-                playbookId: draft.playbookId === deleteTarget.item.id ? '' : draft.playbookId,
-              },
-            ]),
+          pruneDrafts(
+            previous,
+            () => true,
+            (id) => id !== removed,
           ),
         );
       } else {
@@ -713,17 +751,10 @@ export default function App() {
         );
         setDocuments((previous) => previous.filter((item) => !removedIds.has(item.id)));
         setDrafts((previous) =>
-          Object.fromEntries(
-            Object.entries(previous).map(([key, draft]) => [
-              key,
-              {
-                ...draft,
-                selectedIds:
-                  key === 'compare'
-                    ? draft.selectedIds.map((id) => (removedIds.has(id) ? '' : id))
-                    : draft.selectedIds.filter((id) => !removedIds.has(id)),
-              },
-            ]),
+          pruneDrafts(
+            previous,
+            (id) => !removedIds.has(id),
+            () => true,
           ),
         );
       }
@@ -989,12 +1020,13 @@ export default function App() {
                     playbooks={playbooks}
                     onCreate={createPlaybook}
                     onUpdate={updatePlaybook}
-                    onDocumentImported={(document) =>
+                    onDocumentImported={(document) => {
+                      markAdded(document.id);
                       setDocuments((previous) => [
                         document,
                         ...previous.filter((item) => item.id !== document.id),
-                      ])
-                    }
+                      ]);
+                    }}
                     onDelete={(item) => askDelete({ type: 'playbook', item })}
                   />
                 ) : route === 'settings' ? (
