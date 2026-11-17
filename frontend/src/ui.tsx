@@ -127,13 +127,11 @@ export function Modal({
   children,
   onClose,
   wide = false,
-  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
-  className?: string;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -206,7 +204,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`modal ${wide ? 'modal-wide' : ''} ${className}`}
+        className={`modal${wide ? ' modal-wide' : ''}`}
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
@@ -249,7 +247,7 @@ function PickerPopover({
     <motion.div
       ref={ref}
       id={id}
-      className={`picker-popover motion-picker-popover ${effort ? 'effort-popover' : ''}`}
+      className="picker-popover motion-picker-popover"
       inert={!present}
       aria-hidden={!present || undefined}
       initial={reduced ? false : { opacity: 0 }}
@@ -419,7 +417,7 @@ export function ModelPicker({
       <span className="picker-divider" />
       <button
         type="button"
-        className="picker-button effort-picker"
+        className="picker-button"
         data-picker="effort"
         aria-label={`Denkaufwand: ${EFFORT_NAMES[effort] ?? effort}`}
         aria-expanded={open === 'effort'}

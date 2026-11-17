@@ -103,7 +103,7 @@ export function History({
           Analysen werden geladen …
         </div>
       ) : filtered.length ? (
-        <div className="history-list">
+        <div>
           {filtered.map((analysis) => (
             <article className="history-item" key={analysis.id}>
               <button type="button" className="history-item-main" onClick={() => onOpen(analysis)}>

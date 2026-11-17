@@ -119,7 +119,7 @@ export function DocumentPreviewProvider({
       {createPortal(
         <dialog
           ref={dialog}
-          className={`document-preview-dialog ${modal ? 'is-full' : 'is-docked'}`}
+          className={`document-preview-dialog${modal ? ' is-full' : ''}`}
           aria-label={`Dokumentvorschau: ${title}`}
           onCancel={(event) => {
             event.preventDefault();

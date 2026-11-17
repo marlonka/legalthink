@@ -892,7 +892,7 @@ export default function App() {
           <nav className="primary-nav">
             <button
               type="button"
-              className={`nav-item nav-motion-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
+              className={`nav-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
               aria-current={route === 'new' ? 'page' : undefined}
               onClick={() => navigate('new')}
             >
@@ -901,7 +901,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              className={`nav-item nav-motion-item ${route === 'history' || isReview ? 'active' : ''}`}
+              className={`nav-item ${route === 'history' || isReview ? 'active' : ''}`}
               aria-current={route === 'history' ? 'page' : undefined}
               onClick={() => navigate('history')}
             >
@@ -911,7 +911,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              className={`nav-item nav-motion-item ${route === 'playbooks' ? 'active' : ''}`}
+              className={`nav-item ${route === 'playbooks' ? 'active' : ''}`}
               aria-current={route === 'playbooks' ? 'page' : undefined}
               onClick={() => navigate('playbooks')}
             >
@@ -925,7 +925,7 @@ export default function App() {
               {analyses.slice(0, 4).map((item) => (
                 <button
                   type="button"
-                  className={`recent-item nav-motion-item ${route === `analysis/${item.id}` ? 'active' : ''}`}
+                  className={`recent-item ${route === `analysis/${item.id}` ? 'active' : ''}`}
                   aria-current={route === `analysis/${item.id}` ? 'page' : undefined}
                   title={item.title}
                   key={item.id}
@@ -944,7 +944,7 @@ export default function App() {
           <div className="sidebar-bottom">
             <button
               type="button"
-              className={`nav-item nav-motion-item ${route === 'settings' ? 'active' : ''}`}
+              className={`nav-item ${route === 'settings' ? 'active' : ''}`}
               aria-current={route === 'settings' ? 'page' : undefined}
               onClick={() => navigate('settings')}
             >

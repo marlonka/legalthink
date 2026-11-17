@@ -179,7 +179,7 @@ export default function Start(props: Props) {
             disabled={running || uploading}
           >
             <item.icon size={17} strokeWidth={1.6} />
-            <span className="workflow-option-label">{item.label}</span>
+            <span>{item.label}</span>
           </button>
         ))}
       </div>
@@ -287,7 +287,7 @@ export default function Start(props: Props) {
                   onRemove={onRemove}
                 />
               ) : (
-                <div className="document-chip empty-comparison-slot" key={`empty-${index}`}>
+                <div className="document-chip" key={`empty-${index}`}>
                   <div className="document-chip-icon">
                     <FileText size={18} />
                   </div>
