@@ -5,6 +5,7 @@ import {
   GlobalWorkerOptions,
   TextLayer,
   type PDFDocumentProxy,
+  type PDFPageProxy,
   type RenderTask,
 } from 'pdfjs-dist';
 import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
@@ -118,6 +119,7 @@ function PdfPage({
   onHighlight: (page: number, offset: number) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const rendered = useRef<PDFPageProxy | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   useEffect(() => {
     if (!active || !host.current) return;
@@ -132,6 +134,7 @@ function PdfPage({
     void (async () => {
       try {
         const source = await pdf.getPage(page);
+        rendered.current = source;
         const base = source.getViewport({ scale: 1 });
         const scale = size.width / base.width;
         const view = source.getViewport({ scale });
@@ -179,9 +182,13 @@ function PdfPage({
     };
   }, [pdf, page, size.width, active, quote, onHighlight]);
 
-  // Offscreen canvases are released, but each page keeps its exact measured dimensions.
+  // Offscreen pages release their canvas and the page's decoded images and operator lists;
+  // pdf.js waits for a cancelled render to settle. Each page keeps its measured size.
   useEffect(() => {
-    if (!active) host.current?.replaceChildren();
+    if (active) return;
+    host.current?.replaceChildren();
+    rendered.current?.cleanup();
+    rendered.current = null;
   }, [active]);
 
   return (
