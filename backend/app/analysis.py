@@ -59,70 +59,100 @@ def normalized(text: str) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFC", text)).strip()
 
 
-def _page_location(document: Document, quote: str) -> str | None:
+class SourceIndex:
+    """Normalized source texts and PDF pages, computed once per verification.
+
+    Up to 1,000,000 characters are checked against 130 quotes; normalizing every
+    source again for each quote took seconds and blocked the event loop.
+    """
+
+    def __init__(self, documents: list[Document]):
+        self.documents = documents
+        self.by_id = {document.id: document for document in documents}
+        self._texts: dict[str, str] = {}
+        self._pages: dict[str, list[tuple[str, str]] | None] = {}
+
+    def text(self, document: Document) -> str:
+        if document.id not in self._texts:
+            self._texts[document.id] = normalized(document.text)
+        return self._texts[document.id]
+
+    def contains(self, document: Document | None, quote: str) -> bool:
+        """Case-sensitive, whitespace-tolerant containment of a normalized quote."""
+        return bool(document and len(quote) >= 12 and quote in self.text(document))
+
+    def page_location(self, document: Document, quote: str) -> str | None:
+        if document.id not in self._pages:
+            self._pages[document.id] = _pdf_pages(document)
+        pages = self._pages[document.id]
+        if pages is None:
+            return None
+        location = None
+        for number, text in pages:
+            first = text.find(quote)
+            if first < 0:
+                continue
+            if location is not None or text.find(quote, first + 1) >= 0:
+                return None
+            location = f"Seite {number}"
+        return location
+
+    def resolve(self, document_id: str, quote: str) -> Document | None:
+        """Recover a malformed model ID only from one unambiguous verbatim source match."""
+        source = self.by_id.get(document_id)
+        if source:
+            return source
+        quote = normalized(quote)
+        if len(quote) < 12:
+            return None
+        matches = [doc for doc in self.documents if quote in self.text(doc)]
+        if len(matches) == 1:
+            return matches[0]
+
+        # Correspondence may repeat across case files. Require both a verbatim match
+        # and one unambiguous UUID with a single changed or transposed digit.
+        def simple_uuid_typo(candidate: str) -> bool:
+            try:
+                wanted, actual = UUID(document_id).hex, UUID(candidate).hex
+            except ValueError:
+                return False
+            changed = [i for i, (a, b) in enumerate(zip(wanted, actual, strict=True)) if a != b]
+            if len(changed) <= 1:
+                return True
+            if len(changed) != 2:
+                return False
+            a, b = changed
+            return b == a + 1 and wanted[a] == actual[b] and wanted[b] == actual[a]
+
+        nearby = [doc for doc in matches if simple_uuid_typo(doc.id)]
+        return nearby[0] if len(nearby) == 1 else None
+
+
+def _pdf_pages(document: Document) -> list[tuple[str, str]] | None:
+    """Page number and normalized text per page, if the import's markers are complete."""
     if not document.name.lower().endswith(".pdf"):
         return None
-    pages = re.split(r"\[Seite (\d+)\]\n", document.text)
+    parts = re.split(r"\[Seite (\d+)\]\n", document.text)
     # The extractor adds one marker per page. Identical-looking document text
     # must not invent page provenance; ambiguous legacy text keeps only a quote match.
-    if pages[0].strip() or pages[1::2] != [str(page) for page in range(1, document.page_count + 1)]:
+    if parts[0].strip() or parts[1::2] != [str(page) for page in range(1, document.page_count + 1)]:
         return None
-    location = None
-    for i in range(1, len(pages), 2):
-        text = normalized(pages[i + 1])
-        first = text.find(quote)
-        if first < 0:
-            continue
-        if location is not None or text.find(quote, first + 1) >= 0:
-            return None
-        location = f"Seite {pages[i]}"
-    return location
-
-
-def resolve_source(document_id: str, quote: str, documents: list[Document]) -> Document | None:
-    """Recover a malformed model ID only from one unambiguous verbatim source match."""
-    source = next((doc for doc in documents if doc.id == document_id), None)
-    if source:
-        return source
-    quote = normalized(quote)
-    if len(quote) < 12:
-        return None
-    matches = [doc for doc in documents if quote in normalized(doc.text)]
-    if len(matches) == 1:
-        return matches[0]
-
-    # Correspondence may repeat across case files. Require both a verbatim match
-    # and one unambiguous UUID with a single changed or transposed digit.
-    def simple_uuid_typo(candidate: str) -> bool:
-        try:
-            wanted, actual = UUID(document_id).hex, UUID(candidate).hex
-        except ValueError:
-            return False
-        changed = [i for i, (a, b) in enumerate(zip(wanted, actual, strict=True)) if a != b]
-        if len(changed) <= 1:
-            return True
-        if len(changed) != 2:
-            return False
-        a, b = changed
-        return b == a + 1 and wanted[a] == actual[b] and wanted[b] == actual[a]
-
-    nearby = [doc for doc in matches if simple_uuid_typo(doc.id)]
-    return nearby[0] if len(nearby) == 1 else None
+    return [(parts[i], normalized(parts[i + 1])) for i in range(1, len(parts), 2)]
 
 
 def recover_source_references(analysis: Analysis, documents: list[Document]) -> None:
     """Repair response references in memory; never rewrite saved reports or deleted sources."""
-    ids = {doc.id for doc in documents}
+    index = SourceIndex(documents)
     known_ids = {*analysis.document_ids, analysis.source_text_document_id}
     for item in [*analysis.findings, *analysis.timeline]:
-        if item.source_document_id in ids or item.source_document_id in known_ids:
+        if item.source_document_id in index.by_id or item.source_document_id in known_ids:
             continue
-        source = resolve_source(item.source_document_id, item.source_quote, documents)
+        source = index.resolve(item.source_document_id, item.source_quote)
         if source is None:
             continue
         item.source_document_id = source.id
         item.verified = True
-        location = _page_location(source, normalized(item.source_quote))
+        location = index.page_location(source, normalized(item.source_quote))
         if isinstance(item, Finding):
             item.source_document_name = source.name
             item.source_location = location or "Textfundstelle"
@@ -133,6 +163,7 @@ def recover_source_references(analysis: Analysis, documents: list[Document]) -> 
 def verify_findings(
     result: ModelAnalysis, documents: list[Document], allowed_urls: set[str] | None = None
 ) -> list[Finding]:
+    index = SourceIndex(documents)
     findings = []
     for item in result.findings:
         comparison = None
@@ -142,9 +173,9 @@ def verify_findings(
             original, counterdraft = documents[:2]
             comparison = ComparisonEvidence(
                 change_type=item.comparison.change_type,
-                original=verify_comparison_source(original, item.comparison.original_quote),
+                original=verify_comparison_source(index, original, item.comparison.original_quote),
                 counterdraft=verify_comparison_source(
-                    counterdraft, item.comparison.counterdraft_quote
+                    index, counterdraft, item.comparison.counterdraft_quote
                 ),
             )
             target = (
@@ -159,13 +190,13 @@ def verify_findings(
                     "suggestion": "" if comparison.change_type == "removed" else item.suggestion,
                 }
             )
-        doc = resolve_source(item.source_document_id, item.source_quote, documents)
+        doc = index.resolve(item.source_document_id, item.source_quote)
         quote = normalized(item.source_quote)
-        # Case-sensitive, whitespace-tolerant containment. Verification means text match only.
-        verified = bool(doc and len(quote) >= 12 and quote in normalized(doc.text))
+        # Verification means a text match only, not a legal or factual confirmation.
+        verified = index.contains(doc, quote)
         location = "Textfundstelle"
         if verified and doc:
-            location = _page_location(doc, quote) or "Textfundstelle"
+            location = index.page_location(doc, quote) or "Textfundstelle"
         elif not verified:
             location = "Beleg nicht bestätigt"
         fields = item.model_dump(exclude={"comparison"})
@@ -184,15 +215,17 @@ def verify_findings(
     return findings
 
 
-def verify_comparison_source(document: Document, quote: str) -> ComparisonSource:
+def verify_comparison_source(
+    index: SourceIndex, document: Document, quote: str
+) -> ComparisonSource:
     normalized_quote = normalized(quote)
-    verified = bool(len(normalized_quote) >= 12 and normalized_quote in normalized(document.text))
+    verified = index.contains(document, normalized_quote)
     return ComparisonSource(
         source_document_id=document.id,
         source_document_name=document.name,
         source_quote=quote,
         source_location=(
-            (_page_location(document, normalized_quote) or "Textfundstelle")
+            (index.page_location(document, normalized_quote) or "Textfundstelle")
             if verified
             else "Beleg nicht bestätigt"
             if quote.strip()
@@ -203,16 +236,17 @@ def verify_comparison_source(document: Document, quote: str) -> ComparisonSource
 
 
 def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[TimelineEntry]:
+    index = SourceIndex(documents)
     events = []
     for item in result.timeline:
-        document = resolve_source(item.source_document_id, item.source_quote, documents)
+        document = index.resolve(item.source_document_id, item.source_quote)
         quote = normalized(item.source_quote)
-        verified = bool(document and len(quote) >= 12 and quote in normalized(document.text))
+        verified = index.contains(document, quote)
         fields = item.model_dump()
         fields["source_document_id"] = document.id if document else item.source_document_id
         fields["source"] = "Beleg nicht bestätigt"
         if verified and document:
-            location = _page_location(document, quote)
+            location = index.page_location(document, quote)
             fields["source"] = document.name + (f" · {location}" if location else "")
         events.append(TimelineEntry(**fields, verified=verified))
     return events
@@ -593,7 +627,13 @@ class AnalysisService:
                 ),
             )
         sources = provider_sources(response) if request.research else []
-        findings = verify_findings(result, evidence_documents, {s.url for s in sources})
+        # Matching quotes against up to 1,000,000 characters runs off the event loop.
+        findings, timeline = await asyncio.to_thread(
+            lambda: (
+                verify_findings(result, evidence_documents, {s.url for s in sources}),
+                verify_timeline(result, evidence_documents),
+            )
+        )
         if request.workflow == "compare":
             for finding in findings:
                 # A proposed replacement must target the counterdraft. Original-only
@@ -606,7 +646,7 @@ class AnalysisService:
             workflow=request.workflow,
             summary=result.summary,
             findings=findings,
-            timeline=verify_timeline(result, evidence_documents),
+            timeline=timeline,
             questions=result.questions,
             created_at=now(),
             model=request.model,
