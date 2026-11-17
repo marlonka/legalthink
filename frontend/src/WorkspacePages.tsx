@@ -12,6 +12,7 @@ import {
   Moon,
   Plus,
   RotateCw,
+  Save,
   Search,
   Scale,
   Server,
@@ -368,7 +369,10 @@ export function Playbooks({
                   Abbrechen
                 </button>
                 <button className="button primary" type="submit" disabled={saving || importing}>
-                  {saving && <LoaderCircle className="spin" size={15} />}Playbook speichern
+                  <span className="action-icon" aria-hidden="true">
+                    {saving ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}
+                  </span>
+                  Playbook speichern
                 </button>
               </div>
             </form>
@@ -410,6 +414,7 @@ export function Playbooks({
                   setContent(selected.content);
                   setSelected(null);
                   setOpen(true);
+                  setFormError('');
                 }}
               >
                 Duplizieren

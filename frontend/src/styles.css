@@ -224,6 +224,26 @@ code {
 .button.danger:hover {
   background: var(--danger-action-hover);
 }
+/* Actions whose icon or label changes while busy keep their size: the icon has a
+   fixed slot and the longest label reserves the width. */
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 17px;
+}
+.stable-action-label {
+  display: inline-grid;
+  align-items: center;
+  white-space: nowrap;
+}
+.stable-action-label > span {
+  grid-area: 1 / 1;
+}
+.stable-action-size {
+  visibility: hidden;
+}
 .small-button {
   min-height: 36px;
   padding: 7px 11px;

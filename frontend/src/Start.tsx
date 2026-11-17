@@ -235,7 +235,7 @@ export default function Start(props: Props) {
               onClick={() => fileInput.current?.click()}
               disabled={uploading || running}
             >
-              <span className="composer-action-icon" aria-hidden="true">
+              <span className="action-icon" aria-hidden="true">
                 {uploading ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />}
               </span>
               <span className="stable-action-label">

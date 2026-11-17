@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Menu,
   Plus,
+  RotateCw,
   Settings2,
   Trash2,
   X,
@@ -987,8 +988,19 @@ export default function App() {
                   onClick={() => void refresh()}
                   disabled={refreshing}
                 >
-                  {refreshing && <LoaderCircle className="spin" size={14} />}
-                  {refreshing ? 'Wird geladen …' : 'Erneut laden'}
+                  <span className="action-icon" aria-hidden="true">
+                    {refreshing ? (
+                      <LoaderCircle className="spin" size={14} />
+                    ) : (
+                      <RotateCw size={14} />
+                    )}
+                  </span>
+                  <span className="stable-action-label">
+                    <span className="stable-action-size" aria-hidden="true">
+                      Wird geladen …
+                    </span>
+                    <span>{refreshing ? 'Wird geladen …' : 'Erneut laden'}</span>
+                  </span>
                 </button>
               </section>
             )}
