@@ -7,6 +7,11 @@ interface WorkflowFindingContentProps {
   finding: Finding;
 }
 
+/** Research links of a finding: web addresses only, each once. */
+export function researchUrls(finding: Finding) {
+  return [...new Set(finding.source_urls ?? [])].filter((url) => /^https?:\/\//i.test(url));
+}
+
 export function WorkflowFindingContent({ analysis, finding }: WorkflowFindingContentProps) {
   const compliance = analysis.workflow === 'compliance';
   const dsfa = compliance && analysis.compliance_task === 'dsfa';
@@ -22,9 +27,7 @@ export function WorkflowFindingContent({ analysis, finding }: WorkflowFindingCon
     : compliance
       ? 'Prüfergebnis'
       : 'Einordnung';
-  const researchUrls = [...new Set(finding.source_urls ?? [])].filter((url) =>
-    /^https?:\/\//i.test(url),
-  );
+  const links = researchUrls(finding);
   const evidence = finding.source_quote.trim() ? (
     <div className="workflow-finding-section workflow-finding-evidence">
       <dt>{quoteLabel}</dt>
@@ -45,14 +48,14 @@ export function WorkflowFindingContent({ analysis, finding }: WorkflowFindingCon
         </div>
       )}
       {compliance && evidence}
-      {(finding.legal_basis.trim() || researchUrls.length > 0) && (
+      {(finding.legal_basis.trim() || links.length > 0) && (
         <div className="workflow-finding-section workflow-finding-law">
           <dt>{finding.legal_basis.trim() ? 'Rechtsbezug' : 'Recherchebelege'}</dt>
           <dd>
             {finding.legal_basis.trim() && <p>{finding.legal_basis}</p>}
-            {researchUrls.length > 0 && (
+            {links.length > 0 && (
               <ul className="workflow-finding-research">
-                {researchUrls.map((url, index) => (
+                {links.map((url, index) => (
                   <li key={url}>
                     <ExternalLink url={url}>Recherchebeleg {index + 1}</ExternalLink>
                   </li>
