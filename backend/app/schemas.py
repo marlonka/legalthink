@@ -45,6 +45,11 @@ def now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def explained(message: str) -> PydanticCustomError:
+    """A validation error whose message contains no input and is shown to the user."""
+    return PydanticCustomError("explained", message)
+
+
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -96,38 +101,30 @@ class AnalysisRequest(StrictModel):
         selected = next((m for m in MODELS if m["id"] == self.model), None)
         if selected:
             if self.custom_model is not None:
-                raise PydanticCustomError(
-                    "model_configuration",
-                    "Die Konfiguration eines mitgelieferten Modells ist festgelegt.",
-                )
+                raise explained("Die Konfiguration eines mitgelieferten Modells ist festgelegt.")
             efforts = selected["efforts"]
         elif self.custom_model is not None:
             efforts = self.custom_model.efforts
             if self.research and not self.custom_model.supports_web_search:
-                raise PydanticCustomError(
-                    "model_configuration",
+                raise explained(
                     "Webrecherche ist für dieses eigene Modell nicht freigegeben. "
-                    "Deaktivieren Sie die Webrecherche oder prüfen Sie die Modellkonfiguration.",
+                    "Deaktivieren Sie die Webrecherche oder prüfen Sie die Modellkonfiguration."
                 )
         else:
-            raise PydanticCustomError(
-                "model_configuration",
-                "Bitte das eigene Modell zuerst in den Einstellungen hinzufügen.",
-            )
+            raise explained("Bitte das eigene Modell zuerst in den Einstellungen hinzufügen.")
         if self.effort not in efforts:
-            raise PydanticCustomError(
-                "model_configuration",
+            raise explained(
                 "Diese Denktiefe ist für das gewählte Modell nicht konfiguriert. "
-                "Prüfen Sie die Modell-Einstellungen.",
+                "Prüfen Sie die Modell-Einstellungen."
             )
         if len(set(self.document_ids)) != len(self.document_ids):
-            raise ValueError("Dokumente dürfen nur einmal ausgewählt werden.")
+            raise explained("Dokumente dürfen nur einmal ausgewählt werden.")
         if self.workflow == "compare" and len(self.document_ids) != 2:
-            raise ValueError("Die Synopse benötigt genau zwei Dokumente: Entwurf und Gegenentwurf.")
+            raise explained("Die Synopse benötigt genau zwei Dokumente: Entwurf und Gegenentwurf.")
         if not self.document_ids and not self.source_text.strip():
-            raise ValueError("Bitte ein Dokument auswählen oder Text zur Prüfung einfügen.")
+            raise explained("Bitte ein Dokument auswählen oder Text zur Prüfung einfügen.")
         if self.workflow != "compliance" and self.compliance_task != "general":
-            raise ValueError("AVV und DSFA sind nur im Datenschutz-Workflow verfügbar.")
+            raise explained("AVV und DSFA sind nur im Datenschutz-Workflow verfügbar.")
         return self
 
 

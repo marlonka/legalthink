@@ -388,6 +388,14 @@ def test_validation_errors_never_echo_document_text(client):
         )
         assert rejected.status_code == 422
         assert "PRIVATE" not in rejected.text
+    # Rule violations name the rule instead of a generic field list.
+    single = client.post(
+        "/api/analyses",
+        json={"workflow": "compare", "document_ids": ["a"], "source_text": "PRIVATE Text"},
+    )
+    assert single.status_code == 422
+    assert single.json()["detail"].startswith("Die Synopse benötigt genau zwei Dokumente")
+    assert "PRIVATE" not in single.text
     assert not service.calls
     assert client.get("/api/analyses").json() == []
 

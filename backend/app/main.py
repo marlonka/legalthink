@@ -115,7 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def validation_error(request: Request, exc: RequestValidationError):
         # Pydantic's default response may echo confidential input. Return safe field names only.
         for error in exc.errors():
-            if error["type"] == "model_configuration":
+            if error["type"] == "explained":
                 return JSONResponse({"detail": error["msg"]}, status_code=422)
             if error["loc"] == ("body", "model"):
                 return JSONResponse(
