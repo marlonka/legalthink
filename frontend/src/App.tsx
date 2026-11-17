@@ -2,6 +2,7 @@ import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   Check,
+  CircleAlert,
   FileText,
   History as HistoryIcon,
   LoaderCircle,
@@ -15,7 +16,7 @@ import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
 import { DocumentPreviewProvider } from './DocumentPreview';
 import { RouteContent } from './RouteContent';
-import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
+import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS, request } from './types';
 import { useThemePreference } from './theme';
 import { useMotionPreferences } from './motion';
 import type {
@@ -129,13 +130,15 @@ function withNewer<T extends { id: string }>(
   return [...local.filter((item) => !ids.has(item.id) && newer(item.id)), ...server];
 }
 
-function Notification({ message, onClose }: { message: string; onClose: () => void }) {
+type Toast = { id: number; text: string; failed: boolean };
+
+function Notification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const present = useIsPresent();
   const { reduced, transition } = useMotionPreferences();
   return (
     <motion.div
-      className="toast motion-toast"
-      role="status"
+      className={`toast motion-toast${toast.failed ? ' failed' : ''}`}
+      role={toast.failed ? 'alert' : 'status'}
       aria-atomic="true"
       aria-hidden={!present || undefined}
       inert={!present}
@@ -144,8 +147,8 @@ function Notification({ message, onClose }: { message: string; onClose: () => vo
       exit={{ opacity: 0, transition: transition('exit') }}
       transition={transition('enter')}
     >
-      <Check size={16} />
-      <span>{message}</span>
+      {toast.failed ? <CircleAlert size={16} /> : <Check size={16} />}
+      <span>{toast.text}</span>
       <button
         type="button"
         className="icon-button small"
@@ -247,7 +250,13 @@ export default function App() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [pageError, setPageError] = useState('');
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState<Toast | null>(null);
+  const toastCount = useRef(0);
+  // Errors stay until closed; a repeated message is announced and timed again.
+  const notify = useCallback((text: string, failed = false) => {
+    toastCount.current += 1;
+    setToast({ id: toastCount.current, text, failed });
+  }, []);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -416,8 +425,8 @@ export default function App() {
     return () => controller.abort();
   }, [route, analyses, analysis?.id]);
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(''), 4500);
+    if (!toast || toast.failed) return;
+    const timer = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timer);
   }, [toast]);
   useEffect(() => () => requestController.current?.abort(), []);
@@ -569,7 +578,7 @@ export default function App() {
       );
       return;
     }
-    if (!health?.api_configured) {
+    if (health?.api_configured === false) {
       setError(
         'API-Schlüssel fehlt. Hinterlegen Sie OPENAI_API_KEY in backend/.env und starten Sie den Server neu.',
       );
@@ -684,7 +693,7 @@ export default function App() {
     if (refreshing || loading) return;
     setRefreshing(true);
     try {
-      if (await loadWorkspace()) setToast('Daten aktualisiert.');
+      if (await loadWorkspace()) notify('Daten aktualisiert.');
     } finally {
       setRefreshing(false);
     }
@@ -697,7 +706,7 @@ export default function App() {
     });
     markAdded(result.id);
     setPlaybooks((previous) => [result, ...previous]);
-    setToast('Playbook gespeichert.');
+    notify('Playbook gespeichert.');
   }
 
   async function updatePlaybook(id: string, name: string, content: string) {
@@ -708,7 +717,7 @@ export default function App() {
     setPlaybooks((previous) =>
       previous.map((playbook) => (playbook.id === id ? result : playbook)),
     );
-    setToast('Playbook aktualisiert.');
+    notify('Playbook aktualisiert.');
   }
 
   async function confirmDelete() {
@@ -759,7 +768,7 @@ export default function App() {
         );
       }
       setDeleteTarget(null);
-      setToast('Gelöscht.');
+      notify('Gelöscht.');
     } catch (error) {
       setDeleteError(message(error));
     } finally {
@@ -771,20 +780,18 @@ export default function App() {
     if (!analysis) return;
     setExporting(true);
     try {
-      const response = await fetch(
-        `/api/analyses/${encodeURIComponent(analysis.id)}/export?format=${format}`,
+      const response = await request(
+        `/analyses/${encodeURIComponent(analysis.id)}/export?format=${format}`,
       );
-      if (!response.ok)
-        throw new Error('Der Export konnte nicht erstellt werden. Versuchen Sie es erneut.');
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
       link.download = `${analysis.title.replace(/[<>:"/\\|?*]/g, '-').slice(0, 100)}.${format}`;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setToast('Export wurde heruntergeladen.');
+      notify('Export wurde heruntergeladen.');
     } catch (error) {
-      setToast(message(error));
+      notify(message(error), true);
     } finally {
       setExporting(false);
     }
@@ -793,10 +800,11 @@ export default function App() {
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Formulierung in die Zwischenablage kopiert.');
+      notify('Formulierung in die Zwischenablage kopiert.');
     } catch {
-      setToast(
+      notify(
         'Die Zwischenablage ist nicht verfügbar. Markieren und kopieren Sie den Text direkt.',
+        true,
       );
     }
   }
@@ -1129,9 +1137,7 @@ export default function App() {
           </main>
         </div>
         <AnimatePresence initial={false}>
-          {toast && (
-            <Notification key="notification" message={toast} onClose={() => setToast('')} />
-          )}
+          {toast && <Notification key={toast.id} toast={toast} onClose={() => setToast(null)} />}
         </AnimatePresence>
         <AnimatePresence initial={false}>
           {deleteTarget && (

@@ -56,7 +56,7 @@ summary {
     opacity 140ms ease-out;
 }
 /* Press feedback changes only opacity; position and size stay fixed. */
-button:not(:disabled):active,
+button:not(:disabled, [aria-disabled='true']):active,
 a.icon-button:active,
 summary:active {
   opacity: 0.88;
@@ -67,7 +67,8 @@ summary:active {
   ):active {
   background-color: var(--surface-selected);
 }
-button:disabled {
+button:disabled,
+button[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -851,6 +852,12 @@ code {
 }
 .toast > span {
   min-width: 0;
+}
+.toast.failed {
+  border-color: var(--danger-border);
+}
+.toast.failed > svg {
+  color: var(--danger-text);
 }
 .toast > .icon-button {
   margin-left: 5px;

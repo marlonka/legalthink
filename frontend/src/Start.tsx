@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowDown,
@@ -117,6 +117,19 @@ export default function Start(props: Props) {
   const current = WORKFLOWS.find((item) => item.id === workflow)!;
   const currentCompliance = COMPLIANCE_TASKS.find((item) => item.id === complianceTask)!;
   const fileInput = useRef<HTMLInputElement>(null);
+  const runButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const wasRunning = useRef(running);
+  useEffect(() => {
+    if (wasRunning.current === running) return;
+    wasRunning.current = running;
+    // The start button disables itself while waiting, and the cancel action then
+    // disappears. Keep keyboard focus on the action that is available.
+    // Chrome moves focus away from a disabled button only after this effect has run.
+    const focused = document.activeElement;
+    if (focused && focused !== document.body && focused !== runButton.current) return;
+    (running ? cancelButton : runButton).current?.focus({ preventScroll: true });
+  }, [running]);
   const textInput = useRef<HTMLTextAreaElement>(null);
   const dragCounter = useRef(0);
   const [dragging, setDragging] = useState(false);
@@ -427,6 +440,7 @@ export default function Start(props: Props) {
             disabled={running}
           />
           <button
+            ref={runButton}
             className="button primary run-analysis-button"
             type="button"
             aria-label="Analyse starten"
@@ -508,7 +522,7 @@ export default function Start(props: Props) {
                 {serviceTier === 'flex' ? 'Analyse mit Flex läuft …' : 'Analyse läuft …'}
               </strong>
             </div>
-            <button type="button" className="text-button" onClick={onCancel}>
+            <button ref={cancelButton} type="button" className="text-button" onClick={onCancel}>
               Warten abbrechen
             </button>
           </div>

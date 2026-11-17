@@ -217,8 +217,9 @@ export default function Review({
             type="button"
             ref={exportTrigger}
             className="button secondary"
-            onClick={() => setExportOpen(!exportOpen)}
-            disabled={exporting}
+            // Stays focusable while a download is prepared; disabling it would drop focus.
+            onClick={() => !exporting && setExportOpen(!exportOpen)}
+            aria-disabled={exporting || undefined}
             aria-expanded={exportOpen}
             aria-controls="export-options"
           >

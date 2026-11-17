@@ -103,7 +103,8 @@ export interface Health {
   default_processing_region: ProcessingRegion;
 }
 
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+/** Fetch from the local API; failures become errors with the server's German message. */
+export async function request(path: string, init?: RequestInit): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
@@ -131,6 +132,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(message);
   }
+  return response;
+}
+
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await request(path, init);
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }

@@ -111,8 +111,12 @@ function lockModal(modal: ActiveModal) {
       for (const [element, wasInert] of backgroundState) element.inert = wasInert;
       backgroundState.clear();
       document.body.style.overflow = originalOverflow;
-      if (originalFocus?.isConnected && !originalFocus.closest('[inert]'))
-        originalFocus.focus({ preventScroll: true });
+      // The trigger can be gone, for example a deleted row: fall back to the main content.
+      const target =
+        originalFocus?.isConnected && !originalFocus.closest('[inert]')
+          ? originalFocus
+          : document.getElementById('main-content');
+      target?.focus({ preventScroll: true });
       originalFocus = null;
     });
   };
