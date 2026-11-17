@@ -168,25 +168,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def list_documents():
         return readable(Document, app.state.store.list("documents"))
 
-    @app.post("/api/documents", response_model=Document, status_code=201)
-    async def upload(file: Annotated[UploadFile, File()]):
-        name = safe_filename(file.filename)
-        suffix = Path(name).suffix.lower()
-        if suffix not in DOCUMENT_MEDIA_TYPES:
-            await file.close()
-            raise HTTPException(415, "Unterstützt werden PDF, DOCX, TXT und Markdown.")
+    async def read_upload(file: UploadFile) -> bytes:
         try:
             data = await file.read(config.max_upload_bytes + 1)
         finally:
+            # Free the spooled upload before the extraction, which can take 25 seconds.
             await file.close()
         if len(data) > config.max_upload_bytes:
             raise HTTPException(413, "Die Datei ist zu groß. Maximal 12 MB sind erlaubt.")
+        return data
+
+    async def extract_upload(data: bytes, suffix: str) -> tuple[str, int]:
         slots = app.state.extraction_slots
         if slots.locked():
             raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
         try:
             async with slots:
-                text, pages = await extract_isolated(data, suffix)
+                return await extract_isolated(data, suffix)
         except ExtractionError as error:
             raise HTTPException(422, str(error)) from None
         except TimeoutError:
@@ -194,6 +192,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 422,
                 "Das Lesen der Datei dauerte zu lange. Bitte eine vereinfachte Version hochladen.",
             ) from None
+
+    @app.post("/api/documents", response_model=Document, status_code=201)
+    async def upload(file: Annotated[UploadFile, File()]):
+        name = safe_filename(file.filename)
+        suffix = Path(name).suffix.lower()
+        if suffix not in DOCUMENT_MEDIA_TYPES:
+            await file.close()
+            raise HTTPException(415, "Unterstützt werden PDF, DOCX, TXT und Markdown.")
+        data = await read_upload(file)
+        text, pages = await extract_upload(data, suffix)
         document = Document(
             id=new_id(),
             name=name,
@@ -238,29 +246,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.put("/api/documents/{document_id}/original", response_model=Document)
     async def attach_original(document_id: str, file: Annotated[UploadFile, File()]):
         source = app.state.store.get("documents", document_id)
-        try:
-            if not source:
-                raise HTTPException(404, "Dokument nicht gefunden.")
-            suffix = Path(source["name"]).suffix.lower()
-            if suffix not in DOCUMENT_MEDIA_TYPES:
-                raise HTTPException(422, "Für dieses Dateiformat ist keine Vorschau verfügbar.")
-            if Path(safe_filename(file.filename)).suffix.lower() != suffix:
-                raise HTTPException(422, "Bitte eine Datei im gleichen Format auswählen.")
-            data = await file.read(config.max_upload_bytes + 1)
-        finally:
+        suffix = Path(source["name"]).suffix.lower() if source else ""
+        problem = None
+        if not source:
+            problem = HTTPException(404, "Dokument nicht gefunden.")
+        elif suffix not in DOCUMENT_MEDIA_TYPES:
+            problem = HTTPException(422, "Für dieses Dateiformat ist keine Vorschau verfügbar.")
+        elif Path(safe_filename(file.filename)).suffix.lower() != suffix:
+            problem = HTTPException(422, "Bitte eine Datei im gleichen Format auswählen.")
+        if problem:
             await file.close()
-        if len(data) > config.max_upload_bytes:
-            raise HTTPException(413, "Die Datei ist zu groß. Maximal 12 MB sind erlaubt.")
-        slots = app.state.extraction_slots
-        if slots.locked():
-            raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
-        try:
-            async with slots:
-                text, _ = await extract_isolated(data, suffix)
-        except ExtractionError as error:
-            raise HTTPException(422, str(error)) from None
-        except TimeoutError:
-            raise HTTPException(422, "Das Lesen der Datei dauerte zu lange.") from None
+            raise problem
+        data = await read_upload(file)
+        text, _ = await extract_upload(data, suffix)
         if normalized(text) != normalized(source["text"]):
             raise HTTPException(
                 422, "Der Text dieser Datei stimmt nicht mit dem gespeicherten Quelltext überein."
@@ -318,11 +316,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         recover_source_references(analysis, sources)
         # Older reports can recover a file name while the source is still available.
         # Do not rewrite the saved report or accept model-generated document names.
+        names = {source.id: source.name for source in sources}
         for finding in analysis.findings:
             if not finding.source_document_name:
-                source = source_document(finding.source_document_id)
-                if source:
-                    finding.source_document_name = source["name"]
+                name = names.get(finding.source_document_id)
+                if name is None and (source := source_document(finding.source_document_id)):
+                    name = source["name"]
+                if name:
+                    finding.source_document_name = name
         return analysis
 
     def get_analysis(analysis_id: str) -> Analysis:
