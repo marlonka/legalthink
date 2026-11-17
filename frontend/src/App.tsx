@@ -17,7 +17,7 @@ import { DocumentPreviewProvider } from './DocumentPreview';
 import { RouteContent } from './RouteContent';
 import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
 import { useThemePreference } from './theme';
-import { MotionButton, useMotionPreferences } from './motion';
+import { useMotionPreferences } from './motion';
 import type {
   Analysis,
   ComplianceTask,
@@ -46,6 +46,14 @@ const Playbooks = lazy(() =>
 const Settings = lazy(() =>
   import('./WorkspacePages').then((pages) => ({ default: pages.Settings })),
 );
+const PAGE_NAMES: Record<string, string> = {
+  history: 'Analysen',
+  playbooks: 'Kanzlei-Playbooks',
+  settings: 'Einstellungen',
+};
+function pageName(route: string) {
+  return route.startsWith('analysis/') ? 'Analyse' : (PAGE_NAMES[route] ?? 'Neue Analyse');
+}
 
 function stored(key: string, fallback: string) {
   try {
@@ -107,9 +115,14 @@ function Notification({ message, onClose }: { message: string; onClose: () => vo
     >
       <Check size={16} />
       <span>{message}</span>
-      <MotionButton className="icon-button small" onClick={onClose} aria-label="Hinweis schließen">
+      <button
+        type="button"
+        className="icon-button small"
+        onClick={onClose}
+        aria-label="Hinweis schließen"
+      >
         <X size={14} />
-      </MotionButton>
+      </button>
     </motion.div>
   );
 }
@@ -351,7 +364,7 @@ export default function App() {
   }, [models, model, effort]);
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
-    document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Neue Analyse'} · LegalThink`;
+    document.title = `${pageName(route)} · LegalThink`;
   }, [route]);
   useEffect(() => {
     if (!route.startsWith('analysis/')) return;
@@ -764,15 +777,6 @@ export default function App() {
     .map((id) => documents.find((item) => item.id === id))
     .filter((item): item is DocumentRecord => Boolean(item));
   const isReview = route.startsWith('analysis/');
-  const pageName = isReview
-    ? 'Analyse'
-    : route === 'history'
-      ? 'Analysen'
-      : route === 'playbooks'
-        ? 'Kanzlei-Playbooks'
-        : route === 'settings'
-          ? 'Einstellungen'
-          : 'Neue Analyse';
   const unavailablePage =
     (route === 'history' && loadFailures.includes('Analysen') && !analyses.length) ||
     (route === 'playbooks' && loadFailures.includes('Playbooks') && !playbooks.length) ||
@@ -828,27 +832,34 @@ export default function App() {
           }}
         >
           <div className="sidebar-brand">
-            <MotionButton onClick={() => navigate('new')} aria-label="LegalThink Startseite">
+            <button
+              type="button"
+              onClick={() => navigate('new')}
+              aria-label="LegalThink Startseite"
+            >
               <Brand />
-            </MotionButton>
-            <MotionButton
+            </button>
+            <button
+              type="button"
               className="icon-button sidebar-mobile-close"
               aria-label="Navigation schließen"
               onClick={() => setMobileOpen(false)}
             >
               <X size={18} />
-            </MotionButton>
+            </button>
           </div>
           <nav className="primary-nav">
-            <MotionButton
+            <button
+              type="button"
               className={`nav-item nav-motion-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
               aria-current={route === 'new' ? 'page' : undefined}
               onClick={() => navigate('new')}
             >
               <Plus size={18} strokeWidth={1.6} />
               <span>Neue Analyse</span>
-            </MotionButton>
-            <MotionButton
+            </button>
+            <button
+              type="button"
               className={`nav-item nav-motion-item ${route === 'history' || isReview ? 'active' : ''}`}
               aria-current={route === 'history' ? 'page' : undefined}
               onClick={() => navigate('history')}
@@ -856,21 +867,23 @@ export default function App() {
               <HistoryIcon size={17} strokeWidth={1.6} />
               <span>Analysen</span>
               {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
-            </MotionButton>
-            <MotionButton
+            </button>
+            <button
+              type="button"
               className={`nav-item nav-motion-item ${route === 'playbooks' ? 'active' : ''}`}
               aria-current={route === 'playbooks' ? 'page' : undefined}
               onClick={() => navigate('playbooks')}
             >
               <BookOpen size={17} strokeWidth={1.6} />
               <span>Kanzlei-Playbooks</span>
-            </MotionButton>
+            </button>
           </nav>
           {analyses.length > 0 && (
             <div className="sidebar-recent">
               <div className="nav-section-label">Letzte Analysen</div>
               {analyses.slice(0, 4).map((item) => (
-                <MotionButton
+                <button
+                  type="button"
                   className={`recent-item nav-motion-item ${route === `analysis/${item.id}` ? 'active' : ''}`}
                   aria-current={route === `analysis/${item.id}` ? 'page' : undefined}
                   title={item.title}
@@ -883,25 +896,27 @@ export default function App() {
                   <FileText size={14} />
                   <span>{item.title}</span>
                   {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
-                </MotionButton>
+                </button>
               ))}
             </div>
           )}
           <div className="sidebar-bottom">
-            <MotionButton
+            <button
+              type="button"
               className={`nav-item nav-motion-item ${route === 'settings' ? 'active' : ''}`}
               aria-current={route === 'settings' ? 'page' : undefined}
               onClick={() => navigate('settings')}
             >
               <Settings2 size={17} strokeWidth={1.6} />
               <span>Einstellungen</span>
-            </MotionButton>
+            </button>
           </div>
         </motion.aside>
         <div className="main-shell" inert={mobileOpen}>
           <header className="topbar">
             <div>
-              <MotionButton
+              <button
+                type="button"
                 ref={menuTriggerRef}
                 className="icon-button mobile-menu"
                 aria-controls="workspace-navigation"
@@ -910,7 +925,7 @@ export default function App() {
                 onClick={openNavigation}
               >
                 <Menu size={20} />
-              </MotionButton>
+              </button>
               <span className="mobile-page-name">LegalThink</span>
             </div>
             {health?.api_configured === false && (
@@ -941,7 +956,7 @@ export default function App() {
               <RouteContent onReturn={() => navigate('new')}>
                 {unavailablePage ? (
                   <section className="standard-page">
-                    <h1>{pageName}</h1>
+                    <h1>{pageName(route)}</h1>
                     <p className="muted">
                       Diese Ansicht steht nach dem erneuten Laden wieder zur Verfügung.
                     </p>

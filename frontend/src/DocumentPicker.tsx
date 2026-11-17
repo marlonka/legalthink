@@ -2,7 +2,6 @@ import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDownUp, Check, FileText, Search, X } from 'lucide-react';
 import type { DocumentRecord } from './types';
 import { Modal } from './ui';
-import { MotionButton } from './motion';
 
 interface Props {
   documents: DocumentRecord[];
@@ -83,7 +82,8 @@ export default function DocumentPicker({
             placeholder="Dokument suchen …"
             aria-label="Gespeicherte Dokumente durchsuchen"
           />
-          <MotionButton
+          <button
+            type="button"
             className={`icon-button small document-search-clear ${search ? '' : 'is-empty'}`}
             onClick={(event) => {
               setSearch('');
@@ -98,7 +98,7 @@ export default function DocumentPicker({
             disabled={!search}
           >
             <X size={14} />
-          </MotionButton>
+          </button>
         </label>
         <div
           ref={listRef}
@@ -170,22 +170,24 @@ export default function DocumentPicker({
                 </div>
               ))}
             </div>
-            <MotionButton
+            <button
+              type="button"
               className="text-button"
               disabled={selected.length !== 2}
               onClick={() => setSelection((previous) => [...previous].reverse())}
             >
               <ArrowDownUp size={14} />
               Reihenfolge tauschen
-            </MotionButton>
+            </button>
           </div>
         )}
       </div>
       <div className="modal-footer document-picker-footer">
-        <MotionButton className="button secondary" onClick={onClose}>
+        <button type="button" className="button secondary" onClick={onClose}>
           Abbrechen
-        </MotionButton>
-        <MotionButton
+        </button>
+        <button
+          type="button"
           className="button primary"
           disabled={!valid}
           onClick={() => onApply(selection)}
@@ -198,7 +200,7 @@ export default function DocumentPicker({
               {selected.length} {selected.length === 1 ? 'Dokument' : 'Dokumente'} übernehmen
             </span>
           </span>
-        </MotionButton>
+        </button>
       </div>
     </Modal>
   );

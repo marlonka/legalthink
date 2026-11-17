@@ -1,5 +1,5 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
-import { motion, type HTMLMotionProps, type Transition } from 'motion/react';
+import { motion, type Transition } from 'motion/react';
 
 const SPRING = {
   control: { type: 'spring', stiffness: 500, damping: 38, mass: 0.8 },
@@ -11,8 +11,6 @@ const TIMING = {
   enter: { duration: 0.16, ease: [0.2, 0, 0, 1] },
   exit: { duration: 0.1, ease: [0.4, 0, 1, 1] },
   page: { duration: 0.18, ease: [0.2, 0, 0, 1] },
-  press: { duration: 0.06, ease: 'easeOut' },
-  release: { duration: 0.14, ease: 'easeOut' },
 } satisfies Record<string, Transition>;
 const INSTANT = { duration: 0 } satisfies Transition;
 type Preset = keyof typeof SPRING | keyof typeof TIMING;
@@ -45,26 +43,6 @@ export function useMotionPreferences() {
         : SPRING[preset as keyof typeof SPRING];
     },
   };
-}
-
-export function MotionButton({
-  disabled,
-  transition,
-  type = 'button',
-  ...props
-}: Omit<HTMLMotionProps<'button'>, 'whileTap' | 'whileHover'>) {
-  const preferences = useMotionPreferences();
-  return (
-    <motion.button
-      {...props}
-      type={type}
-      disabled={disabled}
-      whileTap={
-        disabled ? undefined : { opacity: 0.88, transition: preferences.transition('press') }
-      }
-      transition={preferences.reduced ? INSTANT : (transition ?? TIMING.release)}
-    />
-  );
 }
 
 type CollapseProps = {

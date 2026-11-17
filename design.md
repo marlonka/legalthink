@@ -211,13 +211,12 @@ Die folgenden Werte sind die abgestimmte Implementierung von LegalThink. Sie ste
 | `fade` | — | — | — | Deckkraft: 120 ms, `easeOut` |
 | `enter` / `exit` | — | — | — | Overlays: 160 ms hinein, 100 ms hinaus |
 | `page` | — | — | — | Seitenwechsel: 180 ms |
-| `press` / `release` | — | — | — | Klickfeedback: 60 ms drücken, 140 ms zurück |
 
 Layoutstabilität hat Vorrang. Die mobile Navigation blendet an ihrer endgültigen Position ein und aus. Kleine Icons dürfen sich innerhalb einer festen Fläche drehen. Neue Eingaben dürfen laufende Übergänge umkehren; niemals Animationen abwarten, bevor sich der Zustand ändert. Dialoge erhalten nur eine Deckkraftanimation, nicht zusätzlich eine zweite auf ihrem Inhalt. [Motion: physikalische Übergänge](https://motion.dev/docs/react-transitions)
 
 #### Interaktionen
 
-- Schaltflächen behalten Position und Größe beim Drücken. Feedback über Farbe oder kurze Deckkraftänderung. Keine `scale`-, `x`- oder `y`-Animation auf Bedienelementen oder deren Beschriftungen, auch nicht um wenige Pixel.
+- Schaltflächen behalten Position und Größe beim Drücken. Feedback über Farbe oder kurze Deckkraftänderung: `styles.css` setzt beim Drücken 0,88 Deckkraft (60 ms hinein, 140 ms zurück). Das Feedback hängt nicht an Motion, damit ein beim Klick deaktivierter Button nach dem Wiederfreigeben nicht halbtransparent stehen bleibt. Keine `scale`-, `x`- oder `y`-Animation auf Bedienelementen oder deren Beschriftungen, auch nicht um wenige Pixel.
 - Navigation, Prüfungsart, Tabs und Darstellung markieren die Auswahl an Ort und Stelle. Keine zwischen Controls wandernde Auswahlfläche und kein Wechsel der Schriftstärke, der die Breite verändert.
 - Seiten, Popover, Dialoge und Statusmeldungen blenden nur ein beziehungsweise aus. Keine Verschiebung oder Skalierung der Leseflächen. Keine Verzögerung vor der nächsten Aktion.
 - Bei Modell, Denkaufwand, Auswahlzahlen, Ladezuständen und Aktionsbeschriftungen Platz für die längste unterstützte Variante vorhalten. Unsichtbare Messbeschriftungen bleiben `aria-hidden`; nur der aktuelle Wert gehört zum zugänglichen Namen.

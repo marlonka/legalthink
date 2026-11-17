@@ -52,11 +52,14 @@ summary {
   transition:
     background-color 140ms cubic-bezier(0.2, 0, 0, 1),
     border-color 140ms cubic-bezier(0.2, 0, 0, 1),
-    color 140ms cubic-bezier(0.2, 0, 0, 1);
+    color 140ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 140ms ease-out;
 }
+/* Press feedback changes only opacity; position and size stay fixed. */
 button:not(:disabled):active,
 a.icon-button:active,
 summary:active {
+  opacity: 0.88;
   transition-duration: 60ms;
 }
 :is(.button.secondary, .icon-button, .picker-button, .picker-option, .nav-item, .recent-item):not(

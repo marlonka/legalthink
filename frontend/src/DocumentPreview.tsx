@@ -12,7 +12,7 @@ import { ArrowDownToLine, FileText, Maximize2, Minimize2, X } from 'lucide-react
 import { motion } from 'motion/react';
 import type { DocumentRecord } from './types';
 import { SourceFile } from './SourceFile';
-import { MotionButton, useMotionPreferences } from './motion';
+import { useMotionPreferences } from './motion';
 import './document-preview.css';
 
 export type PreviewRequest = {
@@ -140,16 +140,18 @@ export function DocumentPreviewProvider({
                   </a>
                 )}
                 {canDock && (
-                  <MotionButton
+                  <button
+                    type="button"
                     className="icon-button"
                     onClick={() => setExpanded(!expanded)}
                     aria-label={expanded ? 'Geteilte Ansicht' : 'Vorschau vergrößern'}
                     title={expanded ? 'Geteilte Ansicht' : 'Vergrößern'}
                   >
                     {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                  </MotionButton>
+                  </button>
                 )}
-                <MotionButton
+                <button
+                  type="button"
                   ref={closeButton}
                   className="icon-button"
                   onClick={close}
@@ -157,7 +159,7 @@ export function DocumentPreviewProvider({
                   title="Schließen"
                 >
                   <X size={19} />
-                </MotionButton>
+                </button>
               </header>
               {source.source_quote && (
                 <details

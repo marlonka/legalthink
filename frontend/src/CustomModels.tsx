@@ -4,7 +4,6 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Model } from './types';
 import { CUSTOM_EFFORTS, MAX_CUSTOM_MODELS, validModelId } from './custom-models';
 import { EFFORT_NAMES, ErrorMessage, ExternalLink, Modal } from './ui';
-import { MotionButton } from './motion';
 import './custom-models.css';
 
 export default function CustomModels({
@@ -39,14 +38,16 @@ export default function CustomModels({
           {custom.map((model) => (
             <li key={model.id}>
               <span title={model.id}>{model.id}</span>
-              <MotionButton
+              <button
+                type="button"
                 className="icon-button"
                 aria-label={`${model.id} bearbeiten`}
                 onClick={() => open(model)}
               >
                 <Pencil size={15} />
-              </MotionButton>
-              <MotionButton
+              </button>
+              <button
+                type="button"
                 className="icon-button"
                 aria-label={`${model.id} entfernen`}
                 disabled={selected === model.id}
@@ -65,18 +66,19 @@ export default function CustomModels({
                 }}
               >
                 <Trash2 size={15} />
-              </MotionButton>
+              </button>
             </li>
           ))}
         </ul>
       )}
-      <MotionButton
+      <button
+        type="button"
         className="text-button"
         onClick={() => open()}
         disabled={custom.length >= MAX_CUSTOM_MODELS}
       >
         <Plus size={15} /> Eigenes Modell hinzufügen
-      </MotionButton>
+      </button>
       {editing === null && error && <ErrorMessage>{error}</ErrorMessage>}
       <AnimatePresence initial={false}>
         {editing !== null && (
@@ -174,16 +176,12 @@ export default function CustomModels({
                 {error && <ErrorMessage>{error}</ErrorMessage>}
               </div>
               <div className="modal-footer">
-                <MotionButton
-                  className="button secondary"
-                  type="button"
-                  onClick={() => setEditing(null)}
-                >
+                <button className="button secondary" type="button" onClick={() => setEditing(null)}>
                   Abbrechen
-                </MotionButton>
-                <MotionButton className="button primary" type="submit">
+                </button>
+                <button className="button primary" type="submit">
                   Modell speichern
-                </MotionButton>
+                </button>
               </div>
             </form>
           </Modal>

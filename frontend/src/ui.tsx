@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import { ArrowUpRight, Check, ChevronDown, X } from 'lucide-react';
 import type { Model } from './types';
-import { MotionButton, useMotionPreferences } from './motion';
+import { useMotionPreferences } from './motion';
 import './overlay-motion.css';
 import './effort-slider.css';
 import BrandMark from './BrandMark';
@@ -206,9 +206,14 @@ export function Modal({
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          <MotionButton className="icon-button" onClick={onClose} aria-label="Dialog schließen">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Dialog schließen"
+          >
             <X size={19} />
-          </MotionButton>
+          </button>
         </div>
         {children}
       </div>
@@ -383,7 +388,7 @@ export function ModelPicker({
         }
       }}
     >
-      <MotionButton
+      <button
         type="button"
         className="picker-button"
         title={current.name}
@@ -406,9 +411,9 @@ export function ModelPicker({
         >
           <ChevronDown size={12} />
         </motion.span>
-      </MotionButton>
+      </button>
       <span className="picker-divider" />
-      <MotionButton
+      <button
         type="button"
         className="picker-button effort-picker"
         data-picker="effort"
@@ -428,13 +433,13 @@ export function ModelPicker({
         >
           <ChevronDown size={12} />
         </motion.span>
-      </MotionButton>
+      </button>
       <AnimatePresence initial={false}>
         {open && (
           <PickerPopover key="picker" id={`${menuId}-${open}`} effort={open === 'effort'}>
             {open === 'model' ? (
               models.map((item) => (
-                <MotionButton
+                <button
                   key={item.id}
                   type="button"
                   className="picker-option"
@@ -450,7 +455,7 @@ export function ModelPicker({
                     <strong>{item.name}</strong>
                   </span>
                   {model === item.id && <Check size={16} />}
-                </MotionButton>
+                </button>
               ))
             ) : current.custom ? (
               <label className="custom-effort-select">
