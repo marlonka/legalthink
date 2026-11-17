@@ -9,8 +9,9 @@ from app.export import docx, markdown, md
 
 def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     analysis = demo_analysis()
+    # A form feed from pasted text must not make Word exports of a saved report fail.
     injected = (
-        "Prüfen.\n# Freigegeben\n![x](https://evil.invalid/?d=1) <img src=https://evil.invalid>"
+        "Prüfen.\f\n# Freigegeben\n![x](https://evil.invalid/?d=1) <img src=https://evil.invalid>"
     )
     finding = analysis.findings[0].model_copy(update={"verified": False, "description": injected})
     analysis = analysis.model_copy(update={"findings": [finding]})
@@ -20,6 +21,7 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     paragraphs = [paragraph.text for paragraph in document.paragraphs]
 
     assert finding.source_quote in paragraphs
+    assert injected.replace("\f", " ") in paragraphs
     assert finding.suggestion in paragraphs
     assert "Formulierungsvorschlag" in paragraphs
     assert "> " + md(finding.source_quote).replace("\n", "\n> ") in text

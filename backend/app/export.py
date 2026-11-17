@@ -191,7 +191,23 @@ def add_hyperlink(paragraph, label: str, url: str) -> None:
     paragraph._p.append(hyperlink)
 
 
+# XML 1.0 forbids these characters; python-docx raises on them. Pasted text and
+# verified quotes can contain them, for example form feeds from a print export.
+_XML_ILLEGAL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def _xml_safe(value):
+    if isinstance(value, str):
+        return _XML_ILLEGAL.sub(" ", value)
+    if isinstance(value, list):
+        return [_xml_safe(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _xml_safe(item) for key, item in value.items()}
+    return value
+
+
 def docx(analysis: Analysis) -> bytes:
+    analysis = Analysis.model_validate(_xml_safe(analysis.model_dump()))
     proposal_label = (
         "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
     )
