@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -18,7 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
 
-from . import duplicates, export, local_files
+from . import export
 from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
 from .config import Settings
 from .demo import demo_analysis, demo_documents, restore_demo_sources
@@ -77,7 +76,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         restore_demo_sources(app.state.store)
         app.state.analysis_slots = asyncio.Semaphore(2)
         app.state.extraction_slots = asyncio.Semaphore(2)
-        app.state.duplicates = duplicates.DuplicateFinder()
         client = None
         app.state.analysis_service = None
         if config.api_key:
@@ -93,7 +91,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             yield
         finally:
-            await run_in_threadpool(app.state.duplicates.close)
             if client:
                 await client.close()
 
@@ -488,70 +485,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "Content-Disposition": f'attachment; filename="LegalThink-{analysis.id}.{format}"'
             },
         )
-
-    def local_only() -> None:
-        # Paths, file lists and the trash belong to this computer's user.
-        if config.allow_remote:
-            raise HTTPException(403, "Die Duplikatsuche ist nur im lokalen Betrieb verfügbar.")
-
-    stale_scan = "Das Suchergebnis ist nicht mehr aktuell. Bitte erneut suchen."
-    files = APIRouter(prefix="/api/duplicates", dependencies=[Depends(local_only)])
-
-    @files.get("/locations", response_model=local_files.Locations)
-    def duplicate_locations():
-        return local_files.locations()
-
-    @files.get("/folders", response_model=local_files.FolderListing)
-    def duplicate_folders(path: str):
-        try:
-            return local_files.list_folders(path)
-        except local_files.FolderError as error:
-            raise HTTPException(422, str(error)) from None
-
-    @files.post("/scan", response_model=duplicates.DuplicateScan, status_code=202)
-    def start_duplicate_scan(body: duplicates.ScanRequest):
-        try:
-            return app.state.duplicates.start(body.path)
-        except local_files.FolderError as error:
-            raise HTTPException(422, str(error)) from None
-        except duplicates.ScanBusy:
-            raise HTTPException(409, "Es läuft bereits eine Suche.") from None
-
-    @files.get("/scan", response_model=duplicates.DuplicateScan | None)
-    def duplicate_scan():
-        return app.state.duplicates.current()
-
-    @files.delete("/scan", response_model=duplicates.DuplicateScan | None)
-    def cancel_duplicate_scan():
-        return app.state.duplicates.cancel()
-
-    @files.post("/trash", response_model=duplicates.TrashReport)
-    def trash_duplicates(body: duplicates.TrashRequest):
-        try:
-            job = app.state.duplicates.job(body.scan_id)
-            trashed, failed = job.trash(body.file_ids)
-        except duplicates.StaleScan:
-            raise HTTPException(409, stale_scan) from None
-        except duplicates.KeepOneCopy:
-            raise HTTPException(
-                422, "Behalten Sie in jeder Gruppe mindestens eine Datei."
-            ) from None
-        return duplicates.TrashReport(trashed=trashed, failed=failed, scan=job.snapshot())
-
-    @files.post("/reveal", status_code=204)
-    def reveal_duplicate(body: duplicates.RevealRequest):
-        try:
-            entry = app.state.duplicates.job(body.scan_id).entry(body.file_id)
-        except duplicates.StaleScan:
-            raise HTTPException(409, stale_scan) from None
-        if not os.path.lexists(entry.path):
-            raise HTTPException(404, "Die Datei ist nicht mehr vorhanden.")
-        try:
-            local_files.reveal(entry.path)
-        except OSError:
-            raise HTTPException(503, "Der Dateimanager konnte nicht geöffnet werden.") from None
-
-    app.include_router(files)
 
     if config.frontend_dir.is_dir():
         assets = config.frontend_dir / "assets"

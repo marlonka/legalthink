@@ -102,15 +102,6 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
         )
         authorized = {"Authorization": f"Bearer {token}", "Origin": "https://review.example"}
         assert client.get("/api/playbooks", headers=authorized).json() == []
-        # Folders, file lists and the trash of the server's user are never remote.
-        for method, path, body in (
-            ("GET", "/api/duplicates/locations", None),
-            ("GET", "/api/duplicates/folders?path=/", None),
-            ("POST", "/api/duplicates/scan", {"path": str(tmp_path)}),
-        ):
-            denied = client.request(method, path, json=body, headers=authorized)
-            assert denied.status_code == 403
-        assert client.app.state.duplicates.current() is None
         assert (
             client.get("/api/playbooks", headers={**authorized, "Origin": "null"}).status_code
             == 403
