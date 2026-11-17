@@ -814,6 +814,7 @@ export default function App() {
     (route === 'settings' && loadFailures.includes('Dokumente') && !documents.length);
   return (
     <DocumentPreviewProvider
+      route={route}
       documents={documents}
       onUpdated={(updated) =>
         setDocuments((previous) => previous.map((doc) => (doc.id === updated.id ? updated : doc)))

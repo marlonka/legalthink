@@ -15,7 +15,7 @@ import { SourceFile } from './SourceFile';
 import { useMotionPreferences } from './motion';
 import './document-preview.css';
 
-export type PreviewRequest = {
+type PreviewRequest = {
   source_document_id: string;
   source_document_name?: string;
   source_quote?: string;
@@ -29,42 +29,44 @@ const PreviewContext = createContext<{ openPreview: (source: PreviewRequest) => 
 export const useDocumentPreview = () => useContext(PreviewContext);
 
 export function DocumentPreviewProvider({
+  route,
   documents,
   onUpdated,
   children,
 }: {
+  route: string;
   documents: DocumentRecord[];
   onUpdated: (document: DocumentRecord) => void;
   children: ReactNode;
 }) {
-  const [source, setSource] = useState<PreviewRequest | null>(null);
+  const [opened, setOpened] = useState<(PreviewRequest & { route: string }) | null>(null);
+  // A preview belongs to the page that opened it; navigating away closes it at once.
+  const source = opened?.route === route ? opened : null;
   const [expanded, setExpanded] = useState(false);
   const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1400px)').matches);
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const canDock = wide && window.location.hash.startsWith('#analysis/');
+  const shown = useRef(false);
+  const canDock = wide && route.startsWith('analysis/');
   const modal = expanded || !canDock;
   const { reduced, transition } = useMotionPreferences();
   const file = documents.find((item) => item.id === source?.source_document_id);
 
   function openPreview(next: PreviewRequest) {
     trigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSource(next);
+    if (!source) setExpanded(false);
+    setOpened({ ...next, route });
   }
   function close() {
-    setSource(null);
+    setOpened(null);
     setExpanded(false);
   }
   useEffect(() => {
     const query = window.matchMedia('(min-width: 1400px)');
     const change = () => setWide(query.matches);
     query.addEventListener('change', change);
-    window.addEventListener('hashchange', close);
-    return () => {
-      query.removeEventListener('change', change);
-      window.removeEventListener('hashchange', close);
-    };
+    return () => query.removeEventListener('change', change);
   }, []);
   useLayoutEffect(() => {
     const main = document.getElementById('main-content');
@@ -76,13 +78,22 @@ export function DocumentPreviewProvider({
       main.scrollTop += anchor.getBoundingClientRect().top - top;
     const element = dialog.current;
     if (!element) return;
+    const focused =
+      document.activeElement instanceof HTMLElement && element.contains(document.activeElement)
+        ? document.activeElement
+        : null;
     // Keep the renderer mounted when changing between dock and full-screen view.
     if (element.open) element.close();
     if (source) {
       if (modal) element.showModal();
       else element.show();
-      closeButton.current?.focus({ preventScroll: true });
-    } else if (trigger.current?.isConnected) trigger.current.focus({ preventScroll: true });
+      // Opening focuses the close button; a size change keeps the control in use.
+      (shown.current && focused ? focused : closeButton.current)?.focus({ preventScroll: true });
+      shown.current = true;
+    } else {
+      shown.current = false;
+      if (trigger.current?.isConnected) trigger.current.focus({ preventScroll: true });
+    }
   }, [Boolean(source), modal]);
   useEffect(
     () => () => {
