@@ -7,7 +7,7 @@ from dataclasses import replace
 import httpx2
 import pytest
 from docx import Document as WordDocument
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn
 from fastapi import Request
 from fastapi.testclient import TestClient
@@ -466,7 +466,16 @@ def test_scanned_pdf_and_empty_or_long_text_rejected():
         extract(b"a" * 200001, ".txt")
 
 
-def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
+def test_docx_import_reads_all_body_text_and_rejects_unresolved_revisions(client):
+    namespaces = (
+        'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+        'xmlns:v="urn:schemas-microsoft-com:vml"'
+    )
+
+    def box(markup):
+        return f"<w:txbxContent><w:p><w:r><w:t>{markup}</w:t></w:r></w:p></w:txbxContent>"
+
     for revision in (None, "ins", "del", "moveFrom", "moveTo"):
         document = WordDocument()
         document.add_paragraph("Der Vertrag beginnt am 1. Januar.")
@@ -483,6 +492,40 @@ def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
             paragraph._p.append(change)
         else:
             paragraph.add_run("Der Auftragnehmer haftet unbegrenzt.")
+            # Contract templates keep text in content controls, nested tables, fields and
+            # text boxes. Word shows it; the analysis must receive it as well.
+            cell = paragraph._parent
+            cell.add_table(rows=1, cols=1).cell(0, 0).text = "Vertragsstrafe 50.000 EUR."
+            body = document.element.body
+            body.insert(
+                len(body) - 1,
+                parse_xml(
+                    f"<w:sdt {namespaces}><w:sdtContent><w:p><w:r><w:t>Die Haftung ist "
+                    "auf 1.000 EUR begrenzt.</w:t></w:r></w:p></w:sdtContent></w:sdt>"
+                ),
+            )
+            start = document.add_paragraph("Laufzeit bis ")
+            start._p.append(
+                parse_xml(
+                    f"<w:sdt {namespaces}><w:sdtContent><w:r><w:t>31. Dezember 2027"
+                    "</w:t></w:r></w:sdtContent></w:sdt>"
+                )
+            )
+            start._p.append(
+                parse_xml(
+                    f'<w:fldSimple {namespaces} w:instr="REF Kuendigung"><w:r><w:t>'
+                    "; Kündigung nach § 12.</w:t></w:r></w:fldSimple>"
+                )
+            )
+            start._p.append(
+                parse_xml(
+                    f'<w:r {namespaces}><mc:AlternateContent><mc:Choice Requires="wps">'
+                    f"<w:drawing>{box('Textfeld: Vertraulich')}</w:drawing></mc:Choice>"
+                    "<mc:Fallback><w:pict><v:shape><v:textbox>"
+                    f"{box('Textfeld: Vertraulich')}</v:textbox></v:shape></w:pict>"
+                    "</mc:Fallback></mc:AlternateContent></w:r>"
+                )
+            )
         output = io.BytesIO()
         document.save(output)
         response = client.post(
@@ -493,7 +536,17 @@ def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
             assert "Änderungen" in response.json()["detail"]
         else:
             assert response.status_code == 201
-            assert "haftet unbegrenzt" in response.json()["text"]
+            text = response.json()["text"]
+            expected = [
+                "Der Vertrag beginnt am 1. Januar.",
+                "Der Auftragnehmer haftet unbegrenzt.\nVertragsstrafe 50.000 EUR.",
+                "Die Haftung ist auf 1.000 EUR begrenzt.",
+                "Laufzeit bis 31. Dezember 2027; Kündigung nach § 12.",
+                "Textfeld: Vertraulich",
+            ]
+            positions = [text.index(part) for part in expected]
+            assert positions == sorted(positions)
+            assert text.count("Textfeld: Vertraulich") == 1
     assert len(client.get("/api/documents").json()) == 1
 
 
