@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -174,30 +175,47 @@ def extract(data: bytes, suffix: str) -> tuple[str, int]:
 
 
 _CHILD_ENV = ("PATH", "SYSTEMROOT", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL")
+EXTRACTION_TIMEOUT_SECONDS = 25
 
 
 async def extract_isolated(data: bytes, suffix: str) -> tuple[str, int]:
+    """Parse untrusted bytes in a disposable process without configuration or secrets.
+
+    The process runs from a worker thread rather than as an asyncio subprocess: in
+    reload mode, Uvicorn uses a selector event loop on Windows, which cannot start
+    subprocesses. A timeout or a cancelled request ends the process.
+    """
     options = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
-    # The parser handles untrusted files: give it no API key or other configuration.
     env = {key: os.environ[key] for key in _CHILD_ENV if key in os.environ}
-    process = await asyncio.create_subprocess_exec(
-        sys.executable,
-        "-m",
-        "app.extraction",
-        suffix,
-        cwd=Path(__file__).resolve().parent.parent,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,
-        env=env,
-        **options,
-    )
-    try:
-        output, _ = await asyncio.wait_for(process.communicate(data), timeout=25)
-    except (TimeoutError, asyncio.CancelledError):
-        if process.returncode is None:
+    cancelled = threading.Event()
+    started: list[subprocess.Popen] = []
+
+    def run() -> bytes:
+        process = subprocess.Popen(
+            [sys.executable, "-m", "app.extraction", suffix],
+            cwd=Path(__file__).resolve().parent.parent,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            **options,
+        )
+        started.append(process)
+        if cancelled.is_set():
             process.kill()
-        await process.wait()
+        try:
+            return process.communicate(data, timeout=EXTRACTION_TIMEOUT_SECONDS)[0]
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            raise TimeoutError from None
+
+    try:
+        output = await asyncio.to_thread(run)
+    except asyncio.CancelledError:
+        cancelled.set()
+        for process in started:
+            process.kill()
         raise
     try:
         result = json.loads(output)
