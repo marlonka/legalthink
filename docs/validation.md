@@ -1,8 +1,8 @@
 # Verbleibende Tests
 
-Stand: 3. Oktober 2026. Auf Wunsch auf wesentliche Schutzmechanismen reduziert.
+Stand: 17. November 2026. 54 Offline-Backendfälle, in der CI unter Linux, Windows und macOS, und zwei Browserfälle gegen den Produktionsbuild. Am 3. Oktober 2026 auf wesentliche Schutzmechanismen reduziert.
 
-## Aktueller Stand
+## Reduktion – 3. Oktober 2026
 
 **44 Backendfälle statt 70; weiterhin ein Browser-Smoke-Test.** Testcode netto um 207 Zeilen reduziert. Produktcode, CI und Abhängigkeiten unverändert.
 
@@ -42,8 +42,8 @@ Feldkombinationen, jede Provider-Statusvariante und interne Shutdown-Details wer
 - `backend/tests/test_api.py`: Datenspeicherung, atomisches Speichern und Löschen, Abbruch, Eingabegrenzen einschließlich 1.000.000 Zeichen, vertrauliche Fehlermeldungen, Dokumentimport und Export bestehender Berichte.
 - `backend/tests/test_analysis.py`: OpenAI-Anfrage mit Luna/Sehr hoch, getrennte Anweisungen und Quelldaten, Cacheparameter, Quellenprüfung, Vergleichsrollen, wesentliche Providerfehler und Abbruch. Providerantworten werden simuliert.
 - `backend/tests/test_security_review.py`: Host-/Origin-/Token-Zugriff, PDF-Ressourcengrenzen, Dokumentherkunft sowie bekannte Import- und Exportfehler.
-- `backend/tests/test_export.py`: Unbestätigte Zitate dürfen keine nachverfolgten Word-Änderungen erzeugen.
-- `tests/built.spec.ts`: Ein Browserablauf gegen den Produktionsbuild: Start mit Luna/Sehr hoch, lokales Beispiel, Quellenansicht, Markdown-Export, erneutes Öffnen und Löschen mit anschließendem Browser-Zurück. Prüft außerdem lokale Assets und Content Security Policy.
+- `backend/tests/test_export.py`: Unbestätigte Zitate dürfen keine nachverfolgten Word-Änderungen erzeugen; Steuerzeichen im Bericht verhindern den Word-Export nicht.
+- `tests/built.spec.ts`: Zwei Browserabläufe gegen den Produktionsbuild. Erstens Start mit Luna/Sehr hoch, lokales Beispiel, Quellenansicht, Markdown-Export, erneutes Öffnen und Löschen mit anschließendem Browser-Zurück; dabei auch lokale Assets und Content Security Policy. Zweitens ein Vergleich, der hochgeladene Versionen, Zusatzkontext, Prüfauftrag und abgeschaltete Webrecherche an die lokale API sendet, ohne externe Anfrage und ohne konfigurierten Schlüssel.
 
 Entfernt: 43 Browserfälle für Layout, Motion, Themes, Bildschirmgrößen, Detailbedienung und große Texteingaben; doppelte Backendfälle, Demo-Matrizen und reine Formatierungsprüfungen. Die separate Vite-Testinstanz, zweite Playwright-Konfiguration und axe-Abhängigkeit entfallen. Keine automatischen Testwiederholungen.
 
@@ -143,3 +143,18 @@ Drei unabhängige Reviews: Frontend-Zustand, Backend-Lifecycle und Dokumentvorsc
 - Produktionsbuild mit Node 26.11.0, TypeScript, Prettier, Ruff, Lockdateikonsistenz und `git diff --check` bestanden. **50 Backendfälle und ein Build-Smoke-Test mit Python 3.15.1 bestanden.** Netzwerkzugriffe des Providers bleiben in den Tests gesperrt; keine echten OpenAI-Anfragen.
 - Zusätzliche lokale Prüfung mit synthetischen Dateien: PDF-Canvas und Textebene sowie Word-Absätze und Tabelle auf Desktop (1600 px, Hell) und Mobil (390 px, Dunkel) gerendert. Keine Browserfehler, externen Browseranfragen oder horizontalen Seitenüberläufe. Vorschau geöffnet und geschlossen; Schließen-Button über acht Frames positions- und größenstabil (höchstens 0,5 px Abweichung). Keine zusätzlichen dauerhaften Testfälle.
 - npm meldet für Workspace und Frontend keine veralteten direkten Pakete und keine bekannten Schwachstellen. `pip-audit` prüfte alle 42 festgeschriebenen Python-Drittanbieterpakete einschließlich plattformspezifischer Einträge: keine bekannten Schwachstellen.
+
+## Code-Review, Bereinigung und Abhängigkeiten – 17. November 2026
+
+Reviews aus Sicherheits-, Plattform-, Daten- und Bediensicht. Jeder Befund wurde vor der Korrektur reproduziert; erweiterte Testfälle schlagen ohne die jeweilige Korrektur fehl.
+
+- Zugriffsgrenze: Mit `--root-path` hinter einem Präfix-Proxy prüfte sie den ungekürzten Pfad, Token-, Loopback- und Herkunftsprüfungen entfielen. Sie verwendet jetzt den Routingpfad. Unter Windows konnten Pfade wie `///host/share/x.png` zu UNC-Pfaden werden; ausgeliefert werden nur beim Start gelistete Builddateien, Pfade mit `\`, `:` oder NUL werden abgewiesen.
+- Windows: Im Reload-Modus von `npm run dev` scheiterte jeder Upload mit 500, weil die dortige Eventloop keine asyncio-Subprozesse starten kann. Die Extraktion läuft über einen Worker-Thread; Zeitlimit und Abbruch beenden den Prozess weiterhin. Die CI führt die Backendtests zusätzlich unter Windows und macOS aus.
+- DOCX-Import liest Inhaltssteuerelemente, Felder, verschachtelte Tabellen und Textfelder des Haupttexts; vorher fehlten sie der Analyse, obwohl die Vorschau sie zeigte. Ohne solche Strukturen bleibt der Text unverändert (200 generierte Dokumente verglichen). Kopf- und Fußzeilen, Fuß- und Endnoten sowie Kommentare werden nicht gelesen; das README nennt diese Grenze.
+- Nicht bestätigte Chronologie-Ereignisse aus eingefügtem Text erhielten den Quellennamen und wirkten belegt. Nur bestätigte Ereignisse erhalten ihn jetzt.
+- Word-Export scheiterte an Steuerzeichen wie Seitenvorschüben mit 500; der Export ersetzt sie durch Leerzeichen. Validierungsfehler nennen die verletzte Regel statt „Ungültige Eingabe: body.“
+- Zitatprüfung normalisiert jede Quelle einmal je Prüfung und läuft außerhalb der Eventloop: 1.000.000 Zeichen mit 130 Zitaten 3,9 s → 79 ms, Quellenzuordnung älterer Berichte bis 5,2 s → 128 ms, gleiche Ergebnisse.
+- Oberfläche: Neu laden verwirft keine währenddessen hinzugefügten Uploads, Analysen oder Playbooks. Die Vorschau schließt mit ihrer Seite; Fokus bleibt bei Größenwechsel, Analysestart und Export erhalten. Fehler erscheinen als Fehlermeldung mit `role="alert"`. PDF-Seiten außerhalb des Sichtbereichs geben ihre Ressourcen frei. „Erneut laden“ und „Playbook speichern“ behalten beim Laden ihre Größe (0 px über acht Frames). Wieder aktivierte Buttons behielten Motions Inline-Opazität und wirkten deaktiviert; Klickfeedback kommt jetzt aus CSS.
+- Entfernt: 117 Zeilen CSS ohne Wirkung, nicht referenzierte Klassennamen, ein ungenutzter `Modal`-Parameter und ein nicht eingebundenes SVG. Berechnete Styles und Boxen aller Elemente vor und nach der CSS-Bereinigung in 190 Zuständen verglichen (1440, 820 und 390 px; Hell und Dunkel; mit und ohne reduzierte Bewegung; leere und gefüllte Seiten, Menüs, Dialoge, Drag-and-drop, Hinweis, Vorschau, mobile Navigation). Keine Abweichung in Position oder Größe. Verbleibende Unterschiede ohne Darstellungswirkung: Flex-Eigenschaften an Grid-Containern, Übergänge ohne Dauer und die Identitätstransformation der geöffneten mobilen Navigation.
+- Abhängigkeiten nur ab drei Tagen Veröffentlichungsalter: pypdf 7.1.0, FastAPI 0.162.7, OpenAI Python 3.51.0, pytest-asyncio 1.5.0, Ruff 0.17.5, Motion 14.14.0, Playwright 1.65.1 und Prettier 3.10.1. pypdf 7 enthält Sicherheitskorrekturen für die Verarbeitung nicht vertrauenswürdiger PDFs, die für 6.x nicht erschienen sind; die genutzten APIs und Grenzwerte sind unverändert. Zurückgestellt: FastAPI 0.163.1, OpenAI Python 3.52.0, python-multipart 0.0.34, HTTPX2 2.16.2 und Lucide React 1.73.0. npm meldet für Workspace und Frontend keine bekannten Schwachstellen.
+- Lokal bestanden: 54 Offline-Backendfälle, beide Browserfälle, Produktionsbuild mit TypeScript, Ruff, Prettier und `git diff --check`. 57 Screenshots nach den Updates ohne Browserfehler und bis auf bekanntes Kantenglättungsrauschen unverändert. Keine echten OpenAI-Anfragen.
