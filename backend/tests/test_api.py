@@ -209,7 +209,17 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
                     source_document_id=pasted_document.id,
                     source_quote=quote,
                     verified=True,
-                )
+                ),
+                # The model claimed this source, but the quote is not in the text.
+                TimelineEntry(
+                    date="2. März",
+                    event="Lieferung angekündigt.",
+                    open_question="",
+                    source="Beleg nicht bestätigt",
+                    source_document_id=pasted_document.id,
+                    source_quote="Die Lieferung erfolgt am 2. März.",
+                    verified=False,
+                ),
             ]
             return result
 
@@ -241,6 +251,7 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     assert analysis["source_text_document_name"] == expected_name
     assert analysis["findings"][0]["source_document_name"] == expected_name
     assert analysis["timeline"][0]["source"] == expected_name
+    assert analysis["timeline"][1]["source"] == "Beleg nicht bestätigt"
     assert analysis["findings"][0]["source_quote"] == quote
     assert analysis["timeline"][0]["source_quote"] == quote
     assert pasted["text"] == text and pasted["char_count"] == len(text)

@@ -408,7 +408,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         if finding.source_document_id == pasted_document.id:
                             finding.source_document_name = pasted_document.name
                     for event in result.timeline:
-                        if event.source_document_id == pasted_document.id:
+                        # An unconfirmed event keeps its notice instead of the source name.
+                        if event.verified and event.source_document_id == pasted_document.id:
                             event.source = pasted_document.name
                 await run_in_threadpool(
                     app.state.store.save_analysis,
