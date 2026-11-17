@@ -624,9 +624,7 @@ function ComposerDocument({
           {compare
             ? index === 0
               ? '01 · Original'
-              : index === 1
-                ? '02 · Gegenentwurf'
-                : 'Zusätzliches Dokument'
+              : '02 · Gegenentwurf'
             : document.page_count
               ? `${document.page_count} ${document.page_count === 1 ? 'Seite' : 'Seiten'}`
               : `${document.char_count.toLocaleString('de-DE')} Zeichen`}

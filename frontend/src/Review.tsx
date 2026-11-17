@@ -361,7 +361,7 @@ export default function Review({
         >
           <section className="findings-column" aria-label={labels.findings}>
             <div className="findings-toolbar">
-              <div className="filter-pills" aria-label="Nach Priorität filtern">
+              <div className="filter-pills" role="group" aria-label="Nach Priorität filtern">
                 <button
                   className={filter === 'all' ? 'active' : ''}
                   onClick={() => setFilter('all')}

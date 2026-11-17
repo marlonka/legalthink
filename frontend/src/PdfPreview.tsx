@@ -10,6 +10,7 @@ import {
 } from 'pdfjs-dist';
 import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { MIN_QUOTE_LENGTH, normalizeQuote } from './quote';
 import './pdf-viewer.css';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
@@ -22,7 +23,6 @@ type Citation = {
 type Position = { item: number; start: number; end: number };
 const segmenter = new Intl.Segmenter('de', { granularity: 'grapheme' });
 const PDF_TO_CSS_UNITS = 96 / 72;
-const normalize = (value: string) => value.normalize('NFC').replace(/\s+/g, ' ').trim();
 
 // Preserve word boundaries, including spaces implied by PDF text geometry. Using the same
 // character map for search and highlighting prevents an approximate match becoming evidence.
@@ -75,9 +75,9 @@ function occurrences(text: string, needle: string) {
 }
 
 function highlightQuote(layer: TextLayer, content: TextContent, paper: HTMLElement, quote: string) {
-  const needle = normalize(quote);
+  const needle = normalizeQuote(quote);
   const { value, positions } = mappedText(content);
-  if (needle.length < 12 || occurrences(value, needle) !== 1) return;
+  if (needle.length < MIN_QUOTE_LENGTH || occurrences(value, needle) !== 1) return;
   const index = value.indexOf(needle);
   const first = positions[index];
   const last = positions[index + needle.length - 1];
@@ -380,8 +380,8 @@ export default function PdfPreview({
     userNavigated.current = false;
     scrollAnchor.current = { page: targetPage, fraction: 0 };
     goToPage(targetPage, false);
-    const needle = normalize(quote);
-    if (needle.length < 12) {
+    const needle = normalizeQuote(quote);
+    if (needle.length < MIN_QUOTE_LENGTH) {
       setCitation({ state: needle ? 'short' : 'none', page: targetPage });
       return;
     }

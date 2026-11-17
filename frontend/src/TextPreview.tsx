@@ -3,13 +3,19 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { LocateFixed } from 'lucide-react';
 import type { DocumentRecord } from './types';
+import { MIN_QUOTE_LENGTH, normalizeQuote } from './quote';
 
 // Normalize in native string operations; source-size arrays and iterating one
 // Intl.Segmenter result per character make pasted million-character files costly.
 function locateQuote(text: string, quote: string) {
-  const wanted = quote.normalize('NFC').replace(/\s+/g, ' ').trim();
-  const empty = { count: 0, start: 0, end: 0, tooShort: Boolean(wanted) && wanted.length < 12 };
-  if (wanted.length < 12) return empty;
+  const wanted = normalizeQuote(quote);
+  const empty = {
+    count: 0,
+    start: 0,
+    end: 0,
+    tooShort: Boolean(wanted) && wanted.length < MIN_QUOTE_LENGTH,
+  };
+  if (wanted.length < MIN_QUOTE_LENGTH) return empty;
   const composed = text.normalize('NFC');
   const normalized = composed.replace(/\s+/g, ' ');
   const first = normalized.indexOf(wanted);
@@ -166,6 +172,7 @@ export default function TextPreview({
         ref={viewport}
         className="text-preview-viewport"
         tabIndex={0}
+        role="region"
         aria-label={reading ? 'Markdown-Leseansicht' : 'Dokumenttext'}
       >
         {reading ? (
