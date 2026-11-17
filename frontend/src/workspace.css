@@ -136,9 +136,6 @@
 .severity-dot.low {
   background: var(--severity-low);
 }
-.severity-dot.info {
-  background: var(--severity-info);
-}
 .review-tab-bar {
   display: flex;
   align-items: center;
@@ -162,15 +159,6 @@
 }
 .review-tabs > button.active {
   color: var(--text-primary);
-}
-.review-tabs > button.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--text-primary);
 }
 .review-tabs > button > span {
   padding: 2px 5px;
@@ -215,9 +203,11 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
-.filter-pills > button:hover,
-.filter-pills > button.active {
+.filter-pills > button:hover {
   background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.filter-pills > button.active {
   color: var(--text-primary);
 }
 .filter-pills > button > span {
@@ -316,10 +306,6 @@
 .finding-chevron {
   margin-top: 3px;
   color: var(--text-muted);
-  transition: transform 180ms ease;
-}
-.finding-chevron.rotated {
-  transform: rotate(180deg);
 }
 .finding-content-motion {
   overflow: hidden;
@@ -371,11 +357,6 @@
   font-size: 16px;
   font-weight: 500;
 }
-.open-questions > p {
-  margin-top: 9px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
 .open-questions ol {
   margin: 18px 0 0;
   padding-left: 20px;
@@ -415,8 +396,6 @@
   gap: 12px;
   padding: 0;
   text-align: left;
-}
-.suggestion-title {
   font-size: 16px;
   font-weight: 500;
   line-height: 1.55;
@@ -613,11 +592,6 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.analysis-details p {
-  margin-top: 14px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
 
 /* History, playbooks and settings. */
 .standard-page-header {
@@ -746,7 +720,6 @@
 }
 .delete-hover {
   margin-right: 5px;
-  color: var(--text-muted);
 }
 .history-item:hover .delete-hover {
   color: var(--text-primary);
@@ -770,15 +743,6 @@
   font-size: 18px;
   font-weight: 500;
   color: var(--text-primary);
-}
-.empty-state p {
-  max-width: 420px;
-  font-size: 16px;
-  line-height: 1.8;
-  color: var(--text-secondary);
-}
-.empty-state .button {
-  margin-top: 8px;
 }
 .empty-state.compact {
   padding: 43px 20px;
@@ -1102,10 +1066,6 @@
 .theme-option:hover {
   background: var(--surface-hover);
 }
-.theme-option:has(input:checked) {
-  border-color: var(--border-selected);
-  background: var(--surface-selected);
-}
 .theme-option input {
   width: 14px;
   height: 14px;
@@ -1366,9 +1326,6 @@
   }
   .empty-state h2 {
     font-size: 24px;
-  }
-  .empty-state p {
-    font-size: 16px;
   }
   .playbook-card-content {
     padding: 22px;

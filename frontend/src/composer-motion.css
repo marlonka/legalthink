@@ -305,10 +305,6 @@
   min-height: 36px;
 }
 
-.drop-overlay.composer-drop-feedback {
-  border: 0;
-}
-
 .composer-drop-perimeter {
   position: absolute;
   inset: 0;
