@@ -254,6 +254,11 @@ def verify_timeline(result: ModelAnalysis, documents: list[Document]) -> list[Ti
     return events
 
 
+def _content(item: Any) -> list[Any]:
+    """Content parts of an output item. Reasoning items carry `content=None`."""
+    return getattr(item, "content", None) or []
+
+
 def final_output_texts(response: Any) -> list[str]:
     """Return the text of each final assistant message.
 
@@ -269,7 +274,7 @@ def final_output_texts(response: Any) -> list[str]:
             continue
         text = "".join(
             getattr(content, "text", "") or ""
-            for content in getattr(item, "content", [])
+            for content in _content(item)
             if getattr(content, "type", "") == "output_text"
         )
         if text.strip():
@@ -591,14 +596,17 @@ class AnalysisService:
             ) from None
 
         provider_duration_ms = round((perf_counter() - started) * 1000)
-        for item in response.output:
-            for content in getattr(item, "content", []):
-                if getattr(content, "type", "") == "refusal":
-                    raise AnalysisError(
-                        "Das Modell hat die Bearbeitung abgelehnt. Bitte den "
-                        "Prüfauftrag überarbeiten.",
-                        422,
-                    )
+        # Refusals are content parts of messages. Reasoning items carry no content list.
+        if any(
+            getattr(content, "type", "") == "refusal"
+            for item in response.output
+            if getattr(item, "type", "") == "message"
+            for content in _content(item)
+        ):
+            raise AnalysisError(
+                "Das Modell hat die Bearbeitung abgelehnt. Bitte den Prüfauftrag überarbeiten.",
+                422,
+            )
         if response.status != "completed":
             reason = getattr(getattr(response, "incomplete_details", None), "reason", None)
             if reason == "max_output_tokens":

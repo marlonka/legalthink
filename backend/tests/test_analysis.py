@@ -60,7 +60,9 @@ def provider_response(result=None, status="completed", refusal=False, annotation
         "created_at": 1,
         "model": "gpt-6-luna",
         "status": status,
+        # Reasoning models put a reasoning item, without content, before the answer.
         "output": [
+            {"id": "rs_offline", "type": "reasoning", "summary": []},
             {
                 "id": "msg_offline",
                 "type": "message",
@@ -84,7 +86,7 @@ def two_differing_reports():
     other = {**model_result(), "summary": "PRIVATE abweichender Bericht."}
     response["output"].append(
         {
-            **response["output"][0],
+            **response["output"][-1],
             "id": "msg_second",
             "content": [{"type": "output_text", "text": json.dumps(other), "annotations": []}],
         }
@@ -259,10 +261,10 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 for cited_url in [*invalid_urls, url]
             ]
         )
-        response["output"][0]["phase"] = "final_answer"
+        response["output"][-1]["phase"] = "final_answer"
         # GPT-6 can precede a hosted search with commentary; output_text would join both.
         response["output"].insert(
-            0,
+            1,
             {
                 "id": "msg_commentary",
                 "type": "message",
