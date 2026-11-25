@@ -129,12 +129,14 @@ def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     assert len(client.get("/api/playbooks").json()) == 1
     for table in ("analyses", "documents", "playbooks"):
         client.app.state.store.delete(table, f"damaged-{table}")
+    # The list omits document texts; the browser loads a text when it shows it.
     example = client.get("/api/documents").json()[0]
+    example_text = client.get(f"/api/documents/{example['id']}/text").text
     # User uploads remain deletable even with the same filename and text as an example.
     uploaded = Document(
         id=new_id(),
         name=example["name"],
-        text=example["text"],
+        text=example_text,
         page_count=1,
         char_count=example["char_count"],
         original_available=True,
@@ -152,9 +154,9 @@ def test_bulk_document_deletion_only_removes_confirmed_sources(client):
         response = client.request("DELETE", "/api/documents", json={"document_ids": confirmed})
         assert response.status_code == 204
         remaining = {doc["id"]: doc for doc in client.get("/api/documents").json()}
-        assert remaining == {example["id"]: example, newer.id: newer.model_dump()}
+        assert remaining == {example["id"]: example, newer.id: newer.model_dump(exclude={"text"})}
         assert client.get(f"/api/documents/{uploaded.id}/original").status_code == 404
-        assert client.get(f"/api/documents/{example['id']}/text").text == example["text"]
+        assert client.get(f"/api/documents/{example['id']}/text").text == example_text
     assert client.get(f"/api/analyses/{analysis['id']}").json()["findings"] == analysis["findings"]
     assert len(client.get("/api/playbooks").json()) == 1
 
@@ -254,7 +256,7 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     assert analysis["timeline"][1]["source"] == "Beleg nicht bestätigt"
     assert analysis["findings"][0]["source_quote"] == quote
     assert analysis["timeline"][0]["source_quote"] == quote
-    assert pasted["text"] == text and pasted["char_count"] == len(text)
+    assert pasted["char_count"] == len(text)
     downloaded = client.get(f"/api/documents/{pasted_id}/text")
     assert downloaded.content == text.encode("utf-8")
     assert downloaded.headers["content-disposition"].startswith("attachment;")
@@ -289,7 +291,7 @@ def test_mixed_document_and_pasted_text_limit_is_enforced_without_truncation(
     assert response.status_code == expected_status, response.text
     if extra:
         assert not service.calls
-        assert client.get("/api/documents").json() == [document.model_dump()]
+        assert client.get("/api/documents").json() == [document.model_dump(exclude={"text"})]
         assert client.get("/api/analyses").json() == []
     else:
         assert [doc.text for doc in service.calls[0][1]] == [text]
@@ -588,6 +590,7 @@ def test_failed_upstream_analysis_is_not_persisted(client):
     )
     assert response.status_code == 502
     assert client.get("/api/analyses").json() == []
+    document.pop("text")
     assert client.get("/api/documents").json() == [document]
 
 

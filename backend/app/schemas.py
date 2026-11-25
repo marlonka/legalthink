@@ -54,14 +54,19 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class Document(StrictModel):
+class DocumentSummary(StrictModel):
+    """A stored document without its extracted text, as the document list returns it."""
+
     id: str
     name: str
-    text: str
     page_count: int
     char_count: int
     original_available: bool = False
     is_demo: bool = False
+
+
+class Document(DocumentSummary):
+    text: str
 
 
 class DocumentDeleteRequest(StrictModel):

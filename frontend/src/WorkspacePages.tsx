@@ -210,7 +210,11 @@ export function Playbooks({
     try {
       const form = new FormData();
       form.append('file', file);
-      const document = await api<DocumentRecord>('/documents', { method: 'POST', body: form });
+      // An upload returns the document with its extracted text.
+      const document = await api<DocumentRecord & { text: string }>('/documents', {
+        method: 'POST',
+        body: form,
+      });
       onDocumentImported?.(document);
       setContent(document.text);
       if (document.text.length > 30000)

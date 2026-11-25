@@ -10,7 +10,8 @@ export type ServiceTier = 'default' | 'flex';
 export interface DocumentRecord {
   id: string;
   name: string;
-  text: string;
+  /** Extracted text. The document list omits it; uploads and pasted text include it. */
+  text?: string;
   page_count: number;
   char_count: number;
   original_available?: boolean;

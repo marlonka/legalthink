@@ -139,6 +139,15 @@ class Store:
             rows = db.execute(f"SELECT body FROM {table} ORDER BY created_at DESC, rowid DESC")
             return [json.loads(row[0]) for row in rows]
 
+    def list_documents(self) -> list[dict[str, Any]]:
+        """Stored documents without their extracted text, newest first."""
+        with self.connection() as db:
+            rows = db.execute(
+                "SELECT json_remove(body, '$.text') FROM documents "
+                "ORDER BY created_at DESC, rowid DESC"
+            )
+            return [json.loads(row[0]) for row in rows]
+
     def delete_documents(self, document_ids: list[str]) -> None:
         # Delete the confirmed selection atomically; newer uploads stay untouched.
         with self.connection() as db:

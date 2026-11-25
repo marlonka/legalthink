@@ -31,6 +31,7 @@ from .schemas import (
     DemoRequest,
     Document,
     DocumentDeleteRequest,
+    DocumentSummary,
     Playbook,
     PlaybookInput,
     new_id,
@@ -96,7 +97,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="LegalThink",
-        version="0.3.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -164,9 +164,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def models():
         return {"models": MODELS}
 
-    @app.get("/api/documents", response_model=list[Document])
+    @app.get("/api/documents", response_model=list[DocumentSummary])
     def list_documents():
-        return readable(Document, app.state.store.list("documents"))
+        # Each text can hold 200,000 characters; the browser loads one when it shows it.
+        return readable(DocumentSummary, app.state.store.list_documents())
 
     async def read_upload(file: UploadFile) -> bytes:
         try:
