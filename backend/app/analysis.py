@@ -48,6 +48,8 @@ FLEX_TIMEOUT_SECONDS = 900.0
 # Localize hosted search; the tool otherwise assumes a user in the United States.
 WEB_SEARCH_LOCATION = {"type": "approximate", "country": "DE", "timezone": "Europe/Berlin"}
 MAX_SOURCES = 30
+# A shorter quote is too unspecific to confirm; frontend/src/quote.ts uses the same.
+MIN_QUOTE_LENGTH = 12
 _URL_FORBIDDEN = re.compile(r'[\s<>"\x00-\x1f\x7f]')
 
 
@@ -94,7 +96,7 @@ class SourceIndex:
 
     def contains(self, document: Document | None, quote: str) -> bool:
         """Case-sensitive, whitespace-tolerant containment of a normalized quote."""
-        return bool(document and len(quote) >= 12 and quote in self.text(document))
+        return bool(document and len(quote) >= MIN_QUOTE_LENGTH and quote in self.text(document))
 
     def page_location(self, document: Document, quote: str) -> str | None:
         if document.id not in self._pages:
@@ -118,7 +120,7 @@ class SourceIndex:
         if source:
             return source
         quote = normalized(quote)
-        if len(quote) < 12:
+        if len(quote) < MIN_QUOTE_LENGTH:
             return None
         matches = [doc for doc in self.documents if quote in self.text(doc)]
         if len(matches) == 1:

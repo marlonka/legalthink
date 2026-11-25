@@ -23,14 +23,12 @@ MODELS = [
     {
         "id": "gpt-6-luna",
         "name": "GPT-6 Luna",
-        "description": "Für fokussierte Aufgaben und schnelle erste Prüfungen.",
         "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
         "default_effort": "xhigh",
     },
     {
         "id": "gpt-6.1-sol",
         "name": "GPT-6.1 Sol",
-        "description": "Für anspruchsvolle Prüfungen und komplexe Abwägungen.",
         "efforts": ["low", "medium", "high", "xhigh", "max"],
         "default_effort": "xhigh",
     },
