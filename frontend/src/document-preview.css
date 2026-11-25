@@ -187,6 +187,9 @@
 .preview-unavailable p {
   max-width: 640px;
 }
+.preview-unavailable > .button {
+  margin-top: 12px;
+}
 .text-preview {
   display: flex;
   flex-direction: column;
