@@ -65,16 +65,18 @@ def has_revision(finding: Finding) -> bool:
     )
 
 
-_MD_SPECIAL = re.compile(r"([\\`*_\[\]<>!|])")
+_MD_SPECIAL = re.compile(r"([\\`*_~\[\]<>!|])")
 _MD_LINE_START = re.compile(r"^(\s*)([#>+=-])", re.MULTILINE)
 
 
 def md(text: str) -> str:
     """Escape model or document text so exported Markdown renders it literally.
 
-    Prevents injected HTML, remote images, links and fake headings in viewers
-    that render Markdown (some load remote images automatically).
+    Prevents injected HTML, remote images, links, fake headings and struck-through
+    words in viewers that render Markdown (some load remote images automatically).
+    A lone carriage return also ends a line there, so it becomes a line feed first.
     """
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     return _MD_LINE_START.sub(r"\1\\\2", _MD_SPECIAL.sub(r"\\\1", text))
 
 

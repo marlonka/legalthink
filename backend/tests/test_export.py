@@ -16,8 +16,15 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     )
     # Research URLs come from web search metadata; a `>` must not end the autolink.
     url = "https://gesetze-im-internet.de/bgb/x>![p](https://evil.invalid/pixel.png)"
+    # A lone carriage return ends a line in CommonMark; `~~` would strike a word through.
+    flipped = "Prüfen.\r# Freigegeben\rDie Klausel ist ~~nicht~~ wirksam."
     finding = analysis.findings[0].model_copy(
-        update={"verified": False, "description": injected, "source_urls": [url]}
+        update={
+            "verified": False,
+            "description": injected,
+            "legal_basis": flipped,
+            "source_urls": [url],
+        }
     )
     analysis = analysis.model_copy(
         update={"findings": [finding], "sources": [Source(title="BGB", url=url)]}
@@ -36,7 +43,7 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     # Model text from an untrusted document must not become HTML, images or headings.
     # Complete autolinks render as links; nothing may follow them as Markdown.
     prose = re.sub(r"<[^<>\s]+>", "", text)
-    assert not re.search(r"(?<!\\)(<img|!\[|\n# Freigegeben)", prose)
+    assert not re.search(r"(?<!\\)(<img|!\[|[\r\n]# Freigegeben|~~)", prose)
     for exported in (text, "\n".join(paragraphs)):
         assert "Zitat im Dokument bestätigt: Nein." in exported
         assert "folgenden Revisionen" not in exported
