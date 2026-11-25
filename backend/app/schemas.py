@@ -23,14 +23,12 @@ MODELS = [
     {
         "id": "gpt-6-luna",
         "name": "GPT-6 Luna",
-        "description": "Für fokussierte Aufgaben und schnelle erste Prüfungen.",
         "efforts": ["none", "low", "medium", "high", "xhigh", "max"],
         "default_effort": "xhigh",
     },
     {
         "id": "gpt-6.1-sol",
         "name": "GPT-6.1 Sol",
-        "description": "Für anspruchsvolle Prüfungen und komplexe Abwägungen.",
         "efforts": ["low", "medium", "high", "xhigh", "max"],
         "default_effort": "xhigh",
     },
@@ -45,18 +43,28 @@ def now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def explained(message: str) -> PydanticCustomError:
+    """A validation error whose message contains no input and is shown to the user."""
+    return PydanticCustomError("explained", message)
+
+
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class Document(StrictModel):
+class DocumentSummary(StrictModel):
+    """A stored document without its extracted text, as the document list returns it."""
+
     id: str
     name: str
-    text: str
     page_count: int
     char_count: int
     original_available: bool = False
     is_demo: bool = False
+
+
+class Document(DocumentSummary):
+    text: str
 
 
 class DocumentDeleteRequest(StrictModel):
@@ -96,38 +104,32 @@ class AnalysisRequest(StrictModel):
         selected = next((m for m in MODELS if m["id"] == self.model), None)
         if selected:
             if self.custom_model is not None:
-                raise PydanticCustomError(
-                    "model_configuration",
-                    "Die Konfiguration eines mitgelieferten Modells ist festgelegt.",
-                )
+                raise explained("Die Konfiguration eines mitgelieferten Modells ist festgelegt.")
             efforts = selected["efforts"]
         elif self.custom_model is not None:
             efforts = self.custom_model.efforts
             if self.research and not self.custom_model.supports_web_search:
-                raise PydanticCustomError(
-                    "model_configuration",
+                raise explained(
                     "Webrecherche ist für dieses eigene Modell nicht freigegeben. "
-                    "Deaktivieren Sie die Webrecherche oder prüfen Sie die Modellkonfiguration.",
+                    "Deaktivieren Sie die Webrecherche oder prüfen Sie die Modellkonfiguration."
                 )
         else:
-            raise PydanticCustomError(
-                "model_configuration",
-                "Bitte das eigene Modell zuerst in den Einstellungen hinzufügen.",
-            )
+            raise explained("Bitte das eigene Modell zuerst in den Einstellungen hinzufügen.")
         if self.effort not in efforts:
-            raise PydanticCustomError(
-                "model_configuration",
-                "Diese Denktiefe ist für das gewählte Modell nicht konfiguriert. "
-                "Prüfen Sie die Modell-Einstellungen.",
+            raise explained(
+                "Dieser Denkaufwand ist für das gewählte Modell nicht konfiguriert. "
+                "Prüfen Sie die Modell-Einstellungen."
             )
         if len(set(self.document_ids)) != len(self.document_ids):
-            raise ValueError("Dokumente dürfen nur einmal ausgewählt werden.")
+            raise explained("Dokumente dürfen nur einmal ausgewählt werden.")
         if self.workflow == "compare" and len(self.document_ids) != 2:
-            raise ValueError("Die Synopse benötigt genau zwei Dokumente: Entwurf und Gegenentwurf.")
+            raise explained(
+                "Der Versionsvergleich benötigt genau zwei Dokumente: Original und Gegenentwurf."
+            )
         if not self.document_ids and not self.source_text.strip():
-            raise ValueError("Bitte ein Dokument auswählen oder Text zur Prüfung einfügen.")
+            raise explained("Bitte ein Dokument auswählen oder Text zur Prüfung einfügen.")
         if self.workflow != "compliance" and self.compliance_task != "general":
-            raise ValueError("AVV und DSFA sind nur im Datenschutz-Workflow verfügbar.")
+            raise explained("AVV und DSFA sind nur im Datenschutz-Workflow verfügbar.")
         return self
 
 
@@ -149,17 +151,12 @@ class ModelFinding(StrictModel):
 
 
 class ModelComparisonEvidence(StrictModel):
+    # The prompt asks for an empty side on "added" and "removed". The strict schema
+    # cannot express that; a contrary quote is verified and shown like any other
+    # instead of rejecting the whole, already billed report.
     change_type: Literal["modified", "added", "removed"]
     original_quote: str
     counterdraft_quote: str
-
-    @model_validator(mode="after")
-    def validate_sides(self) -> ModelComparisonEvidence:
-        if self.change_type == "added" and self.original_quote.strip():
-            raise ValueError("Eine ergänzte Regelung hat keinen Originalwortlaut.")
-        if self.change_type == "removed" and self.counterdraft_quote.strip():
-            raise ValueError("Eine gestrichene Regelung hat keinen Gegenentwurfswortlaut.")
-        return self
 
 
 class ModelComparisonFinding(ModelFinding):

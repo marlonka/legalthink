@@ -45,7 +45,6 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
   font-size: 13px;
 }
 .pdf-pagination {
@@ -80,22 +79,15 @@
   background: var(--surface-input);
 }
 .pdf-viewport {
-  height: clamp(240px, 58dvh, 660px);
-}
-.pdf-viewport {
   position: relative;
   overflow: auto;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
   overflow-anchor: none;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
   background: var(--document-canvas);
 }
 .pdf-paper-container {
   width: max-content;
-  min-width: 100%;
-  padding: 12px;
 }
 .pdf-page {
   position: relative;
@@ -121,7 +113,6 @@
 }
 .pdf-status {
   min-height: 40px;
-  padding-top: 8px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;

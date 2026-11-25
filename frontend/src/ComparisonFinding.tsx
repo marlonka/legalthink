@@ -1,6 +1,7 @@
 import { Quote } from 'lucide-react';
 import type { ComparisonSource, Finding } from './types';
 import { ExternalLink } from './ui';
+import { researchUrls } from './WorkflowFindingContent';
 import './comparison-results.css';
 
 export type ComparisonSide = 'original' | 'counterdraft';
@@ -14,6 +15,7 @@ export function ComparisonFinding({
   onShowSource: (side: ComparisonSide) => void;
 }) {
   const comparison = finding.comparison;
+  const links = researchUrls(finding);
   return (
     <div className="comparison-finding">
       {comparison ? (
@@ -39,11 +41,11 @@ export function ComparisonFinding({
         <h4>Bewertung der Änderung</h4>
         <p>{finding.description}</p>
       </div>
-      {(finding.legal_basis || finding.source_urls?.length) && (
+      {(finding.legal_basis.trim() || links.length > 0) && (
         <div className="legal-basis">
-          <span>Rechtsbezug</span>
-          <p>{finding.legal_basis}</p>
-          {finding.source_urls?.map((url, index) => (
+          <span>{finding.legal_basis.trim() ? 'Rechtsbezug' : 'Recherchebelege'}</span>
+          {finding.legal_basis.trim() && <p>{finding.legal_basis}</p>}
+          {links.map((url, index) => (
             <ExternalLink key={url} url={url}>
               Recherchebeleg {index + 1}
             </ExternalLink>

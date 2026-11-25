@@ -5,10 +5,12 @@ import {
   GlobalWorkerOptions,
   TextLayer,
   type PDFDocumentProxy,
+  type PDFPageProxy,
   type RenderTask,
 } from 'pdfjs-dist';
 import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { MIN_QUOTE_LENGTH, normalizeQuote } from './quote';
 import './pdf-viewer.css';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
@@ -21,7 +23,17 @@ type Citation = {
 type Position = { item: number; start: number; end: number };
 const segmenter = new Intl.Segmenter('de', { granularity: 'grapheme' });
 const PDF_TO_CSS_UNITS = 96 / 72;
-const normalize = (value: string) => value.normalize('NFC').replace(/\s+/g, ' ').trim();
+// The limits of pdf.js's own viewer: mobile browsers fail on larger canvases, which then
+// show no page at 150-200 % zoom.
+const MAX_CANVAS_PIXELS = window.matchMedia('(pointer: coarse)').matches ? 5_242_880 : 16_000_000;
+
+/** Free canvas memory at once; Safari otherwise keeps it until garbage collection. */
+function releaseCanvases(element: HTMLElement | null) {
+  element?.querySelectorAll('canvas').forEach((canvas) => {
+    canvas.width = 0;
+    canvas.height = 0;
+  });
+}
 
 // Preserve word boundaries, including spaces implied by PDF text geometry. Using the same
 // character map for search and highlighting prevents an approximate match becoming evidence.
@@ -74,9 +86,9 @@ function occurrences(text: string, needle: string) {
 }
 
 function highlightQuote(layer: TextLayer, content: TextContent, paper: HTMLElement, quote: string) {
-  const needle = normalize(quote);
+  const needle = normalizeQuote(quote);
   const { value, positions } = mappedText(content);
-  if (needle.length < 12 || occurrences(value, needle) !== 1) return;
+  if (needle.length < MIN_QUOTE_LENGTH || occurrences(value, needle) !== 1) return;
   const index = value.indexOf(needle);
   const first = positions[index];
   const last = positions[index + needle.length - 1];
@@ -118,6 +130,7 @@ function PdfPage({
   onHighlight: (page: number, offset: number) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const rendered = useRef<PDFPageProxy | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   useEffect(() => {
     if (!active || !host.current) return;
@@ -132,6 +145,7 @@ function PdfPage({
     void (async () => {
       try {
         const source = await pdf.getPage(page);
+        rendered.current = source;
         const base = source.getViewport({ scale: 1 });
         const scale = size.width / base.width;
         const view = source.getViewport({ scale });
@@ -143,7 +157,7 @@ function PdfPage({
         const ratio = Math.min(
           window.devicePixelRatio || 1,
           2,
-          Math.sqrt(16_000_000 / (view.width * view.height)),
+          Math.sqrt(MAX_CANVAS_PIXELS / (view.width * view.height)),
         );
         canvas.width = Math.ceil(view.width * ratio);
         canvas.height = Math.ceil(view.height * ratio);
@@ -158,6 +172,7 @@ function PdfPage({
         text.className = 'pdf-text-layer';
         sheet.appendChild(text);
         // Attach only after the canvas is ready; the previous page remains stable meanwhile.
+        releaseCanvases(paper);
         paper.replaceChildren(sheet);
         textLayer = new TextLayer({ textContentSource: content, container: text, viewport: view });
         await textLayer.render();
@@ -179,10 +194,19 @@ function PdfPage({
     };
   }, [pdf, page, size.width, active, quote, onHighlight]);
 
-  // Offscreen canvases are released, but each page keeps its exact measured dimensions.
+  // Offscreen pages release their canvas and the page's decoded images and operator lists;
+  // pdf.js waits for a cancelled render to settle. Each page keeps its measured size.
   useEffect(() => {
-    if (!active) host.current?.replaceChildren();
+    if (active) return;
+    releaseCanvases(host.current);
+    host.current?.replaceChildren();
+    rendered.current?.cleanup();
+    rendered.current = null;
   }, [active]);
+  useEffect(() => {
+    const element = host.current;
+    return () => releaseCanvases(element);
+  }, []);
 
   return (
     <div className="pdf-page-slot" style={{ height: size.height + 32 }} data-pdf-page={page}>
@@ -373,8 +397,8 @@ export default function PdfPreview({
     userNavigated.current = false;
     scrollAnchor.current = { page: targetPage, fraction: 0 };
     goToPage(targetPage, false);
-    const needle = normalize(quote);
-    if (needle.length < 12) {
+    const needle = normalizeQuote(quote);
+    if (needle.length < MIN_QUOTE_LENGTH) {
       setCitation({ state: needle ? 'short' : 'none', page: targetPage });
       return;
     }

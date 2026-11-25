@@ -2,14 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { LocateFixed } from 'lucide-react';
-import type { DocumentRecord } from './types';
+import { request, type DocumentRecord } from './types';
+import { MIN_QUOTE_LENGTH, normalizeQuote } from './quote';
 
 // Normalize in native string operations; source-size arrays and iterating one
 // Intl.Segmenter result per character make pasted million-character files costly.
 function locateQuote(text: string, quote: string) {
-  const wanted = quote.normalize('NFC').replace(/\s+/g, ' ').trim();
-  const empty = { count: 0, start: 0, end: 0, tooShort: Boolean(wanted) && wanted.length < 12 };
-  if (wanted.length < 12) return empty;
+  const wanted = normalizeQuote(quote);
+  const empty = {
+    count: 0,
+    start: 0,
+    end: 0,
+    tooShort: Boolean(wanted) && wanted.length < MIN_QUOTE_LENGTH,
+  };
+  if (wanted.length < MIN_QUOTE_LENGTH) return empty;
   const composed = text.normalize('NFC');
   const normalized = composed.replace(/\s+/g, ' ');
   const first = normalized.indexOf(wanted);
@@ -66,8 +72,10 @@ export default function TextPreview({
   original: boolean;
   markdown: boolean;
 }) {
-  const [text, setText] = useState(original ? '' : document.text);
-  const [loading, setLoading] = useState(original);
+  // Text the browser already has; otherwise the original file or the stored text is loaded.
+  const known = original ? undefined : document.text;
+  const [text, setText] = useState(known ?? '');
+  const [loading, setLoading] = useState(known === undefined);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(markdown && !quote);
@@ -83,21 +91,17 @@ export default function TextPreview({
   }
   useEffect(() => {
     setError('');
-    if (!original) {
-      setText(document.text);
+    if (known !== undefined) {
+      setText(known);
       setLoading(false);
       return;
     }
     const controller = new AbortController();
     setLoading(true);
     setText('');
-    fetch(`/api/documents/${encodeURIComponent(document.id)}/original`, {
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Die Originaldatei konnte nicht geladen werden.');
-        return response.text();
-      })
+    const file = original ? 'original' : 'text';
+    request(`/documents/${encodeURIComponent(document.id)}/${file}`, { signal: controller.signal })
+      .then((response) => response.text())
       .then((value) => {
         if (controller.signal.aborted) return;
         setText(value);
@@ -105,12 +109,14 @@ export default function TextPreview({
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
-          setError(error instanceof Error ? error.message : 'Datei konnte nicht geladen werden.');
+          setError(
+            error instanceof Error ? error.message : 'Der Text konnte nicht geladen werden.',
+          );
           setLoading(false);
         }
       });
     return () => controller.abort();
-  }, [document.id, document.text, original, attempt]);
+  }, [document.id, known, original, attempt]);
   useEffect(() => {
     setReading(markdown && !quote);
   }, [document.id, quote, markdown]);
@@ -166,6 +172,7 @@ export default function TextPreview({
         ref={viewport}
         className="text-preview-viewport"
         tabIndex={0}
+        role="region"
         aria-label={reading ? 'Markdown-Leseansicht' : 'Dokumenttext'}
       >
         {reading ? (

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef, useState } from 'react';
 import { LoaderCircle, Upload } from 'lucide-react';
 import { api, type DocumentRecord } from './types';
+import { ErrorBoundary } from './RouteContent';
 import './source-preview.css';
 
 const PdfPreview = lazy(() => import('./PdfPreview'));
@@ -88,26 +89,42 @@ export function SourceFile({
           {error}
         </p>
       )}
-      <Suspense
-        fallback={
-          <div className="preview-loading" role="status">
-            Dokument wird geöffnet …
+      {/* A document that cannot be rendered, for example deeply nested Markdown, must not
+          take down the workspace with its unsaved drafts. */}
+      <ErrorBoundary
+        key={`${document.id}-${textOnly}`}
+        fallback={() => (
+          <div className="preview-unavailable" role="alert">
+            <p>Die Vorschau konnte nicht angezeigt werden.</p>
+            {!textOnly && (rich || extension === 'md') && (
+              <button type="button" className="button secondary" onClick={() => setTextOnly(true)}>
+                {rich ? 'Ausgelesenen Text anzeigen' : 'Quelltext anzeigen'}
+              </button>
+            )}
           </div>
-        }
-      >
-        {document.original_available && !textOnly && extension === 'pdf' ? (
-          <PdfPreview documentId={document.id} initialPage={page} quote={quote} />
-        ) : document.original_available && !textOnly && extension === 'docx' ? (
-          <WordPreview document={document} quote={quote} onEscape={onClose} />
-        ) : (
-          <TextPreview
-            document={document}
-            quote={quote}
-            original={!rich && Boolean(document.original_available)}
-            markdown={extension === 'md' && !textOnly}
-          />
         )}
-      </Suspense>
+      >
+        <Suspense
+          fallback={
+            <div className="preview-loading" role="status">
+              Dokument wird geöffnet …
+            </div>
+          }
+        >
+          {document.original_available && !textOnly && extension === 'pdf' ? (
+            <PdfPreview documentId={document.id} initialPage={page} quote={quote} />
+          ) : document.original_available && !textOnly && extension === 'docx' ? (
+            <WordPreview document={document} quote={quote} onEscape={onClose} />
+          ) : (
+            <TextPreview
+              document={document}
+              quote={quote}
+              original={!rich && Boolean(document.original_available)}
+              markdown={extension === 'md' && !textOnly}
+            />
+          )}
+        </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }

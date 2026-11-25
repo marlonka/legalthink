@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Model } from './types';
-import { CUSTOM_EFFORTS, MAX_CUSTOM_MODELS, validModelId } from './custom-models';
+import { CUSTOM_EFFORTS, MAX_CUSTOM_MODELS, customModel, validModelId } from './custom-models';
 import { EFFORT_NAMES, ErrorMessage, ExternalLink, Modal } from './ui';
-import { MotionButton } from './motion';
 import './custom-models.css';
 
 export default function CustomModels({
@@ -22,7 +21,9 @@ export default function CustomModels({
   const [id, setId] = useState('');
   const [efforts, setEfforts] = useState<string[]>([]);
   const [research, setResearch] = useState(false);
-  const [error, setError] = useState('');
+  // The dialog's validation error and a failed removal are separate notices.
+  const [formError, setFormError] = useState('');
+  const [removeError, setRemoveError] = useState('');
   const custom = models.filter((model) => model.custom);
 
   function open(model?: Model) {
@@ -30,7 +31,11 @@ export default function CustomModels({
     setId(model?.id ?? '');
     setEfforts(model?.efforts.filter((value) => value !== 'auto') ?? []);
     setResearch(model?.supports_web_search ?? false);
-    setError('');
+    setFormError('');
+  }
+  function close() {
+    setEditing(null);
+    setFormError('');
   }
   return (
     <div className="custom-models">
@@ -39,14 +44,16 @@ export default function CustomModels({
           {custom.map((model) => (
             <li key={model.id}>
               <span title={model.id}>{model.id}</span>
-              <MotionButton
+              <button
+                type="button"
                 className="icon-button"
                 aria-label={`${model.id} bearbeiten`}
                 onClick={() => open(model)}
               >
                 <Pencil size={15} />
-              </MotionButton>
-              <MotionButton
+              </button>
+              <button
+                type="button"
                 className="icon-button"
                 aria-label={`${model.id} entfernen`}
                 disabled={selected === model.id}
@@ -58,58 +65,53 @@ export default function CustomModels({
                 onClick={() => {
                   try {
                     onRemove(model.id);
-                    setError('');
+                    setRemoveError('');
                   } catch (cause) {
-                    setError(cause instanceof Error ? cause.message : 'Speichern fehlgeschlagen.');
+                    setRemoveError(
+                      cause instanceof Error ? cause.message : 'Speichern fehlgeschlagen.',
+                    );
                   }
                 }}
               >
                 <Trash2 size={15} />
-              </MotionButton>
+              </button>
             </li>
           ))}
         </ul>
       )}
-      <MotionButton
+      <button
+        type="button"
         className="text-button"
         onClick={() => open()}
         disabled={custom.length >= MAX_CUSTOM_MODELS}
       >
         <Plus size={15} /> Eigenes Modell hinzufügen
-      </MotionButton>
-      {editing === null && error && <ErrorMessage>{error}</ErrorMessage>}
+      </button>
+      {removeError && <ErrorMessage>{removeError}</ErrorMessage>}
       <AnimatePresence initial={false}>
         {editing !== null && (
-          <Modal
-            title={editing ? 'Modell bearbeiten' : 'Eigenes OpenAI-Modell'}
-            onClose={() => setEditing(null)}
-          >
+          <Modal title={editing ? 'Modell bearbeiten' : 'Eigenes OpenAI-Modell'} onClose={close}>
             <form
               onSubmit={(event) => {
                 event.preventDefault();
                 const modelId = id.trim();
                 if (!validModelId(modelId)) {
-                  setError(
+                  setFormError(
                     'Geben Sie die Modell-ID ein: höchstens 120 Zeichen, keine URL und keinen API-Schlüssel.',
                   );
                   return;
                 }
                 if (models.some((model) => model.id === modelId && model.id !== editing)) {
-                  setError('Dieses Modell ist bereits vorhanden.');
+                  setFormError('Dieses Modell ist bereits vorhanden.');
                   return;
                 }
                 try {
-                  onSave({
-                    id: modelId,
-                    name: modelId,
-                    custom: true,
-                    default_effort: 'auto',
-                    efforts: ['auto', ...CUSTOM_EFFORTS.filter((value) => efforts.includes(value))],
-                    supports_web_search: research,
-                  });
-                  setEditing(null);
+                  onSave(customModel(modelId, efforts, research));
+                  close();
                 } catch (cause) {
-                  setError(cause instanceof Error ? cause.message : 'Speichern fehlgeschlagen.');
+                  setFormError(
+                    cause instanceof Error ? cause.message : 'Speichern fehlgeschlagen.',
+                  );
                 }
               }}
             >
@@ -171,19 +173,15 @@ export default function CustomModels({
                 <p className="field-help">
                   Hinzufügen sendet keine API-Anfrage und ändert Ihre Modellauswahl nicht.
                 </p>
-                {error && <ErrorMessage>{error}</ErrorMessage>}
+                {formError && <ErrorMessage>{formError}</ErrorMessage>}
               </div>
               <div className="modal-footer">
-                <MotionButton
-                  className="button secondary"
-                  type="button"
-                  onClick={() => setEditing(null)}
-                >
+                <button className="button secondary" type="button" onClick={close}>
                   Abbrechen
-                </MotionButton>
-                <MotionButton className="button primary" type="submit">
+                </button>
+                <button className="button primary" type="submit">
                   Modell speichern
-                </MotionButton>
+                </button>
               </div>
             </form>
           </Modal>

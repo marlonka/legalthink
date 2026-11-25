@@ -1,7 +1,6 @@
 .pdf-continuous-preview {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   height: 100%;
 }
 .pdf-continuous-preview .pdf-toolbar {
@@ -15,7 +14,6 @@
 }
 .pdf-continuous-preview .pdf-viewport {
   flex: 1 1 auto;
-  min-height: 240px;
 }
 .pdf-continuous-preview .pdf-status {
   flex: 0 0 44px;

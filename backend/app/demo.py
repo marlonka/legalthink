@@ -1,11 +1,12 @@
 """Synthetic, deterministic fixture. It never calls an API or reads user documents."""
 
+from pydantic import ValidationError
+
 from .analysis import verify_findings, verify_timeline
 from .schemas import (
     Analysis,
     DemoScenario,
     Document,
-    Finding,
     ModelAnalysis,
     ModelComparisonAnalysis,
     ModelComparisonEvidence,
@@ -55,92 +56,68 @@ def demo_document() -> Document:
     )
 
 
-def _contract_analysis() -> Analysis:
-    rows = [
-        (
-            "Haftung ohne erkennbare Ausnahmen",
-            "high",
-            "Haftung",
-            "§ 7",
-            "Die Haftung des Anbieters ist unabhängig vom Rechtsgrund auf die vom Kunden\n"
-            "im letzten Monat gezahlte Vergütung begrenzt.",
-            "Die pauschale Begrenzung auf eine Monatsvergütung erfasst ihrem Wortlaut nach auch "
-            "Fallgruppen, für die eine Haftungsbeschränkung unzulässig sein kann. Ob die Klausel "
-            "AGB ist und welche Interessenlage besteht, muss geklärt werden.",
-            "Die Haftung für Vorsatz, grobe Fahrlässigkeit sowie Schäden aus der Verletzung von "
-            "Leben, Körper oder Gesundheit bleibt unbeschränkt. Bei leicht fahrlässiger Verletzung "
-            "wesentlicher Vertragspflichten ist die Haftung auf den vertragstypischen, "
-            "vorhersehbaren "
-            "Schaden begrenzt. Zwingende gesetzliche Haftung bleibt unberührt.",
-            "§ 276 Abs. 3 BGB; §§ 307, 310 BGB. Anwendbarkeit und konkrete Ausgestaltung prüfen.",
-        ),
-        (
-            "Datenexport nach sieben Tagen beendet",
-            "medium",
-            "Vertragsende",
-            "§ 11",
-            "Nach Vertragsende stellt der Anbieter die Kundendaten für sieben Tage zum\n"
-            "Download bereit. Anschließend werden sämtliche Kundendaten gelöscht.",
-            "Sieben Tage lassen wenig Zeit für Migration und Prüfung der Vollständigkeit. "
-            "Format, Unterstützung, gesetzliche Aufbewahrung und Löschbestätigung bleiben offen. "
-            "Die Exportfrist [Anzahl] ist anhand der benötigten Migrationszeit festzulegen.",
-            "Der Anbieter stellt die Kundendaten nach Vertragsende für [Anzahl] Tage in einem "
-            "gängigen, maschinenlesbaren Format zum Export bereit. Die Löschung erfolgt nach "
-            "bestätigtem Export oder Ablauf dieser Frist, soweit keine gesetzlichen "
-            "Aufbewahrungspflichten entgegenstehen.",
-            "Vertragliche Risikoverteilung; bei Auftragsverarbeitung "
-            "Art. 28 Abs. 3 lit. g DSGVO prüfen.",
-        ),
-        (
-            "Wartungszeiten bleiben unbegrenzt",
-            "medium",
-            "Service Level",
-            "§ 4",
-            "Wartungsarbeiten werden bei der Berechnung nicht berücksichtigt.",
-            "Ohne Zeitfenster oder Obergrenze kann Wartung die angestrebte Verfügbarkeit deutlich "
-            "relativieren. Ein verhandelbares Betriebsrisiko; die Rechtsfolge hängt "
-            "vom Gesamtvertrag ab.",
-            "Angekündigte Wartungsarbeiten werden nur innerhalb des vereinbarten "
-            "Wartungsfensters [Zeitfenster] und bis zu [Stunden] pro Monat von der "
-            "Verfügbarkeitsberechnung ausgenommen.",
-            "Leistungsbeschreibung und gegebenenfalls Transparenzkontrolle nach § 307 BGB prüfen.",
-        ),
-    ]
-    findings = [
-        Finding(
-            id=new_id(),
-            title=r[0],
-            severity=r[1],
-            category=r[2],
-            source_location=r[3],
-            source_quote=r[4],
-            description=r[5],
-            suggestion=r[6],
-            legal_basis=r[7],
-            source_document_id=DEMO_ID,
-            source_document_name=demo_document().name,
-            verified=True,
-            source_urls=[],
-        )
-        for r in rows
-    ]
-    return Analysis(
-        id=new_id(),
+def _contract_case(document: Document) -> ModelAnalysis:
+    return ModelAnalysis(
         title="Cloud-Vertrag · Beispielprüfung",
-        workflow="contract",
         summary="Drei Verhandlungspunkte aus Kundensicht: Haftung, Datenexport und Wartungszeiten. "
         "AGB-Eigenschaft und tatsächliche Ausfallfolgen sind noch zu klären.",
-        findings=findings,
+        findings=[
+            _finding(
+                document,
+                "Die Haftung des Anbieters ist unabhängig vom Rechtsgrund auf die vom Kunden\n"
+                "im letzten Monat gezahlte Vergütung begrenzt.",
+                "Haftung ohne erkennbare Ausnahmen",
+                "Die pauschale Begrenzung auf eine Monatsvergütung erfasst ihrem Wortlaut nach "
+                "auch Fallgruppen, für die eine Haftungsbeschränkung unzulässig sein kann. Ob die "
+                "Klausel AGB ist und welche Interessenlage besteht, muss geklärt werden.",
+                "Haftung",
+                "Die Haftung für Vorsatz, grobe Fahrlässigkeit sowie Schäden aus der Verletzung "
+                "von Leben, Körper oder Gesundheit bleibt unbeschränkt. Bei leicht fahrlässiger "
+                "Verletzung wesentlicher Vertragspflichten ist die Haftung auf den "
+                "vertragstypischen, vorhersehbaren Schaden begrenzt. Zwingende gesetzliche Haftung "
+                "bleibt unberührt.",
+                "§ 276 Abs. 3 BGB; §§ 307, 310 BGB. Anwendbarkeit und konkrete Ausgestaltung "
+                "prüfen.",
+                severity="high",
+            ),
+            _finding(
+                document,
+                "Nach Vertragsende stellt der Anbieter die Kundendaten für sieben Tage zum\n"
+                "Download bereit. Anschließend werden sämtliche Kundendaten gelöscht.",
+                "Datenexport nach sieben Tagen beendet",
+                "Sieben Tage lassen wenig Zeit für Migration und Prüfung der Vollständigkeit. "
+                "Format, Unterstützung, gesetzliche Aufbewahrung und Löschbestätigung bleiben "
+                "offen. Die Exportfrist [Anzahl] ist anhand der benötigten Migrationszeit "
+                "festzulegen.",
+                "Vertragsende",
+                "Der Anbieter stellt die Kundendaten nach Vertragsende für [Anzahl] Tage in einem "
+                "gängigen, maschinenlesbaren Format zum Export bereit. Die Löschung erfolgt nach "
+                "bestätigtem Export oder Ablauf dieser Frist, soweit keine gesetzlichen "
+                "Aufbewahrungspflichten entgegenstehen.",
+                "Vertragliche Risikoverteilung; bei Auftragsverarbeitung "
+                "Art. 28 Abs. 3 lit. g DSGVO prüfen.",
+            ),
+            _finding(
+                document,
+                "Wartungsarbeiten werden bei der Berechnung nicht berücksichtigt.",
+                "Wartungszeiten bleiben unbegrenzt",
+                "Ohne Zeitfenster oder Obergrenze kann Wartung die angestrebte Verfügbarkeit "
+                "deutlich relativieren. Ein verhandelbares Betriebsrisiko; die Rechtsfolge hängt "
+                "vom Gesamtvertrag ab.",
+                "Service Level",
+                "Angekündigte Wartungsarbeiten werden nur innerhalb des vereinbarten "
+                "Wartungsfensters [Zeitfenster] und bis zu [Stunden] pro Monat von der "
+                "Verfügbarkeitsberechnung ausgenommen.",
+                "Leistungsbeschreibung und gegebenenfalls Transparenzkontrolle nach § 307 BGB "
+                "prüfen.",
+            ),
+        ],
         timeline=[],
         questions=[
             "Handelt es sich um AGB oder einen individuell ausgehandelten Vertrag?",
             "Welche Ausfallfolgen und Migrationszeiten sind für den Kunden relevant?",
             "Werden personenbezogene Daten im Auftrag verarbeitet und liegt ein AVV vor?",
         ],
-        created_at=now(),
-        model="Synthetisches Beispiel",
-        effort="high",
-        is_demo=True,
     )
 
 
@@ -318,16 +295,21 @@ def demo_documents(scenario: DemoScenario = "contract") -> list[Document]:
 def restore_demo_sources(store: Store) -> None:
     """Identify shipped sources by ID and content, and repair previously deleted examples."""
     referenced_ids = set()
-    for analysis in store.list("analyses"):
-        if analysis.get("is_demo"):
-            referenced_ids.update(analysis.get("document_ids", []))
-            for item in analysis.get("findings", []) + analysis.get("timeline", []):
-                referenced_ids.add(item.get("source_document_id"))
+    for row in store.list("analyses"):
+        try:
+            analysis = Analysis.model_validate(row)
+        except ValidationError:
+            # The API skips unreadable reports; they must not stop the workspace starting.
+            continue
+        if analysis.is_demo:
+            referenced_ids.update(analysis.document_ids)
+            for item in [*analysis.findings, *analysis.timeline]:
+                referenced_ids.add(item.source_document_id)
     sources = [demo_document(), *(doc for docs in SCENARIO_DOCUMENTS.values() for doc in docs)]
     for document in sources:
         stored = store.get("documents", document.id)
         if stored is not None:
-            if stored["text"] == document.text and not stored.get("is_demo"):
+            if stored.get("text") == document.text and not stored.get("is_demo"):
                 store.put("documents", {**stored, "is_demo": True})
         elif document.id in referenced_ids:
             store.save_document(document.model_dump())
@@ -359,6 +341,8 @@ def _finding(
 
 def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
     first = documents[0]
+    if scenario == "contract":
+        return _contract_case(first)
     if scenario == "compare":
         second = documents[1]
         result = ModelAnalysis(
@@ -689,40 +673,20 @@ def _case(scenario: DemoScenario, documents: list[Document]) -> ModelAnalysis:
 
 def demo_analysis(scenario: DemoScenario = "contract") -> Analysis:
     documents = demo_documents(scenario)
-    if scenario == "contract":
-        analysis = _contract_analysis()
-        result = ModelAnalysis(
-            title=analysis.title,
-            summary=analysis.summary,
-            findings=[
-                ModelFinding.model_validate(
-                    item.model_dump(
-                        exclude={"id", "verified", "source_document_name", "comparison"}
-                    )
-                )
-                for item in analysis.findings
-            ],
-            timeline=[],
-            questions=analysis.questions,
-        )
-    else:
-        result = _case(scenario, documents)
-        analysis = Analysis(
-            id=new_id(),
-            title=result.title,
-            workflow="compliance" if scenario in {"avv", "dsfa"} else scenario,
-            summary=result.summary,
-            findings=[],
-            timeline=[],
-            questions=result.questions,
-            created_at=now(),
-            model="Synthetisches Beispiel",
-            effort="high",
-            is_demo=True,
-        )
-    analysis.findings = verify_findings(result, documents)
-    analysis.timeline = verify_timeline(result, documents)
-    analysis.document_ids = [document.id for document in documents]
-    analysis.compliance_task = scenario if scenario in {"avv", "dsfa"} else "general"
-    analysis.demo_scenario = scenario
-    return analysis
+    result = _case(scenario, documents)
+    return Analysis(
+        id=new_id(),
+        title=result.title,
+        workflow="compliance" if scenario in {"avv", "dsfa"} else scenario,
+        summary=result.summary,
+        findings=verify_findings(result, documents),
+        timeline=verify_timeline(result, documents),
+        questions=result.questions,
+        created_at=now(),
+        model="Synthetisches Beispiel",
+        effort="high",
+        is_demo=True,
+        document_ids=[document.id for document in documents],
+        compliance_task=scenario if scenario in {"avv", "dsfa"} else "general",
+        demo_scenario=scenario,
+    )

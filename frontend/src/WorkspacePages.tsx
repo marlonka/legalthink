@@ -12,6 +12,7 @@ import {
   Moon,
   Plus,
   RotateCw,
+  Save,
   Search,
   Scale,
   Server,
@@ -35,7 +36,6 @@ import { api } from './types';
 import { dateLabel, ErrorMessage, ExternalLink, Modal, ModelPicker } from './ui';
 import { workflowName } from './workflows';
 import { reviewCount } from './review-workflows';
-import { MotionButton } from './motion';
 import { useDocumentPreview } from './DocumentPreview';
 import ServiceTierField from './ServiceTierField';
 import ProcessingRegionField from './ProcessingRegionField';
@@ -67,10 +67,10 @@ export function History({
           <div>
             <h1>Analysen</h1>
           </div>
-          <MotionButton className="button primary" onClick={onNew}>
+          <button type="button" className="button primary" onClick={onNew}>
             <Plus size={16} />
             Neue Analyse
-          </MotionButton>
+          </button>
         </div>
       </header>
       <div className="list-toolbar">
@@ -83,13 +83,14 @@ export function History({
             aria-label="Analysen durchsuchen"
           />
           {search && (
-            <MotionButton
+            <button
+              type="button"
               className="icon-button small"
               onClick={() => setSearch('')}
               aria-label="Suche zurücksetzen"
             >
               <X size={14} />
-            </MotionButton>
+            </button>
           )}
         </label>
         <span>
@@ -102,10 +103,10 @@ export function History({
           Analysen werden geladen …
         </div>
       ) : filtered.length ? (
-        <div className="history-list">
+        <div>
           {filtered.map((analysis) => (
             <article className="history-item" key={analysis.id}>
-              <MotionButton className="history-item-main" onClick={() => onOpen(analysis)}>
+              <button type="button" className="history-item-main" onClick={() => onOpen(analysis)}>
                 <span className="history-icon">
                   <FileText size={21} strokeWidth={1.4} />
                 </span>
@@ -127,14 +128,15 @@ export function History({
                   {reviewCount(analysis)}
                   <ChevronRight size={16} />
                 </span>
-              </MotionButton>
-              <MotionButton
+              </button>
+              <button
+                type="button"
                 className="icon-button delete-hover"
                 onClick={() => onDelete(analysis)}
                 aria-label={`${analysis.title} löschen`}
               >
                 <Trash2 size={15} />
-              </MotionButton>
+              </button>
             </article>
           ))}
         </div>
@@ -159,9 +161,9 @@ export function Playbooks({
 }: {
   playbooks: Playbook[];
   onCreate: (name: string, content: string) => Promise<void>;
-  onUpdate?: (id: string, name: string, content: string) => Promise<void>;
+  onUpdate: (id: string, name: string, content: string) => Promise<void>;
   onDelete: (playbook: Playbook) => void;
-  onDocumentImported?: (document: DocumentRecord) => void;
+  onDocumentImported: (document: DocumentRecord) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Playbook | null>(null);
@@ -187,7 +189,7 @@ export function Playbooks({
     setSaving(true);
     setFormError('');
     try {
-      if (editingId && onUpdate) await onUpdate(editingId, name.trim(), content.trim());
+      if (editingId) await onUpdate(editingId, name.trim(), content.trim());
       else await onCreate(name.trim(), content.trim());
       setOpen(false);
       setName('');
@@ -208,8 +210,12 @@ export function Playbooks({
     try {
       const form = new FormData();
       form.append('file', file);
-      const document = await api<DocumentRecord>('/documents', { method: 'POST', body: form });
-      onDocumentImported?.(document);
+      // An upload returns the document with its extracted text.
+      const document = await api<DocumentRecord & { text: string }>('/documents', {
+        method: 'POST',
+        body: form,
+      });
+      onDocumentImported(document);
       setContent(document.text);
       if (document.text.length > 30000)
         setFormError(
@@ -232,7 +238,8 @@ export function Playbooks({
             <h1>Kanzlei-Playbooks</h1>
             <p>Prüfvorgaben speichern und vor einer Analyse auswählen.</p>
           </div>
-          <MotionButton
+          <button
+            type="button"
             className="button primary"
             onClick={() => {
               setEditingId(null);
@@ -244,30 +251,35 @@ export function Playbooks({
           >
             <Plus size={16} />
             Playbook erstellen
-          </MotionButton>
+          </button>
         </div>
       </header>
       {playbooks.length ? (
         <div className="playbooks-grid">
           {playbooks.map((playbook) => (
             <article className="playbook-card" key={playbook.id}>
-              <MotionButton onClick={() => setSelected(playbook)} className="playbook-card-content">
+              <button
+                type="button"
+                onClick={() => setSelected(playbook)}
+                className="playbook-card-content"
+              >
                 <div>
                   <BookOpen size={22} strokeWidth={1.4} />
                   <ArrowUpRight size={15} />
                 </div>
                 <h2>{playbook.name}</h2>
                 <p>{playbook.content}</p>
-              </MotionButton>
+              </button>
               <footer>
                 <span>{playbook.content.length.toLocaleString('de-DE')} Zeichen</span>
-                <MotionButton
+                <button
+                  type="button"
                   className="icon-button small"
                   aria-label={`${playbook.name} löschen`}
                   onClick={() => onDelete(playbook)}
                 >
                   <Trash2 size={14} />
-                </MotionButton>
+                </button>
               </footer>
             </article>
           ))}
@@ -311,7 +323,7 @@ export function Playbooks({
                 </label>
                 <div className="field-label-row">
                   <label htmlFor="playbook-content">Prüfvorgaben</label>
-                  <MotionButton
+                  <button
                     className="text-button"
                     type="button"
                     onClick={() => fileInput.current?.click()}
@@ -319,7 +331,7 @@ export function Playbooks({
                   >
                     {importing ? <LoaderCircle className="spin" size={14} /> : <Upload size={14} />}
                     Dokument importieren
-                  </MotionButton>
+                  </button>
                 </div>
                 <input
                   ref={fileInput}
@@ -352,21 +364,20 @@ export function Playbooks({
                 {formError && <ErrorMessage>{formError}</ErrorMessage>}
               </div>
               <div className="modal-footer">
-                <MotionButton
+                <button
                   className="button secondary"
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={saving || importing}
                 >
                   Abbrechen
-                </MotionButton>
-                <MotionButton
-                  className="button primary"
-                  type="submit"
-                  disabled={saving || importing}
-                >
-                  {saving && <LoaderCircle className="spin" size={15} />}Playbook speichern
-                </MotionButton>
+                </button>
+                <button className="button primary" type="submit" disabled={saving || importing}>
+                  <span className="action-icon" aria-hidden="true">
+                    {saving ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}
+                  </span>
+                  Playbook speichern
+                </button>
               </div>
             </form>
           </Modal>
@@ -382,22 +393,22 @@ export function Playbooks({
               <div className="playbook-read-content">{selected.content}</div>
             </div>
             <div className="modal-footer">
-              {onUpdate && (
-                <MotionButton
-                  className="button secondary"
-                  onClick={() => {
-                    setName(selected.name);
-                    setContent(selected.content);
-                    setEditingId(selected.id);
-                    setSelected(null);
-                    setOpen(true);
-                    setFormError('');
-                  }}
-                >
-                  Bearbeiten
-                </MotionButton>
-              )}
-              <MotionButton
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setName(selected.name);
+                  setContent(selected.content);
+                  setEditingId(selected.id);
+                  setSelected(null);
+                  setOpen(true);
+                  setFormError('');
+                }}
+              >
+                Bearbeiten
+              </button>
+              <button
+                type="button"
                 className="button secondary"
                 onClick={() => {
                   setEditingId(null);
@@ -405,13 +416,14 @@ export function Playbooks({
                   setContent(selected.content);
                   setSelected(null);
                   setOpen(true);
+                  setFormError('');
                 }}
               >
                 Duplizieren
-              </MotionButton>
-              <MotionButton className="button primary" onClick={() => setSelected(null)}>
+              </button>
+              <button type="button" className="button primary" onClick={() => setSelected(null)}>
                 Schließen
-              </MotionButton>
+              </button>
             </div>
           </Modal>
         )}
@@ -517,14 +529,15 @@ export function Settings({
           <div>
             <h2>OpenAI API</h2>
           </div>
-          <MotionButton
+          <button
+            type="button"
             className="button secondary small-button"
             onClick={onRefresh}
             disabled={refreshing}
           >
             <RotateCw className={refreshing ? 'spin' : undefined} size={14} aria-hidden="true" />
             Status aktualisieren
-          </MotionButton>
+          </button>
         </div>
         <span className="connection-badge" role="status">
           <span className="status-dot" aria-hidden="true" />
@@ -666,7 +679,8 @@ export function Settings({
               Server. Löschen entfernt den Volltext und gespeicherte Originaldateien.
             </p>
           </div>
-          <MotionButton
+          <button
+            type="button"
             className="icon-button delete-all-documents"
             onClick={onDeleteAllDocuments}
             disabled={!documents.length}
@@ -674,7 +688,7 @@ export function Settings({
             title="Alle gespeicherten Dokumente löschen"
           >
             <Trash2 size={18} aria-hidden="true" />
-          </MotionButton>
+          </button>
         </div>
         {documents.length ? (
           <div className="document-management-list">
@@ -690,13 +704,14 @@ export function Settings({
                   </button>
                   <small>{document.char_count.toLocaleString('de-DE')} Zeichen</small>
                 </div>
-                <MotionButton
+                <button
+                  type="button"
                   className="icon-button"
                   onClick={() => onDeleteDocument(document)}
                   aria-label={`${document.name} endgültig löschen`}
                 >
                   <Trash2 size={15} />
-                </MotionButton>
+                </button>
               </div>
             ))}
           </div>

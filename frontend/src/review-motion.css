@@ -16,10 +16,6 @@
   justify-content: flex-start;
 }
 
-.review-motion .review-tabs > button.active::after {
-  display: none;
-}
-
 .review-motion .review-tab-indicator {
   position: absolute;
   inset: auto 0 -1px;
@@ -52,7 +48,6 @@
 .review-motion .review-check {
   display: inline-flex;
   flex-shrink: 0;
-  transition: none;
 }
 
 .review-motion .export-popover[aria-hidden='true'] {

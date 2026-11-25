@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 from docx import Document
 from docx.opc.constants import RELATIONSHIP_TYPE
@@ -18,6 +19,27 @@ DISCLAIMER = (
 )
 PRIORITIES = {"high": "Hoch", "medium": "Mittel", "low": "Niedrig", "info": "Hinweis"}
 CHANGE_TYPES = {"modified": "Geändert", "added": "Ergänzt", "removed": "Gestrichen"}
+# The interface's names for reasoning effort (frontend/src/ui.tsx).
+EFFORTS = {
+    "auto": "Modellstandard",
+    "none": "Ohne",
+    "minimal": "Minimal",
+    "low": "Niedrig",
+    "medium": "Mittel",
+    "high": "Hoch",
+    "xhigh": "Sehr hoch",
+    "max": "Maximum",
+}
+
+
+def report_details(analysis: Analysis) -> str:
+    """Creation time, model and reasoning effort as the interface names them."""
+    try:
+        created = datetime.fromisoformat(analysis.created_at).astimezone(UTC)
+        timestamp = created.strftime("%d.%m.%Y, %H:%M UTC")
+    except ValueError:
+        timestamp = analysis.created_at
+    return f"Erstellt {timestamp} · {analysis.model} · Denkaufwand {EFFORTS[analysis.effort]}"
 
 
 def finding_source(finding: Finding) -> str:
@@ -43,16 +65,18 @@ def has_revision(finding: Finding) -> bool:
     )
 
 
-_MD_SPECIAL = re.compile(r"([\\`*_\[\]<>!|])")
+_MD_SPECIAL = re.compile(r"([\\`*_~\[\]<>!|])")
 _MD_LINE_START = re.compile(r"^(\s*)([#>+=-])", re.MULTILINE)
 
 
 def md(text: str) -> str:
     """Escape model or document text so exported Markdown renders it literally.
 
-    Prevents injected HTML, remote images, links and fake headings in viewers
-    that render Markdown (some load remote images automatically).
+    Prevents injected HTML, remote images, links, fake headings and struck-through
+    words in viewers that render Markdown (some load remote images automatically).
+    A lone carriage return also ends a line there, so it becomes a line feed first.
     """
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     return _MD_LINE_START.sub(r"\1\\\2", _MD_SPECIAL.sub(r"\\\1", text))
 
 
@@ -64,6 +88,20 @@ def md_quote(text: str) -> str:
     return "> " + md(text).replace("\n", "\n> ")
 
 
+# CommonMark ends an autolink at whitespace, a control character, `<` or `>`.
+_AUTOLINK_END = re.compile(r"[\s<>\x00-\x1f\x7f]")
+
+
+def md_url(url: str) -> str:
+    """Percent-encode the characters that would end an autolink and start new Markdown.
+
+    Research URLs come from web search metadata; a `>` would otherwise close `<…>`
+    and let the rest of the URL render, for example as a remote image. Everything else,
+    including international domain names, stays as provided.
+    """
+    return _AUTOLINK_END.sub(lambda match: quote(match.group()), url)
+
+
 def markdown(analysis: Analysis) -> bytes:
     proposal_label = (
         "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
@@ -72,9 +110,7 @@ def markdown(analysis: Analysis) -> bytes:
     if analysis.is_demo:
         lines += ["**SYNTHETISCHES BEISPIEL · Keine Modellanalyse**", ""]
     lines += [
-        f"Erstellt: {analysis.created_at}",
-        f"Modell: {md_line(analysis.model)}",
-        f"Denktiefe: {analysis.effort}",
+        md_line(report_details(analysis)),
         "",
         "## Überblick",
         "",
@@ -127,7 +163,7 @@ def markdown(analysis: Analysis) -> bytes:
         if finding.source_urls:
             lines += [
                 "Recherchequellen zum Befund:",
-                *[f"- <{u}>" for u in finding.source_urls],
+                *[f"- <{md_url(u)}>" for u in finding.source_urls],
                 "",
             ]
     if analysis.timeline:
@@ -153,7 +189,7 @@ def markdown(analysis: Analysis) -> bytes:
         lines += [
             "## Recherchequellen",
             "",
-            *[f"- {md_line(s.title)}: <{s.url}>" for s in analysis.sources],
+            *[f"- {md_line(s.title)}: <{md_url(s.url)}>" for s in analysis.sources],
         ]
     return "\n".join(lines).encode("utf-8")
 
@@ -191,7 +227,23 @@ def add_hyperlink(paragraph, label: str, url: str) -> None:
     paragraph._p.append(hyperlink)
 
 
+# XML 1.0 forbids these characters; python-docx raises on them. Pasted text and
+# verified quotes can contain them, for example form feeds from a print export.
+_XML_ILLEGAL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def _xml_safe(value):
+    if isinstance(value, str):
+        return _XML_ILLEGAL.sub(" ", value)
+    if isinstance(value, list):
+        return [_xml_safe(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _xml_safe(item) for key, item in value.items()}
+    return value
+
+
 def docx(analysis: Analysis) -> bytes:
+    analysis = Analysis.model_validate(_xml_safe(analysis.model_dump()))
     proposal_label = (
         "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
     )
@@ -211,7 +263,7 @@ def docx(analysis: Analysis) -> bytes:
     if analysis.is_demo:
         document.add_paragraph("SYNTHETISCHES BEISPIEL · Keine Modellanalyse", "Subtitle")
     document.add_paragraph(DISCLAIMER)
-    document.add_paragraph(f"{analysis.created_at[:10]} · {analysis.model} · {analysis.effort}")
+    document.add_paragraph(report_details(analysis))
     document.add_heading("Überblick", 1)
     document.add_paragraph(analysis.summary)
     includes_revisions = any(has_revision(finding) for finding in analysis.findings)

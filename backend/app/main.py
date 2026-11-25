@@ -18,7 +18,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
 
 from . import export
-from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
+from .analysis import AnalysisError, AnalysisService, recover_source_references, same_wording
 from .config import Settings
 from .demo import demo_analysis, demo_documents, restore_demo_sources
 from .extraction import ExtractionError, extract_isolated, safe_filename
@@ -31,12 +31,13 @@ from .schemas import (
     DemoRequest,
     Document,
     DocumentDeleteRequest,
+    DocumentSummary,
     Playbook,
     PlaybookInput,
     new_id,
     now,
 )
-from .security import RequestTooLarge, SecurityBoundary
+from .security import SecurityBoundary
 from .static_assets import BuildAssets
 from .store import ProtectedDocumentError, Store
 
@@ -96,7 +97,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="LegalThink",
-        version="0.3.0",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -115,7 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def validation_error(request: Request, exc: RequestValidationError):
         # Pydantic's default response may echo confidential input. Return safe field names only.
         for error in exc.errors():
-            if error["type"] == "model_configuration":
+            if error["type"] == "explained":
                 return JSONResponse({"detail": error["msg"]}, status_code=422)
             if error["loc"] == ("body", "model"):
                 return JSONResponse(
@@ -144,21 +144,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=422,
         )
 
-    @app.exception_handler(RequestTooLarge)
-    async def body_too_large(request: Request, exc: RequestTooLarge):
-        return JSONResponse({"detail": "Die Anfrage ist zu groß."}, status_code=413)
-
+    # Unexpected errors are answered and logged by SecurityBoundary, which catches them
+    # before Starlette's error middleware could log confidential exception values.
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException):
-        return JSONResponse({"detail": str(exc.detail)}, status_code=exc.status_code)
-
-    @app.exception_handler(Exception)
-    async def unexpected_error(request: Request, exc: Exception):
-        # No provider exceptions, document content or keys leave the API or the log.
-        logger.error("Unexpected %s on %s %s", type(exc).__name__, request.method, request.url.path)
         return JSONResponse(
-            {"detail": "Die Anfrage konnte nicht verarbeitet werden. Bitte erneut versuchen."},
-            status_code=500,
+            {"detail": str(exc.detail)}, status_code=exc.status_code, headers=exc.headers
         )
 
     @app.get("/api/health")
@@ -173,9 +164,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def models():
         return {"models": MODELS}
 
-    @app.get("/api/documents", response_model=list[Document])
+    @app.get("/api/documents", response_model=list[DocumentSummary])
     def list_documents():
-        return readable(Document, app.state.store.list("documents"))
+        # Each text can hold 200,000 characters; the browser loads one when it shows it.
+        return readable(DocumentSummary, app.state.store.list_documents())
+
+    async def read_upload(file: UploadFile) -> bytes:
+        try:
+            data = await file.read(config.max_upload_bytes + 1)
+        finally:
+            # Free the spooled upload before the extraction, which can take 25 seconds.
+            await file.close()
+        if len(data) > config.max_upload_bytes:
+            raise HTTPException(413, "Die Datei ist zu groß. Maximal 12 MB sind erlaubt.")
+        return data
+
+    async def extract_upload(data: bytes, suffix: str) -> tuple[str, int]:
+        slots = app.state.extraction_slots
+        if slots.locked():
+            raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
+        try:
+            async with slots:
+                return await extract_isolated(data, suffix)
+        except ExtractionError as error:
+            raise HTTPException(422, str(error)) from None
+        except TimeoutError:
+            raise HTTPException(
+                422,
+                "Das Lesen der Datei dauerte zu lange. Bitte eine vereinfachte Version hochladen.",
+            ) from None
 
     @app.post("/api/documents", response_model=Document, status_code=201)
     async def upload(file: Annotated[UploadFile, File()]):
@@ -184,25 +201,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if suffix not in DOCUMENT_MEDIA_TYPES:
             await file.close()
             raise HTTPException(415, "Unterstützt werden PDF, DOCX, TXT und Markdown.")
-        try:
-            data = await file.read(config.max_upload_bytes + 1)
-        finally:
-            await file.close()
-        if len(data) > config.max_upload_bytes:
-            raise HTTPException(413, "Die Datei ist zu groß. Maximal 12 MB sind erlaubt.")
-        slots = app.state.extraction_slots
-        if slots.locked():
-            raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
-        try:
-            async with slots:
-                text, pages = await extract_isolated(data, suffix)
-        except ExtractionError as error:
-            raise HTTPException(422, str(error)) from None
-        except TimeoutError:
-            raise HTTPException(
-                422,
-                "Das Lesen der Datei dauerte zu lange. Bitte eine vereinfachte Version hochladen.",
-            ) from None
+        data = await read_upload(file)
+        text, pages = await extract_upload(data, suffix)
         document = Document(
             id=new_id(),
             name=name,
@@ -246,31 +246,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.put("/api/documents/{document_id}/original", response_model=Document)
     async def attach_original(document_id: str, file: Annotated[UploadFile, File()]):
-        source = app.state.store.get("documents", document_id)
-        try:
-            if not source:
-                raise HTTPException(404, "Dokument nicht gefunden.")
-            suffix = Path(source["name"]).suffix.lower()
-            if suffix not in DOCUMENT_MEDIA_TYPES:
-                raise HTTPException(422, "Für dieses Dateiformat ist keine Vorschau verfügbar.")
-            if Path(safe_filename(file.filename)).suffix.lower() != suffix:
-                raise HTTPException(422, "Bitte eine Datei im gleichen Format auswählen.")
-            data = await file.read(config.max_upload_bytes + 1)
-        finally:
+        source = await run_in_threadpool(app.state.store.get, "documents", document_id)
+        suffix = Path(source["name"]).suffix.lower() if source else ""
+        problem = None
+        if not source:
+            problem = HTTPException(404, "Dokument nicht gefunden.")
+        elif suffix not in DOCUMENT_MEDIA_TYPES:
+            problem = HTTPException(422, "Für dieses Dateiformat ist keine Vorschau verfügbar.")
+        elif Path(safe_filename(file.filename)).suffix.lower() != suffix:
+            problem = HTTPException(422, "Bitte eine Datei im gleichen Format auswählen.")
+        if problem:
             await file.close()
-        if len(data) > config.max_upload_bytes:
-            raise HTTPException(413, "Die Datei ist zu groß. Maximal 12 MB sind erlaubt.")
-        slots = app.state.extraction_slots
-        if slots.locked():
-            raise HTTPException(429, "Es werden bereits zwei Dateien gelesen. Bitte kurz warten.")
-        try:
-            async with slots:
-                text, _ = await extract_isolated(data, suffix)
-        except ExtractionError as error:
-            raise HTTPException(422, str(error)) from None
-        except TimeoutError:
-            raise HTTPException(422, "Das Lesen der Datei dauerte zu lange.") from None
-        if normalized(text) != normalized(source["text"]):
+            raise problem
+        data = await read_upload(file)
+        text, _ = await extract_upload(data, suffix)
+        # Older imports may differ in whitespace only; the wording must be the same.
+        if not same_wording(text, source["text"]):
             raise HTTPException(
                 422, "Der Text dieser Datei stimmt nicht mit dem gespeicherten Quelltext überein."
             )
@@ -299,10 +290,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/analyses", response_model=list[Analysis])
     def list_analyses():
-        documents = {
-            doc.id: doc.model_dump()
-            for doc in readable(Document, app.state.store.list("documents"))
-        }
+        documents = {doc.id: doc for doc in readable(Document, app.state.store.list("documents"))}
         analyses = []
         for value in app.state.store.list("analyses"):
             try:
@@ -311,27 +299,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 skipped_record("analyses")
         return analyses
 
-    def prepare_analysis(value: dict, documents: dict | None = None) -> Analysis:
-        def source_document(source_id):
+    def prepare_analysis(value: dict, documents: dict[str, Document] | None = None) -> Analysis:
+        def source_document(source_id: str | None) -> Document | None:
             if documents is not None:
                 return documents.get(source_id)
-            return app.state.store.get("documents", source_id)
+            # A damaged source row must not make an intact report unreadable.
+            row = app.state.store.get("documents", source_id) if source_id else None
+            return next(iter(readable(Document, [row] if row else [])), None)
 
         analysis = Analysis.model_validate(value)
         source_ids = {*analysis.document_ids, analysis.source_text_document_id} - {None}
-        sources = [
-            Document.model_validate(source)
-            for source_id in source_ids
-            if (source := source_document(source_id))
-        ]
+        sources = [source for source_id in source_ids if (source := source_document(source_id))]
         recover_source_references(analysis, sources)
         # Older reports can recover a file name while the source is still available.
         # Do not rewrite the saved report or accept model-generated document names.
+        names = {source.id: source.name for source in sources}
         for finding in analysis.findings:
             if not finding.source_document_name:
-                source = source_document(finding.source_document_id)
-                if source:
-                    finding.source_document_name = source["name"]
+                name = names.get(finding.source_document_id)
+                if name is None and (source := source_document(finding.source_document_id)):
+                    name = source.name
+                if name:
+                    finding.source_document_name = name
         return analysis
 
     def get_analysis(analysis_id: str) -> Analysis:
@@ -355,9 +344,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if service is None:
             raise HTTPException(
                 503,
-                "OpenAI ist noch nicht eingerichtet. Der API-Schlüssel "
-                "wird ausschließlich auf dem Server hinterlegt. "
-                "Das Beispiel funktioniert ohne Schlüssel.",
+                "OpenAI ist nicht eingerichtet. Tragen Sie OPENAI_API_KEY in "
+                "backend/.env ein und starten Sie den Server neu. Beispiele "
+                "funktionieren ohne Schlüssel.",
             )
         documents = []
         for document_id in body.document_ids:
@@ -397,17 +386,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await asyncio.sleep(0.25)
 
         async with slots:
+            answered = asyncio.Event()
             task = asyncio.create_task(
-                service.run(body, documents, playbook, pasted_document=pasted_document)
+                service.run(
+                    body, documents, playbook, pasted_document=pasted_document, answered=answered
+                )
             )
             disconnect = asyncio.create_task(disconnected())
             try:
-                done, _ = await asyncio.wait(
-                    {task, disconnect}, return_when=asyncio.FIRST_COMPLETED
-                )
-                # A finished provider call is paid for; keep its result even if the
-                # browser disconnected at the same moment.
-                if task not in done:
+                await asyncio.wait({task, disconnect}, return_when=asyncio.FIRST_COMPLETED)
+                # Closing the browser cancels the request only until OpenAI answers. An
+                # answer is billed, so its evidence is still verified and the report saved.
+                if not task.done() and not answered.is_set():
                     raise HTTPException(499, "Analyse abgebrochen.")
                 result = await task
                 if pasted_document:
@@ -417,7 +407,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         if finding.source_document_id == pasted_document.id:
                             finding.source_document_name = pasted_document.name
                     for event in result.timeline:
-                        if event.source_document_id == pasted_document.id:
+                        # An unconfirmed event keeps its notice instead of the source name.
+                        if event.verified and event.source_document_id == pasted_document.id:
                             event.source = pasted_document.name
                 await run_in_threadpool(
                     app.state.store.save_analysis,
@@ -494,17 +485,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 GZipMiddleware(BuildAssets(directory=assets), minimum_size=1000, compresslevel=6),
                 name="assets",
             )
+        # Public build files are known at startup. Request paths never reach the file
+        # system, so they cannot point outside the build or at a network share.
+        public_files = {
+            file.relative_to(config.frontend_dir).as_posix(): file
+            for file in config.frontend_dir.rglob("*")
+            if file.is_file() and not file.is_relative_to(assets)
+        }
 
         @app.get("/{path:path}")
         def frontend(path: str):
             if path.startswith("api/"):
                 raise HTTPException(404, "API-Endpunkt nicht gefunden.")
-            target = (config.frontend_dir / path).resolve()
-            if target.is_relative_to(config.frontend_dir.resolve()) and target.is_file():
-                return FileResponse(target, headers={"Cache-Control": "no-cache"})
-            return FileResponse(
-                config.frontend_dir / "index.html", headers={"Cache-Control": "no-cache"}
-            )
+            target = public_files.get(path, config.frontend_dir / "index.html")
+            return FileResponse(target, headers={"Cache-Control": "no-cache"})
 
     return app
 

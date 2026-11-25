@@ -9,10 +9,10 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import zipfile
 from pathlib import Path, PurePosixPath
 
-from docx import Document as WordDocument
 from docx.oxml import parse_xml
 from pypdf import Configuration, PdfReader, apply_configuration
 from pypdf.errors import LimitReachedError
@@ -55,7 +55,9 @@ def safe_filename(name: str | None) -> str:
 
 
 def clean_text(text: str) -> str:
-    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
+    # Page breaks, vertical tabs and record separators separate words; keep a break.
+    text = re.sub(r"[\x0b\x0c\x1c-\x1f]", "\n", text)
+    text = re.sub(r"[\x00-\x08\x0e-\x1b]", "", text)
     text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     if len(text) > MAX_CHARS:
         raise ExtractionError(
@@ -112,6 +114,112 @@ def extract_pdf(data: bytes) -> tuple[str, int]:
         return clean_text("\n\n".join(pages)), len(pages)
 
 
+WORD_NAMESPACES = (
+    "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+    "http://purl.oclc.org/ooxml/wordprocessingml/main",
+)
+MC_FALLBACK = "{http://schemas.openxmlformats.org/markup-compatibility/2006}Fallback"
+# Wrappers whose content belongs to the surrounding paragraph, row or table:
+# content controls, custom XML, smart tags, simple fields, links and bidi runs.
+WORD_WRAPPERS = {
+    "sdt",
+    "sdtContent",
+    "customXml",
+    "smartTag",
+    "fldSimple",
+    "hyperlink",
+    "dir",
+    "bdo",
+}
+
+
+def _word_name(element) -> str:
+    """Local WordprocessingML name; empty for other namespaces and comments."""
+    tag = element.tag
+    if not isinstance(tag, str) or not tag.startswith("{"):
+        return ""
+    namespace, _, name = tag[1:].partition("}")
+    return name if namespace in WORD_NAMESPACES else ""
+
+
+# A break without type is a line break; page and column breaks add no text.
+LINE_BREAKS = {None, "textWrapping"}
+
+
+def _word_attribute(element, name: str) -> str | None:
+    namespace = element.tag[1 : element.tag.index("}")]
+    return element.get(f"{{{namespace}}}{name}")
+
+
+def _run_text(run, parts: list[str]) -> None:
+    # Text equivalents as in python-docx.
+    for child in run:
+        name = _word_name(child)
+        if name == "t":
+            parts.append(child.text or "")
+        elif name in {"tab", "ptab"}:
+            parts.append("\t")
+        elif name == "noBreakHyphen":
+            parts.append("-")
+        elif name == "cr" or (name == "br" and _word_attribute(child, "type") in LINE_BREAKS):
+            parts.append("\n")
+
+
+def _inline_text(element, parts: list[str]) -> None:
+    for child in element:
+        name = _word_name(child)
+        if name == "r":
+            _run_text(child, parts)
+        elif name in WORD_WRAPPERS:
+            _inline_text(child, parts)
+
+
+def _text_boxes(paragraph):
+    """Outermost text boxes in a paragraph, without VML fallback duplicates."""
+    for box in paragraph.iter(*(f"{{{namespace}}}txbxContent" for namespace in WORD_NAMESPACES)):
+        nested = False
+        for ancestor in box.iterancestors():
+            if ancestor is paragraph:
+                break
+            if ancestor.tag == MC_FALLBACK or _word_name(ancestor) == "txbxContent":
+                nested = True
+                break
+        if not nested:
+            yield box
+
+
+def _word_items(element, item: str):
+    """Rows of a table or cells of a row, also inside content controls."""
+    for child in element:
+        name = _word_name(child)
+        if name == item:
+            yield child
+        elif name in WORD_WRAPPERS:
+            yield from _word_items(child, item)
+
+
+def _word_blocks(container, blocks: list[str]) -> None:
+    """Paragraphs and table rows in document order, as the reader sees them."""
+    for child in container:
+        name = _word_name(child)
+        if name == "p":
+            parts: list[str] = []
+            _inline_text(child, parts)
+            blocks.append("".join(parts))
+            for box in _text_boxes(child):
+                _word_blocks(box, blocks)
+        elif name == "tbl":
+            for row in _word_items(child, "tr"):
+                cells = []
+                for cell in _word_items(row, "tc"):
+                    content: list[str] = []
+                    _word_blocks(cell, content)
+                    cells.append("\n".join(content))
+                blocks.append(" | ".join(cells))
+        elif name in WORD_WRAPPERS:
+            _word_blocks(child, blocks)
+
+
 def extract(data: bytes, suffix: str) -> tuple[str, int]:
     if not data:
         raise ExtractionError("Die Datei ist leer.")
@@ -140,17 +248,15 @@ def extract(data: bytes, suffix: str) -> tuple[str, int]:
                 raise ExtractionError("Die Datei ist kein gültiges Word-Dokument.")
             revision_tags = {
                 f"{{{namespace}}}{change}"
-                for namespace in (
-                    "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
-                    "http://purl.oclc.org/ooxml/wordprocessingml/main",
-                )
+                for namespace in WORD_NAMESPACES
                 for change in ("ins", "del", "moveFrom", "moveTo")
             }
+            body = None
             for entry in entries:
                 if not entry.filename.startswith("word/") or not entry.filename.endswith(".xml"):
                     continue
-                # Reuse python-docx's parser with entity resolution disabled. The
-                # paragraph API otherwise silently omits tracked text changes.
+                # python-docx's parser resolves no entities. Tracked changes would make
+                # the extracted text differ from what the document shows, so refuse them.
                 root = parse_xml(archive.read(entry))
                 if any(element.tag in revision_tags for element in root.iter()):
                     raise ExtractionError(
@@ -158,46 +264,59 @@ def extract(data: bytes, suffix: str) -> tuple[str, int]:
                         "Nehmen Sie diese in einer Kopie zuerst an oder lehnen Sie sie ab "
                         "und laden Sie die Kopie erneut hoch."
                     )
-        doc = WordDocument(io.BytesIO(data))
-        paragraphs = []
-        # iter_inner_content retains the order of paragraphs and tables.
-        for item in doc.iter_inner_content():
-            if hasattr(item, "text"):
-                paragraphs.append(item.text)
-            else:
-                for row in item.rows:
-                    paragraphs.append(" | ".join(cell.text for cell in row.cells))
-        text = clean_text("\n\n".join(paragraphs))
+                if entry.filename == "word/document.xml":
+                    body = next((child for child in root if _word_name(child) == "body"), None)
+        if body is None:
+            raise ExtractionError("Die Datei ist kein gültiges Word-Dokument.")
+        blocks: list[str] = []
+        _word_blocks(body, blocks)
         # DOCX has no reliable pagination without a layout engine.
-        return text, 0
+        return clean_text("\n\n".join(blocks)), 0
     raise ExtractionError("Unterstützt werden PDF, DOCX, TXT und Markdown.")
 
 
 _CHILD_ENV = ("PATH", "SYSTEMROOT", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL")
+EXTRACTION_TIMEOUT_SECONDS = 25
 
 
 async def extract_isolated(data: bytes, suffix: str) -> tuple[str, int]:
+    """Parse untrusted bytes in a disposable process without configuration or secrets.
+
+    The process runs from a worker thread rather than as an asyncio subprocess: in
+    reload mode, Uvicorn uses a selector event loop on Windows, which cannot start
+    subprocesses. A timeout or a cancelled request ends the process.
+    """
     options = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
-    # The parser handles untrusted files: give it no API key or other configuration.
     env = {key: os.environ[key] for key in _CHILD_ENV if key in os.environ}
-    process = await asyncio.create_subprocess_exec(
-        sys.executable,
-        "-m",
-        "app.extraction",
-        suffix,
-        cwd=Path(__file__).resolve().parent.parent,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.DEVNULL,
-        env=env,
-        **options,
-    )
-    try:
-        output, _ = await asyncio.wait_for(process.communicate(data), timeout=25)
-    except (TimeoutError, asyncio.CancelledError):
-        if process.returncode is None:
+    cancelled = threading.Event()
+    started: list[subprocess.Popen] = []
+
+    def run() -> bytes:
+        process = subprocess.Popen(
+            [sys.executable, "-m", "app.extraction", suffix],
+            cwd=Path(__file__).resolve().parent.parent,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            **options,
+        )
+        started.append(process)
+        if cancelled.is_set():
             process.kill()
-        await process.wait()
+        try:
+            return process.communicate(data, timeout=EXTRACTION_TIMEOUT_SECONDS)[0]
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            raise TimeoutError from None
+
+    try:
+        output = await asyncio.to_thread(run)
+    except asyncio.CancelledError:
+        cancelled.set()
+        for process in started:
+            process.kill()
         raise
     try:
         result = json.loads(output)

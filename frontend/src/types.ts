@@ -10,7 +10,8 @@ export type ServiceTier = 'default' | 'flex';
 export interface DocumentRecord {
   id: string;
   name: string;
-  text: string;
+  /** Extracted text. The document list omits it; uploads and pasted text include it. */
+  text?: string;
   page_count: number;
   char_count: number;
   original_available?: boolean;
@@ -98,12 +99,12 @@ export interface Playbook {
   created_at?: string;
 }
 export interface Health {
-  status: string;
   api_configured: boolean;
   default_processing_region: ProcessingRegion;
 }
 
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+/** Fetch from the local API; failures become errors with the server's German message. */
+export async function request(path: string, init?: RequestInit): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
@@ -131,6 +132,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(message);
   }
+  return response;
+}
+
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await request(path, init);
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   ArrowDown,
@@ -29,7 +29,7 @@ import type {
   Workflow,
 } from './types';
 import { MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
-import { Collapse, MotionButton, useMotionPreferences } from './motion';
+import { Collapse, useMotionPreferences } from './motion';
 import './composer-motion.css';
 
 interface Props {
@@ -117,7 +117,19 @@ export default function Start(props: Props) {
   const current = WORKFLOWS.find((item) => item.id === workflow)!;
   const currentCompliance = COMPLIANCE_TASKS.find((item) => item.id === complianceTask)!;
   const fileInput = useRef<HTMLInputElement>(null);
-  const textInput = useRef<HTMLTextAreaElement>(null);
+  const runButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const wasRunning = useRef(running);
+  useEffect(() => {
+    if (wasRunning.current === running) return;
+    wasRunning.current = running;
+    // The start button disables itself while waiting, and the cancel action then
+    // disappears. Keep keyboard focus on the action that is available.
+    // Chrome moves focus away from a disabled button only after this effect has run.
+    const focused = document.activeElement;
+    if (focused && focused !== document.body && focused !== runButton.current) return;
+    (running ? cancelButton : runButton).current?.focus({ preventScroll: true });
+  }, [running]);
   const dragCounter = useRef(0);
   const [dragging, setDragging] = useState(false);
   const [options, setOptions] = useState(false);
@@ -146,10 +158,15 @@ export default function Start(props: Props) {
     <div className="start-page">
       <header className="analysis-start-heading">
         <h1>Neue Analyse</h1>
-        <MotionButton className="text-button" onClick={onDemo} disabled={demoLoading || running}>
+        <button
+          type="button"
+          className="text-button"
+          onClick={onDemo}
+          disabled={demoLoading || running}
+        >
           Beispiel öffnen
           {demoLoading ? <LoaderCircle className="spin" size={14} /> : <ArrowRight size={14} />}
-        </MotionButton>
+        </button>
       </header>
       <div className="workflow-selector" role="group" aria-label="Prüfungsart">
         {WORKFLOWS.map((item) => (
@@ -161,7 +178,7 @@ export default function Start(props: Props) {
             disabled={running || uploading}
           >
             <item.icon size={17} strokeWidth={1.6} />
-            <span className="workflow-option-label">{item.label}</span>
+            <span>{item.label}</span>
           </button>
         ))}
       </div>
@@ -211,13 +228,13 @@ export default function Start(props: Props) {
         </AnimatePresence>
         <div className="document-input-heading">
           <div className="composer-document-actions">
-            <MotionButton
+            <button
               className="button secondary"
               type="button"
               onClick={() => fileInput.current?.click()}
               disabled={uploading || running}
             >
-              <span className="composer-action-icon" aria-hidden="true">
+              <span className="action-icon" aria-hidden="true">
                 {uploading ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />}
               </span>
               <span className="stable-action-label">
@@ -226,16 +243,16 @@ export default function Start(props: Props) {
                 </span>
                 <span>{uploading ? 'Wird eingelesen …' : 'Dokumente hinzufügen'}</span>
               </span>
-            </MotionButton>
+            </button>
             {libraryDocuments.length > 0 && (
-              <MotionButton
+              <button
                 className="text-button library-button"
                 type="button"
                 onClick={() => setDocumentPickerOpen(true)}
                 disabled={uploading || running}
               >
                 Gespeicherte auswählen
-              </MotionButton>
+              </button>
             )}
           </div>
           <span>PDF, DOCX, TXT, MD · max. 12 MB pro Datei</span>
@@ -269,7 +286,7 @@ export default function Start(props: Props) {
                   onRemove={onRemove}
                 />
               ) : (
-                <div className="document-chip empty-comparison-slot" key={`empty-${index}`}>
+                <div className="document-chip" key={`empty-${index}`}>
                   <div className="document-chip-icon">
                     <FileText size={18} />
                   </div>
@@ -337,7 +354,6 @@ export default function Start(props: Props) {
         </div>
         <div className="composer-instruction-text">
           <textarea
-            ref={textInput}
             id="analysis-context"
             className="composer-text-input context-input"
             value={context}
@@ -349,7 +365,8 @@ export default function Start(props: Props) {
             rows={4}
           />
           <div className="composer-instruction-actions">
-            <MotionButton
+            <button
+              type="button"
               className="text-button"
               aria-haspopup="dialog"
               onClick={() => {
@@ -360,7 +377,7 @@ export default function Start(props: Props) {
             >
               <FileText size={14} aria-hidden="true" />
               Vorlage ansehen
-            </MotionButton>
+            </button>
             <span className="instruction-text-meta" id="analysis-instruction-limit">
               {instructionCharCount.toLocaleString('de-DE')} /{' '}
               {MAX_INSTRUCTION_CHARS.toLocaleString('de-DE')} Zeichen
@@ -391,7 +408,8 @@ export default function Start(props: Props) {
             </select>
             <ChevronDown className="composer-playbook-chevron" size={14} aria-hidden="true" />
           </div>
-          <MotionButton
+          <button
+            type="button"
             className="composer-research-toggle"
             aria-label="Webrecherche"
             aria-pressed={research}
@@ -407,7 +425,7 @@ export default function Start(props: Props) {
               strokeWidth={3}
               aria-hidden="true"
             />
-          </MotionButton>
+          </button>
           <span id="analysis-research-description" className="sr-only">
             Suchanfragen können Dokumentinhalte enthalten.
           </span>
@@ -419,7 +437,8 @@ export default function Start(props: Props) {
             onEffort={onEffort}
             disabled={running}
           />
-          <MotionButton
+          <button
+            ref={runButton}
             className="button primary run-analysis-button"
             type="button"
             aria-label="Analyse starten"
@@ -430,10 +449,11 @@ export default function Start(props: Props) {
           >
             Analyse starten
             {running ? <LoaderCircle className="spin" size={15} /> : <ArrowRight size={15} />}
-          </MotionButton>
+          </button>
         </div>
         <div className="composer-advanced-heading">
-          <MotionButton
+          <button
+            type="button"
             className={`text-button options-toggle ${options ? 'active' : ''}`}
             onClick={() => setOptions(!options)}
             disabled={running}
@@ -450,7 +470,7 @@ export default function Start(props: Props) {
             >
               <ChevronDown size={15} />
             </motion.span>
-          </MotionButton>
+          </button>
           <p className="analysis-data-note" id="analysis-data-note">
             Beim Start werden die ausgewählten Inhalte an OpenAI gesendet.
           </p>
@@ -477,13 +497,14 @@ export default function Start(props: Props) {
             <p className="comparison-order-note">
               Zwei Dokumente: zuerst Original, dann Gegenentwurf.
             </p>
-            <MotionButton
+            <button
+              type="button"
               className="text-button reorder-button"
               onClick={onReorder}
               disabled={running || documents.length !== 2}
             >
               <ArrowDown size={13} /> Reihenfolge tauschen
-            </MotionButton>
+            </button>
           </div>
         )}
         {error && (
@@ -499,9 +520,9 @@ export default function Start(props: Props) {
                 {serviceTier === 'flex' ? 'Analyse mit Flex läuft …' : 'Analyse läuft …'}
               </strong>
             </div>
-            <MotionButton className="text-button" onClick={onCancel}>
+            <button ref={cancelButton} type="button" className="text-button" onClick={onCancel}>
               Warten abbrechen
-            </MotionButton>
+            </button>
           </div>
         )}
       </section>
@@ -527,16 +548,21 @@ export default function Start(props: Props) {
               ) : null}
             </div>
             <div className="modal-footer">
-              <MotionButton className="button secondary" onClick={() => setTemplateOpen(false)}>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setTemplateOpen(false)}
+              >
                 Schließen
-              </MotionButton>
-              <MotionButton
+              </button>
+              <button
+                type="button"
                 className="button primary"
                 onClick={applyTemplate}
                 disabled={running || templateIncluded || templateTooLong}
               >
                 {hasInstruction ? 'Vorlage ergänzen' : 'Vorlage übernehmen'}
-              </MotionButton>
+              </button>
             </div>
           </Modal>
         )}
@@ -596,15 +622,14 @@ function ComposerDocument({
           {compare
             ? index === 0
               ? '01 · Original'
-              : index === 1
-                ? '02 · Gegenentwurf'
-                : 'Zusätzliches Dokument'
+              : '02 · Gegenentwurf'
             : document.page_count
               ? `${document.page_count} ${document.page_count === 1 ? 'Seite' : 'Seiten'}`
               : `${document.char_count.toLocaleString('de-DE')} Zeichen`}
         </small>
       </div>
-      <MotionButton
+      <button
+        type="button"
         className="icon-button small"
         onClick={(event) => {
           const button = event.currentTarget;
@@ -626,7 +651,7 @@ function ComposerDocument({
         aria-label={`${document.name} aus Auswahl entfernen`}
       >
         <X size={14} />
-      </MotionButton>
+      </button>
     </div>
   );
 }

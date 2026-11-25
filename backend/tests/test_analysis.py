@@ -60,7 +60,9 @@ def provider_response(result=None, status="completed", refusal=False, annotation
         "created_at": 1,
         "model": "gpt-6-luna",
         "status": status,
+        # Reasoning models put a reasoning item, without content, before the answer.
         "output": [
+            {"id": "rs_offline", "type": "reasoning", "summary": []},
             {
                 "id": "msg_offline",
                 "type": "message",
@@ -84,7 +86,7 @@ def two_differing_reports():
     other = {**model_result(), "summary": "PRIVATE abweichender Bericht."}
     response["output"].append(
         {
-            **response["output"][0],
+            **response["output"][-1],
             "id": "msg_second",
             "content": [{"type": "output_text", "text": json.dumps(other), "annotations": []}],
         }
@@ -240,7 +242,14 @@ def test_pdf_content_cannot_forge_page_attribution():
 
 async def test_default_research_retains_only_provider_attributed_urls():
     url = "https://gesetze-im-internet.de/bgb/__276.html"
-    invalid_urls = ["https://[invalid", "https:///missing-host", "javascript:alert(1)"]
+    invalid_urls = [
+        "https://[invalid",
+        "https:///missing-host",
+        "javascript:alert(1)",
+        "https://eur-lex.europa.eu/a\n\n![x](https://evil.invalid/nl.png)",
+    ]
+    # More consulted sources than a report keeps; the cited one must not be dropped.
+    consulted = [f"https://eur-lex.europa.eu/legal-content/{number}" for number in range(35)]
     captured = []
 
     def handler(request):
@@ -259,10 +268,10 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 for cited_url in [*invalid_urls, url]
             ]
         )
-        response["output"][0]["phase"] = "final_answer"
+        response["output"][-1]["phase"] = "final_answer"
         # GPT-6 can precede a hosted search with commentary; output_text would join both.
         response["output"].insert(
-            0,
+            1,
             {
                 "id": "msg_commentary",
                 "type": "message",
@@ -272,7 +281,9 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 "content": [{"type": "output_text", "text": "Ich prüfe § 276.", "annotations": []}],
             },
         )
-        response["output"].append(
+        # The search runs before the final answer, which cites one of its sources.
+        response["output"].insert(
+            -1,
             {
                 "id": "search_offline",
                 "type": "web_search_call",
@@ -280,9 +291,11 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 "action": {
                     "type": "search",
                     "query": "§ 276 BGB",
-                    "sources": [{"type": "url", "url": value} for value in [*invalid_urls, url]],
+                    "sources": [
+                        {"type": "url", "url": value} for value in [*invalid_urls, *consulted, url]
+                    ],
                 },
-            }
+            },
         )
         response["service_tier"] = "flex"
         return httpx2.Response(200, json=response)
@@ -307,7 +320,7 @@ async def test_default_research_retains_only_provider_attributed_urls():
     assert result.processing_region == "eu"
     assert result.requested_service_tier == result.service_tier == "flex"
     assert result.findings[0].source_urls == [url]
-    assert [source.url for source in result.sources] == [url]
+    assert [source.url for source in result.sources] == [url, *consulted[:29]]
 
 
 async def test_pasted_text_is_a_separate_verified_source_and_never_a_mandate():
@@ -409,6 +422,8 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
             ("removed", QUOTE, ""),
             ("modified", counter_quote, pasted.text),
             ("modified", QUOTE, QUOTE),
+            # Contrary to its category; verified and kept, not a reason to drop the report.
+            ("added", QUOTE, counter_quote),
         )
     ]
     captured = []
@@ -433,18 +448,20 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     assert user["source_text_document"]["id"] == pasted.id
     assert result.document_ids == [DOC.id, counter.id]
     assert result.source_text_document_id == pasted.id
-    assert [item.verified for item in result.findings] == [True, True, True, False, False]
+    assert [item.verified for item in result.findings] == [True, True, True, False, False, True]
     assert [item.source_quote for item in result.findings] == [
         counter_quote,
         counter_quote,
         QUOTE,
         pasted.text,
         QUOTE,
+        counter_quote,
     ]
     assert [item.source_document_name for item in result.findings] == [
         counter.name,
         counter.name,
         original.name,
+        counter.name,
         counter.name,
         counter.name,
     ]
@@ -455,8 +472,11 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
         "",
         finding["suggestion"],
         finding["suggestion"],
+        finding["suggestion"],
     ]
-    modified, added, removed, invalid, wrong_side = [item.comparison for item in result.findings]
+    modified, added, removed, invalid, wrong_side, contrary = [
+        item.comparison for item in result.findings
+    ]
     assert modified.original.verified and modified.counterdraft.verified
     assert modified.original.source_location == "Seite 2"
     assert modified.counterdraft.source_location == "Seite 4"
@@ -464,6 +484,7 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     assert not removed.counterdraft.verified and removed.counterdraft.source_quote == ""
     assert not invalid.original.verified and not invalid.counterdraft.verified
     assert wrong_side.original.verified and not wrong_side.counterdraft.verified
+    assert contrary.original.verified and contrary.counterdraft.verified
     assert all(
         item.comparison.original.source_document_id == original.id
         and item.comparison.counterdraft.source_document_id == counter.id

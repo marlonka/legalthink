@@ -7,11 +7,7 @@
   min-width: 0;
 }
 .library-button {
-  font-size: 14px;
   white-space: nowrap;
-}
-.document-picker-body {
-  padding-bottom: 14px;
 }
 .document-picker-body .document-picker-search {
   width: 100%;
@@ -118,7 +114,6 @@
   line-height: 1.7;
 }
 .document-picker-count {
-  margin-top: 15px;
   font-variant-numeric: tabular-nums;
 }
 .document-order {
@@ -187,7 +182,6 @@
 }
 @media (max-width: 700px) {
   .document-picker-row {
-    min-height: 70px;
     gap: 10px;
     padding: 13px 11px;
   }

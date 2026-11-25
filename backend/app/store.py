@@ -23,8 +23,12 @@ def _check_table(table: str) -> None:
 
 class Store:
     def __init__(self, data_dir: Path):
-        data_dir.mkdir(parents=True, exist_ok=True)
+        # Other accounts on the computer must not read client documents. A new data
+        # directory and database are private; SQLite gives its WAL files the same mode.
+        data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.path = data_dir / "workspace.sqlite3"
+        if not self.path.exists():
+            self.path.touch(mode=0o600)
         with self.connection() as db:
             db.execute("PRAGMA journal_mode=WAL")
             for table in TABLES:
@@ -137,6 +141,15 @@ class Store:
         _check_table(table)
         with self.connection() as db:
             rows = db.execute(f"SELECT body FROM {table} ORDER BY created_at DESC, rowid DESC")
+            return [json.loads(row[0]) for row in rows]
+
+    def list_documents(self) -> list[dict[str, Any]]:
+        """Stored documents without their extracted text, newest first."""
+        with self.connection() as db:
+            rows = db.execute(
+                "SELECT json_remove(body, '$.text') FROM documents "
+                "ORDER BY created_at DESC, rowid DESC"
+            )
             return [json.loads(row[0]) for row in rows]
 
     def delete_documents(self, document_ids: list[str]) -> None:

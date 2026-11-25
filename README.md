@@ -107,7 +107,7 @@ Weitere Betriebsoptionen stehen in der [Konfigurationsvorlage](backend/.env.exam
 - **Lokaler Einzelbenutzerbetrieb:** Dokumenttexte, Originaldateien, Playbooks und Analysen liegen in SQLite, standardmäßig unter `backend/data/workspace.sqlite3`. Keine integrierte Benutzeranmeldung, Mandantentrennung oder Datenbankverschlüsselung. Die Anwendung nicht ungeschützt ins Internet stellen.
 - **Übertragung:** Beim Analysestart gehen ausgewählte Dokumenttexte, eingefügter Text, Prüfauftrag und gegebenenfalls Playbook an OpenAI. `store=false` verhindert die Speicherung als abrufbares Response-Objekt; es garantiert weder Zero Data Retention noch EU-Verarbeitung.
 - **Löschung:** Ein Dokument zu löschen entfernt seinen gespeicherten Text und seine Originaldatei. Bereits gespeicherte Berichte können weiterhin Zitate daraus enthalten und müssen bei Bedarf zusätzlich gelöscht werden.
-- **Import:** PDFs benötigen eine Textebene; integrierte OCR gibt es nicht. Offene Textänderungen in DOCX müssen vor dem Import in einer Kopie angenommen oder abgelehnt werden. Die Analyse verarbeitet ausgelesenen Text und erfasst visuelle Inhalte nicht vollständig.
+- **Import:** PDFs benötigen eine Textebene; integrierte OCR gibt es nicht. Offene Textänderungen in DOCX müssen vor dem Import in einer Kopie angenommen oder abgelehnt werden. Kopf- und Fußzeilen, Fuß- und Endnoten sowie Kommentare einer DOCX-Datei werden nicht gelesen. Die Analyse verarbeitet ausgelesenen Text und erfasst visuelle Inhalte nicht vollständig.
 - **Ergebnisqualität:** Berichte sind Arbeitsentwürfe. Quellen, Rechtslage und Fristen müssen vor ihrer Verwendung geprüft werden. Die mitgelieferten Beispiele und simulierten Tests belegen keine Modellqualität.
 
 | Eingabegrenze | Umfang |

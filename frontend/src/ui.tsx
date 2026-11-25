@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import { ArrowUpRight, Check, ChevronDown, X } from 'lucide-react';
 import type { Model } from './types';
-import { MotionButton, useMotionPreferences } from './motion';
+import { useMotionPreferences } from './motion';
 import './overlay-motion.css';
 import './effort-slider.css';
 import BrandMark from './BrandMark';
@@ -65,13 +65,43 @@ const backgroundState = new Map<HTMLElement, boolean>();
 let originalOverflow = '';
 let originalFocus: HTMLElement | null = null;
 
-function focusDialog(dialog: HTMLDivElement) {
-  const controls = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+function focusableControls(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector)).filter(
     (element) => {
       const bounds = element.getBoundingClientRect();
-      return bounds.width > 2 && bounds.height > 2 && !element.closest('[inert]');
+      return (
+        bounds.width > 2 &&
+        bounds.height > 2 &&
+        !element.closest('[inert]') &&
+        getComputedStyle(element).visibility !== 'hidden'
+      );
     },
   );
+}
+
+/** Keep Tab and Shift+Tab inside `container`, as a modal dialog or drawer requires. */
+export function trapTab(event: KeyboardEvent, container: HTMLElement) {
+  const controls = focusableControls(container);
+  const first = controls[0];
+  const last = controls.at(-1);
+  const active = document.activeElement;
+  if (!first || !last) {
+    event.preventDefault();
+    container.focus();
+  } else if (!container.contains(active)) {
+    event.preventDefault();
+    first.focus();
+  } else if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function focusDialog(dialog: HTMLDivElement) {
+  const controls = focusableControls(dialog);
   const autofocus = controls.find((element) => element.hasAttribute('autofocus'));
   const editable = controls.find((element) =>
     element.matches('input:not([type="file"]), textarea, select'),
@@ -86,7 +116,13 @@ function lockModal(modal: ActiveModal) {
     originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     for (const element of Array.from(document.body.children)) {
-      if (!(element instanceof HTMLElement) || element.hasAttribute('data-modal-portal')) continue;
+      // Announcements stay audible while a dialog is open.
+      if (
+        !(element instanceof HTMLElement) ||
+        element.hasAttribute('data-modal-portal') ||
+        element.hasAttribute('data-live-region')
+      )
+        continue;
       backgroundState.set(element, element.inert);
       element.inert = true;
     }
@@ -111,8 +147,12 @@ function lockModal(modal: ActiveModal) {
       for (const [element, wasInert] of backgroundState) element.inert = wasInert;
       backgroundState.clear();
       document.body.style.overflow = originalOverflow;
-      if (originalFocus?.isConnected && !originalFocus.closest('[inert]'))
-        originalFocus.focus({ preventScroll: true });
+      // The trigger can be gone, for example a deleted row: fall back to the main content.
+      const target =
+        originalFocus?.isConnected && !originalFocus.closest('[inert]')
+          ? originalFocus
+          : document.getElementById('main-content');
+      target?.focus({ preventScroll: true });
       originalFocus = null;
     });
   };
@@ -123,13 +163,11 @@ export function Modal({
   children,
   onClose,
   wide = false,
-  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
-  className?: string;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -157,25 +195,7 @@ export function Modal({
         event.stopPropagation();
         closeRef.current();
       }
-      if (event.key !== 'Tab') return;
-      const focusable = Array.from(
-        ref.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [],
-      ).filter((element) => {
-        const bounds = element.getBoundingClientRect();
-        return bounds.width > 2 && bounds.height > 2 && !element.closest('[inert]');
-      });
-      const firstElement = focusable[0],
-        lastElement = focusable.at(-1);
-      if (!firstElement) {
-        event.preventDefault();
-        ref.current?.focus();
-      } else if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault();
-        lastElement?.focus();
-      } else if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement?.focus();
-      }
+      if (event.key === 'Tab' && ref.current) trapTab(event, ref.current);
     };
     document.addEventListener('keydown', handleKey);
     return () => {
@@ -202,13 +222,18 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`modal ${wide ? 'modal-wide' : ''} ${className}`}
+        className={`modal${wide ? ' modal-wide' : ''}`}
       >
         <div className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          <MotionButton className="icon-button" onClick={onClose} aria-label="Dialog schließen">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Dialog schließen"
+          >
             <X size={19} />
-          </MotionButton>
+          </button>
         </div>
         {children}
       </div>
@@ -232,7 +257,7 @@ function PickerPopover({
   useEffect(() => {
     if (!present) return;
     const selected =
-      ref.current?.querySelector<HTMLElement>('[aria-pressed="true"], input') ??
+      ref.current?.querySelector<HTMLElement>('[aria-pressed="true"], input, select') ??
       ref.current?.querySelector<HTMLElement>('button:not(:disabled)');
     selected?.focus({ preventScroll: true });
   }, [present, effort]);
@@ -240,7 +265,7 @@ function PickerPopover({
     <motion.div
       ref={ref}
       id={id}
-      className={`picker-popover motion-picker-popover ${effort ? 'effort-popover' : ''}`}
+      className="picker-popover motion-picker-popover"
       inert={!present}
       aria-hidden={!present || undefined}
       initial={reduced ? false : { opacity: 0 }}
@@ -383,7 +408,7 @@ export function ModelPicker({
         }
       }}
     >
-      <MotionButton
+      <button
         type="button"
         className="picker-button"
         title={current.name}
@@ -406,11 +431,11 @@ export function ModelPicker({
         >
           <ChevronDown size={12} />
         </motion.span>
-      </MotionButton>
+      </button>
       <span className="picker-divider" />
-      <MotionButton
+      <button
         type="button"
-        className="picker-button effort-picker"
+        className="picker-button"
         data-picker="effort"
         aria-label={`Denkaufwand: ${EFFORT_NAMES[effort] ?? effort}`}
         aria-expanded={open === 'effort'}
@@ -428,13 +453,13 @@ export function ModelPicker({
         >
           <ChevronDown size={12} />
         </motion.span>
-      </MotionButton>
+      </button>
       <AnimatePresence initial={false}>
         {open && (
           <PickerPopover key="picker" id={`${menuId}-${open}`} effort={open === 'effort'}>
             {open === 'model' ? (
               models.map((item) => (
-                <MotionButton
+                <button
                   key={item.id}
                   type="button"
                   className="picker-option"
@@ -450,7 +475,7 @@ export function ModelPicker({
                     <strong>{item.name}</strong>
                   </span>
                   {model === item.id && <Check size={16} />}
-                </MotionButton>
+                </button>
               ))
             ) : current.custom ? (
               <label className="custom-effort-select">

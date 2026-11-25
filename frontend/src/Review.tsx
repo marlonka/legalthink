@@ -24,7 +24,7 @@ import { workflowName } from './workflows';
 import { reviewLabels } from './review-workflows';
 import { WorkflowFindingContent } from './WorkflowFindingContent';
 import { ComparisonFinding, type ComparisonSide } from './ComparisonFinding';
-import { Collapse, MotionButton, useMotionPreferences } from './motion';
+import { Collapse, useMotionPreferences } from './motion';
 import './review-motion.css';
 
 const SEVERITIES: Record<Severity, { label: string; short: string }> = {
@@ -100,16 +100,6 @@ export default function Review({
     });
     return () => cancelAnimationFrame(frame);
   }, [suggestionRequest, tab, reduced]);
-  useEffect(() => {
-    setTab(analysis.workflow === 'chronology' ? 'timeline' : 'findings');
-    setFilter('all');
-    setSearch('');
-    setSelectedId(analysis.findings[0]?.id ?? '');
-    setExpandedFindings(new Set(analysis.findings.slice(0, 1).map((finding) => finding.id)));
-    setMarked(new Set());
-    setSuggestionRequest(null);
-    consumedSuggestionRequest.current = 0;
-  }, [analysis.id, analysis.workflow, analysis.findings]);
   function documentRole(documentId: string) {
     const index = analysis.document_ids?.indexOf(documentId) ?? -1;
     return analysis.workflow === 'compare' && index >= 0 && index < 2
@@ -213,11 +203,13 @@ export default function Review({
             }
           }}
         >
-          <MotionButton
+          <button
+            type="button"
             ref={exportTrigger}
             className="button secondary"
-            onClick={() => setExportOpen(!exportOpen)}
-            disabled={exporting}
+            // Stays focusable while a download is prepared; disabling it would drop focus.
+            onClick={() => !exporting && setExportOpen(!exportOpen)}
+            aria-disabled={exporting || undefined}
             aria-expanded={exportOpen}
             aria-controls="export-options"
           >
@@ -236,7 +228,7 @@ export default function Review({
             >
               <ChevronDown size={13} />
             </motion.span>
-          </MotionButton>
+          </button>
           <AnimatePresence initial={false}>
             {exportOpen && (
               <ExportPopover
@@ -359,7 +351,7 @@ export default function Review({
         >
           <section className="findings-column" aria-label={labels.findings}>
             <div className="findings-toolbar">
-              <div className="filter-pills" aria-label="Nach Priorität filtern">
+              <div className="filter-pills" role="group" aria-label="Nach Priorität filtern">
                 <button
                   className={filter === 'all' ? 'active' : ''}
                   onClick={() => setFilter('all')}
@@ -519,7 +511,8 @@ export default function Review({
                 </div>
                 <footer>
                   {finding.source_quote && (
-                    <MotionButton
+                    <button
+                      type="button"
                       className="text-button"
                       onClick={() =>
                         openPreview({
@@ -529,13 +522,18 @@ export default function Review({
                       }
                     >
                       <Quote size={14} /> Fundstelle ansehen
-                    </MotionButton>
+                    </button>
                   )}
-                  <MotionButton className="text-button" onClick={() => onCopy(finding.suggestion)}>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => onCopy(finding.suggestion)}
+                  >
                     <Clipboard size={14} />
                     Kopieren
-                  </MotionButton>
-                  <MotionButton
+                  </button>
+                  <button
+                    type="button"
                     className={`mark-button ${marked.has(finding.id) ? 'marked' : ''}`}
                     onClick={() => mark(finding.id)}
                     aria-pressed={marked.has(finding.id)}
@@ -548,7 +546,7 @@ export default function Review({
                       on="Geprüft"
                       off="Als geprüft markieren"
                     />
-                  </MotionButton>
+                  </button>
                 </footer>
               </article>
             ))}
@@ -779,18 +777,18 @@ function ExportPopover({
       exit={{ opacity: 0, transition: transition('exit') }}
       transition={transition('enter')}
     >
-      <MotionButton ref={firstOption} onClick={() => onExport('docx')}>
+      <button type="button" ref={firstOption} onClick={() => onExport('docx')}>
         <FileText size={16} />
         <span>
           Word-Dokument<small>{chronology ? 'Chronologie mit Belegen' : 'Prüfbericht'}</small>
         </span>
-      </MotionButton>
-      <MotionButton onClick={() => onExport('md')}>
+      </button>
+      <button type="button" onClick={() => onExport('md')}>
         <FileText size={16} />
         <span>
           Markdown<small>Bericht als Textdatei</small>
         </span>
-      </MotionButton>
+      </button>
     </motion.div>
   );
 }
@@ -853,17 +851,17 @@ function FindingCard({
           )}
           <div className="finding-actions">
             {finding.source_quote && !finding.comparison && (
-              <MotionButton className="text-button" onClick={onShowSource}>
+              <button type="button" className="text-button" onClick={onShowSource}>
                 <Quote size={13} />
                 Fundstelle ansehen
                 <ChevronRight size={12} />
-              </MotionButton>
+              </button>
             )}
             {finding.suggestion && (
-              <MotionButton className="text-button" onClick={onSuggestion}>
+              <button type="button" className="text-button" onClick={onSuggestion}>
                 {reviewLabels(analysis).suggestion}
                 <ArrowRight size={13} />
-              </MotionButton>
+              </button>
             )}
           </div>
         </div>

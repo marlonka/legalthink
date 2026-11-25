@@ -1,12 +1,15 @@
-import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BookOpen,
   Check,
+  CircleAlert,
   FileText,
   History as HistoryIcon,
   LoaderCircle,
   Menu,
   Plus,
+  RotateCw,
   Settings2,
   Trash2,
   X,
@@ -15,9 +18,9 @@ import { AnimatePresence, motion, useIsPresent } from 'motion/react';
 import Start from './Start';
 import { DocumentPreviewProvider } from './DocumentPreview';
 import { RouteContent } from './RouteContent';
-import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS } from './types';
+import { api, MAX_INSTRUCTION_CHARS, MAX_MATERIAL_CHARS, request } from './types';
 import { useThemePreference } from './theme';
-import { MotionButton, useMotionPreferences } from './motion';
+import { useMotionPreferences } from './motion';
 import type {
   Analysis,
   ComplianceTask,
@@ -30,7 +33,7 @@ import type {
   ServiceTier,
   Workflow,
 } from './types';
-import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
+import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition, trapTab } from './ui';
 import { INSTRUCTION_TEMPLATES } from './instruction-templates';
 import { CUSTOM_MODELS_KEY, MAX_CUSTOM_MODELS, readCustomModels } from './custom-models';
 import './polish.css';
@@ -46,6 +49,14 @@ const Playbooks = lazy(() =>
 const Settings = lazy(() =>
   import('./WorkspacePages').then((pages) => ({ default: pages.Settings })),
 );
+const PAGE_NAMES: Record<string, string> = {
+  history: 'Analysen',
+  playbooks: 'Kanzlei-Playbooks',
+  settings: 'Einstellungen',
+};
+function pageName(route: string) {
+  return route.startsWith('analysis/') ? 'Analyse' : (PAGE_NAMES[route] ?? 'Neue Analyse');
+}
 
 function stored(key: string, fallback: string) {
   try {
@@ -90,14 +101,78 @@ function initialDraft(scenario: DemoScenario): Draft {
   };
 }
 
-function Notification({ message, onClose }: { message: string; onClose: () => void }) {
+type Drafts = Partial<Record<DemoScenario, Draft>>;
+/** Remove documents and playbooks from every draft that no longer exist. */
+function pruneDrafts(
+  drafts: Drafts,
+  documentExists: (id: string) => boolean,
+  playbookExists: (id: string) => boolean,
+): Drafts {
+  return Object.fromEntries(
+    Object.entries(drafts).map(([key, draft]) => [
+      key,
+      {
+        ...draft,
+        selectedIds:
+          key === 'compare'
+            ? draft.selectedIds.map((id) => (documentExists(id) ? id : ''))
+            : draft.selectedIds.filter(documentExists),
+        playbookId: playbookExists(draft.playbookId) ? draft.playbookId : '',
+      },
+    ]),
+  );
+}
+/** A server list plus local records added while it was being loaded. */
+function withNewer<T extends { id: string }>(
+  server: T[],
+  local: T[],
+  newer: (id: string) => boolean,
+) {
+  const ids = new Set(server.map((item) => item.id));
+  return [...local.filter((item) => !ids.has(item.id) && newer(item.id)), ...server];
+}
+
+type Toast = {
+  id: number;
+  text: string;
+  failed: boolean;
+  action?: { label: string; run: () => void };
+};
+
+/**
+ * Screen reader announcements of notices. A live region reliably announces only text that
+ * changes after it exists, and dialogs make the app root inert: the regions therefore stay
+ * mounted outside the root.
+ */
+function Announcements({ toast }: { toast: Toast | null }) {
+  const [host] = useState(() => {
+    const element = document.createElement('div');
+    element.setAttribute('data-live-region', '');
+    return element;
+  });
+  useLayoutEffect(() => {
+    document.body.append(host);
+    return () => host.remove();
+  }, [host]);
+  return createPortal(
+    <>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {toast && !toast.failed && <span key={toast.id}>{toast.text}</span>}
+      </p>
+      <p className="sr-only" aria-live="assertive" aria-atomic="true">
+        {toast?.failed && <span key={toast.id}>{toast.text}</span>}
+      </p>
+    </>,
+    host,
+  );
+}
+
+function Notification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const present = useIsPresent();
   const { reduced, transition } = useMotionPreferences();
   return (
     <motion.div
-      className="toast motion-toast"
-      role="status"
-      aria-atomic="true"
+      className={`toast motion-toast${toast.failed ? ' failed' : ''}`}
       aria-hidden={!present || undefined}
       inert={!present}
       initial={reduced ? false : { opacity: 0 }}
@@ -105,11 +180,28 @@ function Notification({ message, onClose }: { message: string; onClose: () => vo
       exit={{ opacity: 0, transition: transition('exit') }}
       transition={transition('enter')}
     >
-      <Check size={16} />
-      <span>{message}</span>
-      <MotionButton className="icon-button small" onClick={onClose} aria-label="Hinweis schließen">
+      {toast.failed ? <CircleAlert size={16} /> : <Check size={16} />}
+      <span>{toast.text}</span>
+      {toast.action && (
+        <button
+          type="button"
+          className="text-button toast-action"
+          onClick={() => {
+            toast.action?.run();
+            onClose();
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
+      <button
+        type="button"
+        className="icon-button small"
+        onClick={onClose}
+        aria-label="Hinweis schließen"
+      >
         <X size={14} />
-      </MotionButton>
+      </button>
     </motion.div>
   );
 }
@@ -118,6 +210,9 @@ export default function App() {
   const { transition } = useMotionPreferences();
   const [themePreference, setThemePreference] = useThemePreference();
   const [route, setRoute] = useState(routeFromHash);
+  // The page shown when a request started may have changed by the time it ends.
+  const routeRef = useRef(route);
+  routeRef.current = route;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileNavigation, setMobileNavigation] = useState(
     () => window.matchMedia('(max-width: 700px)').matches,
@@ -156,7 +251,13 @@ export default function App() {
   const [complianceTask, setComplianceTask] = useState<ComplianceTask>('general');
   const scenario: DemoScenario =
     workflow === 'compliance' && complianceTask !== 'general' ? complianceTask : workflow;
-  const [drafts, setDrafts] = useState<Partial<Record<DemoScenario, Draft>>>({});
+  const [drafts, setDrafts] = useState<Drafts>({});
+  // When this browser added a record. A workspace load that started earlier keeps it.
+  const added = useRef(new Map<string, number>());
+  function markAdded(...ids: string[]) {
+    const time = performance.now();
+    for (const id of ids) added.current.set(id, time);
+  }
   const { context, sourceText, selectedIds, playbookId, research } =
     drafts[scenario] ?? initialDraft(scenario);
   const sourceTextCharCount = useMemo(() => Array.from(sourceText).length, [sourceText]);
@@ -197,7 +298,14 @@ export default function App() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [pageError, setPageError] = useState('');
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState<Toast | null>(null);
+  const toastCount = useRef(0);
+  // Errors and notices with an action stay until closed; a repeated message is
+  // announced and timed again.
+  const notify = useCallback((text: string, failed = false, action?: Toast['action']) => {
+    toastCount.current += 1;
+    setToast({ id: toastCount.current, text, failed, action });
+  }, []);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -282,6 +390,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', listener);
   }, []);
   const loadWorkspace = useCallback(async (signal?: AbortSignal) => {
+    const started = performance.now();
     const [healthResult, modelResult, documentsResult, analysesResult, playbookResult] =
       await Promise.allSettled([
         api<Health>('/health', { signal }),
@@ -291,6 +400,7 @@ export default function App() {
         api<Playbook[]>('/playbooks', { signal }),
       ]);
     if (signal?.aborted) return false;
+    const newer = (id: string) => (added.current.get(id) ?? -Infinity) > started;
     const failures: string[] = [];
     if (healthResult.status === 'fulfilled') setHealth(healthResult.value);
     else {
@@ -300,41 +410,30 @@ export default function App() {
     if (modelResult.status === 'fulfilled' && modelResult.value.models?.length)
       setModels(modelResult.value.models);
     else failures.push('Modelle');
-    if (documentsResult.status === 'fulfilled') {
-      setDocuments(documentsResult.value);
-      const available = new Set(documentsResult.value.map((document) => document.id));
-      setDrafts((previous) =>
-        Object.fromEntries(
-          Object.entries(previous).map(([key, draft]) => [
-            key,
-            {
-              ...draft,
-              selectedIds:
-                key === 'compare'
-                  ? draft.selectedIds.map((id) => (available.has(id) ? id : ''))
-                  : draft.selectedIds.filter((id) => available.has(id)),
-            },
-          ]),
-        ),
-      );
-    } else failures.push('Dokumente');
-    if (analysesResult.status === 'fulfilled') setAnalyses(analysesResult.value);
+    const documentIds =
+      documentsResult.status === 'fulfilled'
+        ? new Set(documentsResult.value.map((document) => document.id))
+        : null;
+    const playbookIds =
+      playbookResult.status === 'fulfilled'
+        ? new Set(playbookResult.value.map((playbook) => playbook.id))
+        : null;
+    if (documentsResult.status === 'fulfilled')
+      setDocuments((previous) => withNewer(documentsResult.value, previous, newer));
+    else failures.push('Dokumente');
+    if (analysesResult.status === 'fulfilled')
+      setAnalyses((previous) => withNewer(analysesResult.value, previous, newer));
     else failures.push('Analysen');
-    if (playbookResult.status === 'fulfilled') {
-      setPlaybooks(playbookResult.value);
-      const available = new Set(playbookResult.value.map((playbook) => playbook.id));
-      setDrafts((previous) =>
-        Object.fromEntries(
-          Object.entries(previous).map(([key, draft]) => [
-            key,
-            {
-              ...draft,
-              playbookId: available.has(draft.playbookId) ? draft.playbookId : '',
-            },
-          ]),
-        ),
-      );
-    } else failures.push('Playbooks');
+    if (playbookResult.status === 'fulfilled')
+      setPlaybooks((previous) => withNewer(playbookResult.value, previous, newer));
+    else failures.push('Playbooks');
+    setDrafts((previous) =>
+      pruneDrafts(
+        previous,
+        (id) => !documentIds || documentIds.has(id) || newer(id),
+        (id) => !playbookIds || playbookIds.has(id) || newer(id),
+      ),
+    );
     setLoadFailures(failures);
     setLoading(false);
     return failures.length === 0;
@@ -351,7 +450,7 @@ export default function App() {
   }, [models, model, effort]);
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
-    document.title = `${route.startsWith('analysis/') ? 'Analyse' : route === 'history' ? 'Analysen' : route === 'playbooks' ? 'Kanzlei-Playbooks' : route === 'settings' ? 'Einstellungen' : 'Neue Analyse'} · LegalThink`;
+    document.title = `${pageName(route)} · LegalThink`;
   }, [route]);
   useEffect(() => {
     if (!route.startsWith('analysis/')) return;
@@ -375,25 +474,38 @@ export default function App() {
     return () => controller.abort();
   }, [route, analyses, analysis?.id]);
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(''), 4500);
+    if (!toast || toast.failed || toast.action) return;
+    const timer = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timer);
   }, [toast]);
   useEffect(() => () => requestController.current?.abort(), []);
+  useEffect(() => {
+    // Elsewhere than in the composer, a dropped file would replace this tab: drafts
+    // would be lost and a running analysis cancelled. Such drops are refused instead.
+    const refuse = (event: DragEvent) => {
+      if (event.defaultPrevented || !event.dataTransfer?.types.includes('Files')) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'none';
+    };
+    window.addEventListener('dragover', refuse);
+    window.addEventListener('drop', refuse);
+    return () => {
+      window.removeEventListener('dragover', refuse);
+      window.removeEventListener('drop', refuse);
+    };
+  }, []);
+  useEffect(() => {
+    if (!running) return;
+    // Leaving the page ends the request, which OpenAI may already be processing.
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [running]);
   useEffect(() => {
     if (!mobileOpen) return;
     const sidebar = sidebarRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const focusable = () =>
-      Array.from(
-        sidebar?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]',
-        ) ?? [],
-      ).filter(
-        (element) =>
-          element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden',
-      );
     sidebar?.querySelector<HTMLButtonElement>('.sidebar-mobile-close')?.focus();
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -401,36 +513,12 @@ export default function App() {
         setMobileOpen(false);
         return;
       }
-      if (event.key !== 'Tab') return;
-      const elements = focusable();
-      const first = elements[0],
-        last = elements.at(-1);
-      if (!first) {
-        event.preventDefault();
-        sidebar?.focus();
-        return;
-      }
-      if (!sidebar?.contains(document.activeElement)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    const desktop = window.matchMedia('(min-width: 701px)');
-    const onResize = () => {
-      if (desktop.matches) setMobileOpen(false);
+      if (event.key === 'Tab' && sidebar) trapTab(event, sidebar);
     };
     document.addEventListener('keydown', handleKey);
-    desktop.addEventListener('change', onResize);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKey);
-      desktop.removeEventListener('change', onResize);
       if (menuTriggerRef.current?.getClientRects().length) menuTriggerRef.current.focus();
       else contentRef.current?.focus({ preventScroll: true });
     };
@@ -470,6 +558,7 @@ export default function App() {
         errors.push(`${file.name}: ${message(error)}`);
       }
     }
+    markAdded(...uploaded.map((item) => item.id));
     setDocuments((previous) => [
       ...uploaded,
       ...previous.filter((item) => !uploaded.some((newItem) => newItem.id === item.id)),
@@ -527,12 +616,8 @@ export default function App() {
       );
       return;
     }
-    if (!health?.api_configured) {
-      setError(
-        'API-Schlüssel fehlt. Hinterlegen Sie OPENAI_API_KEY in backend/.env und starten Sie den Server neu.',
-      );
-      return;
-    }
+    // The server decides whether a key is configured: the status shown here can predate
+    // a restart with a new key. Without a key it answers at once and calls no provider.
     const controller = new AbortController();
     requestController.current = controller;
     setRunning(true);
@@ -560,8 +645,9 @@ export default function App() {
           service_tier: serviceTier,
         }),
       });
-      setAnalysis(result);
+      markAdded(result.id);
       if (result.source_text_document_id) {
+        markAdded(result.source_text_document_id);
         // The server preserves the submitted text and returns its saved source ID.
         // Populate the local source view immediately without another loading state.
         const sourceDocument: DocumentRecord = {
@@ -577,13 +663,25 @@ export default function App() {
         ]);
       }
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
-      navigate(`analysis/${result.id}`);
+      // Opening the report replaces the page. Someone who moved on while waiting, for
+      // example to write a playbook or read another report, keeps that page and its state
+      // and opens the report from the notice.
+      if (routeRef.current === 'new') {
+        setAnalysis(result);
+        navigate(`analysis/${result.id}`);
+      } else
+        notify(`Analyse fertig: ${result.title}`, false, {
+          label: 'Öffnen',
+          run: () => navigate(`analysis/${result.id}`),
+        });
     } catch (error) {
-      setError(
+      const text =
         error instanceof DOMException && error.name === 'AbortError'
           ? 'Das Warten auf die Antwort wurde abgebrochen.'
-          : message(error),
-      );
+          : message(error);
+      setError(text);
+      // The composer shows the error; elsewhere it would go unnoticed.
+      if (routeRef.current !== 'new') notify(text, true);
     } finally {
       setRunning(false);
       requestController.current = null;
@@ -615,10 +713,19 @@ export default function App() {
         method: 'POST',
         body: JSON.stringify({ scenario }),
       });
+      markAdded(result.id);
       setAnalysis(result);
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
-      const docs = await api<DocumentRecord[]>('/documents');
-      setDocuments(docs);
+      // Add the example's sources without replacing records added in the meantime.
+      const sources = new Set(result.document_ids);
+      const examples = (await api<DocumentRecord[]>('/documents')).filter((document) =>
+        sources.has(document.id),
+      );
+      markAdded(...examples.map((document) => document.id));
+      setDocuments((previous) => [
+        ...examples,
+        ...previous.filter((document) => !sources.has(document.id)),
+      ]);
       navigate(`analysis/${result.id}`);
     } catch (error) {
       setError(message(error));
@@ -631,7 +738,7 @@ export default function App() {
     if (refreshing || loading) return;
     setRefreshing(true);
     try {
-      if (await loadWorkspace()) setToast('Daten aktualisiert.');
+      if (await loadWorkspace()) notify('Daten aktualisiert.');
     } finally {
       setRefreshing(false);
     }
@@ -642,8 +749,9 @@ export default function App() {
       method: 'POST',
       body: JSON.stringify({ name, content }),
     });
+    markAdded(result.id);
     setPlaybooks((previous) => [result, ...previous]);
-    setToast('Playbook gespeichert.');
+    notify('Playbook gespeichert.');
   }
 
   async function updatePlaybook(id: string, name: string, content: string) {
@@ -654,7 +762,7 @@ export default function App() {
     setPlaybooks((previous) =>
       previous.map((playbook) => (playbook.id === id ? result : playbook)),
     );
-    setToast('Playbook aktualisiert.');
+    notify('Playbook aktualisiert.');
   }
 
   async function confirmDelete() {
@@ -680,16 +788,13 @@ export default function App() {
         setAnalyses((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
         setAnalysis((previous) => (previous?.id === deleteTarget.item.id ? null : previous));
       } else if (deleteTarget.type === 'playbook') {
-        setPlaybooks((previous) => previous.filter((item) => item.id !== deleteTarget.item.id));
+        const removed = deleteTarget.item.id;
+        setPlaybooks((previous) => previous.filter((item) => item.id !== removed));
         setDrafts((previous) =>
-          Object.fromEntries(
-            Object.entries(previous).map(([key, draft]) => [
-              key,
-              {
-                ...draft,
-                playbookId: draft.playbookId === deleteTarget.item.id ? '' : draft.playbookId,
-              },
-            ]),
+          pruneDrafts(
+            previous,
+            () => true,
+            (id) => id !== removed,
           ),
         );
       } else {
@@ -700,22 +805,15 @@ export default function App() {
         );
         setDocuments((previous) => previous.filter((item) => !removedIds.has(item.id)));
         setDrafts((previous) =>
-          Object.fromEntries(
-            Object.entries(previous).map(([key, draft]) => [
-              key,
-              {
-                ...draft,
-                selectedIds:
-                  key === 'compare'
-                    ? draft.selectedIds.map((id) => (removedIds.has(id) ? '' : id))
-                    : draft.selectedIds.filter((id) => !removedIds.has(id)),
-              },
-            ]),
+          pruneDrafts(
+            previous,
+            (id) => !removedIds.has(id),
+            () => true,
           ),
         );
       }
       setDeleteTarget(null);
-      setToast('Gelöscht.');
+      notify('Gelöscht.');
     } catch (error) {
       setDeleteError(message(error));
     } finally {
@@ -727,20 +825,18 @@ export default function App() {
     if (!analysis) return;
     setExporting(true);
     try {
-      const response = await fetch(
-        `/api/analyses/${encodeURIComponent(analysis.id)}/export?format=${format}`,
+      const response = await request(
+        `/analyses/${encodeURIComponent(analysis.id)}/export?format=${format}`,
       );
-      if (!response.ok)
-        throw new Error('Der Export konnte nicht erstellt werden. Versuchen Sie es erneut.');
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = url;
       link.download = `${analysis.title.replace(/[<>:"/\\|?*]/g, '-').slice(0, 100)}.${format}`;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setToast('Export wurde heruntergeladen.');
+      notify('Export wurde heruntergeladen.');
     } catch (error) {
-      setToast(message(error));
+      notify(message(error), true);
     } finally {
       setExporting(false);
     }
@@ -749,10 +845,11 @@ export default function App() {
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Formulierung in die Zwischenablage kopiert.');
+      notify('Formulierung in die Zwischenablage kopiert.');
     } catch {
-      setToast(
+      notify(
         'Die Zwischenablage ist nicht verfügbar. Markieren und kopieren Sie den Text direkt.',
+        true,
       );
     }
   }
@@ -764,21 +861,13 @@ export default function App() {
     .map((id) => documents.find((item) => item.id === id))
     .filter((item): item is DocumentRecord => Boolean(item));
   const isReview = route.startsWith('analysis/');
-  const pageName = isReview
-    ? 'Analyse'
-    : route === 'history'
-      ? 'Analysen'
-      : route === 'playbooks'
-        ? 'Kanzlei-Playbooks'
-        : route === 'settings'
-          ? 'Einstellungen'
-          : 'Neue Analyse';
   const unavailablePage =
     (route === 'history' && loadFailures.includes('Analysen') && !analyses.length) ||
     (route === 'playbooks' && loadFailures.includes('Playbooks') && !playbooks.length) ||
     (route === 'settings' && loadFailures.includes('Dokumente') && !documents.length);
   return (
     <DocumentPreviewProvider
+      route={route}
       documents={documents}
       onUpdated={(updated) =>
         setDocuments((previous) => previous.map((doc) => (doc.id === updated.id ? updated : doc)))
@@ -828,50 +917,59 @@ export default function App() {
           }}
         >
           <div className="sidebar-brand">
-            <MotionButton onClick={() => navigate('new')} aria-label="LegalThink Startseite">
+            <button
+              type="button"
+              onClick={() => navigate('new')}
+              aria-label="LegalThink Startseite"
+            >
               <Brand />
-            </MotionButton>
-            <MotionButton
+            </button>
+            <button
+              type="button"
               className="icon-button sidebar-mobile-close"
               aria-label="Navigation schließen"
               onClick={() => setMobileOpen(false)}
             >
               <X size={18} />
-            </MotionButton>
+            </button>
           </div>
           <nav className="primary-nav">
-            <MotionButton
-              className={`nav-item nav-motion-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
+            <button
+              type="button"
+              className={`nav-item new-analysis-nav ${route === 'new' ? 'active' : ''}`}
               aria-current={route === 'new' ? 'page' : undefined}
               onClick={() => navigate('new')}
             >
               <Plus size={18} strokeWidth={1.6} />
               <span>Neue Analyse</span>
-            </MotionButton>
-            <MotionButton
-              className={`nav-item nav-motion-item ${route === 'history' || isReview ? 'active' : ''}`}
+            </button>
+            <button
+              type="button"
+              className={`nav-item ${route === 'history' || isReview ? 'active' : ''}`}
               aria-current={route === 'history' ? 'page' : undefined}
               onClick={() => navigate('history')}
             >
               <HistoryIcon size={17} strokeWidth={1.6} />
               <span>Analysen</span>
               {analyses.length > 0 && <span className="nav-count">{analyses.length}</span>}
-            </MotionButton>
-            <MotionButton
-              className={`nav-item nav-motion-item ${route === 'playbooks' ? 'active' : ''}`}
+            </button>
+            <button
+              type="button"
+              className={`nav-item ${route === 'playbooks' ? 'active' : ''}`}
               aria-current={route === 'playbooks' ? 'page' : undefined}
               onClick={() => navigate('playbooks')}
             >
               <BookOpen size={17} strokeWidth={1.6} />
               <span>Kanzlei-Playbooks</span>
-            </MotionButton>
+            </button>
           </nav>
           {analyses.length > 0 && (
             <div className="sidebar-recent">
               <div className="nav-section-label">Letzte Analysen</div>
               {analyses.slice(0, 4).map((item) => (
-                <MotionButton
-                  className={`recent-item nav-motion-item ${route === `analysis/${item.id}` ? 'active' : ''}`}
+                <button
+                  type="button"
+                  className={`recent-item ${route === `analysis/${item.id}` ? 'active' : ''}`}
                   aria-current={route === `analysis/${item.id}` ? 'page' : undefined}
                   title={item.title}
                   key={item.id}
@@ -882,26 +980,33 @@ export default function App() {
                 >
                   <FileText size={14} />
                   <span>{item.title}</span>
-                  {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
-                </MotionButton>
+                  {item.is_demo && (
+                    <>
+                      <span className="recent-demo-dot" aria-hidden="true" />
+                      <span className="sr-only">(Beispiel)</span>
+                    </>
+                  )}
+                </button>
               ))}
             </div>
           )}
           <div className="sidebar-bottom">
-            <MotionButton
-              className={`nav-item nav-motion-item ${route === 'settings' ? 'active' : ''}`}
+            <button
+              type="button"
+              className={`nav-item ${route === 'settings' ? 'active' : ''}`}
               aria-current={route === 'settings' ? 'page' : undefined}
               onClick={() => navigate('settings')}
             >
               <Settings2 size={17} strokeWidth={1.6} />
               <span>Einstellungen</span>
-            </MotionButton>
+            </button>
           </div>
         </motion.aside>
         <div className="main-shell" inert={mobileOpen}>
           <header className="topbar">
             <div>
-              <MotionButton
+              <button
+                type="button"
                 ref={menuTriggerRef}
                 className="icon-button mobile-menu"
                 aria-controls="workspace-navigation"
@@ -910,7 +1015,7 @@ export default function App() {
                 onClick={openNavigation}
               >
                 <Menu size={20} />
-              </MotionButton>
+              </button>
               <span className="mobile-page-name">LegalThink</span>
             </div>
             {health?.api_configured === false && (
@@ -932,8 +1037,19 @@ export default function App() {
                   onClick={() => void refresh()}
                   disabled={refreshing}
                 >
-                  {refreshing && <LoaderCircle className="spin" size={14} />}
-                  {refreshing ? 'Wird geladen …' : 'Erneut laden'}
+                  <span className="action-icon" aria-hidden="true">
+                    {refreshing ? (
+                      <LoaderCircle className="spin" size={14} />
+                    ) : (
+                      <RotateCw size={14} />
+                    )}
+                  </span>
+                  <span className="stable-action-label">
+                    <span className="stable-action-size" aria-hidden="true">
+                      Wird geladen …
+                    </span>
+                    <span>{refreshing ? 'Wird geladen …' : 'Erneut laden'}</span>
+                  </span>
                 </button>
               </section>
             )}
@@ -941,7 +1057,7 @@ export default function App() {
               <RouteContent onReturn={() => navigate('new')}>
                 {unavailablePage ? (
                   <section className="standard-page">
-                    <h1>{pageName}</h1>
+                    <h1>{pageName(route)}</h1>
                     <p className="muted">
                       Diese Ansicht steht nach dem erneuten Laden wieder zur Verfügung.
                     </p>
@@ -974,12 +1090,13 @@ export default function App() {
                     playbooks={playbooks}
                     onCreate={createPlaybook}
                     onUpdate={updatePlaybook}
-                    onDocumentImported={(document) =>
+                    onDocumentImported={(document) => {
+                      markAdded(document.id);
                       setDocuments((previous) => [
                         document,
                         ...previous.filter((item) => item.id !== document.id),
-                      ])
-                    }
+                      ]);
+                    }}
                     onDelete={(item) => askDelete({ type: 'playbook', item })}
                   />
                 ) : route === 'settings' ? (
@@ -1009,6 +1126,8 @@ export default function App() {
                 ) : isReview ? (
                   analysis?.id === route.split('/')[1] ? (
                     <Review
+                      // Tabs, filters and review marks belong to one analysis.
+                      key={analysis.id}
                       analysis={analysis}
                       documents={documents}
                       onBack={() => navigate('new')}
@@ -1081,10 +1200,9 @@ export default function App() {
           </main>
         </div>
         <AnimatePresence initial={false}>
-          {toast && (
-            <Notification key="notification" message={toast} onClose={() => setToast('')} />
-          )}
+          {toast && <Notification key={toast.id} toast={toast} onClose={() => setToast(null)} />}
         </AnimatePresence>
+        <Announcements toast={toast} />
         <AnimatePresence initial={false}>
           {deleteTarget && (
             <Modal

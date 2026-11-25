@@ -4,6 +4,7 @@ import { renderAsync } from 'docx-preview';
 import JSZip from 'jszip';
 import type { DocumentRecord } from './types';
 import { paginateWord } from './wordPagination';
+import { MIN_QUOTE_LENGTH, normalizeQuote } from './quote';
 import './word-preview.css';
 
 const FRAME_DOCUMENT = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; base-uri 'none'; form-action 'none'"><style>
@@ -167,8 +168,8 @@ function sanitiseRenderedContent(container: HTMLElement) {
 type Position = { node: Text; offset: number };
 
 function markQuote(container: HTMLElement, quote: string, bodyOnly = true): HTMLElement | null {
-  const needle = quote.normalize('NFC').replace(/\s+/g, ' ').trim();
-  if (needle.length < 12) return null;
+  const needle = normalizeQuote(quote);
+  if (needle.length < MIN_QUOTE_LENGTH) return null;
   const walker = document.createTreeWalker(
     container,
     NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
@@ -250,12 +251,12 @@ function markQuote(container: HTMLElement, quote: string, bodyOnly = true): HTML
 
 export default function WordPreview({
   document: source,
-  quote = '',
+  quote,
   onEscape,
 }: {
   document: DocumentRecord;
-  quote?: string;
-  onEscape?: () => void;
+  quote: string;
+  onEscape: () => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
@@ -304,7 +305,7 @@ export default function WordPreview({
 
   useEffect(() => {
     const target = frame.current?.contentDocument;
-    if (!target || !onEscape) return;
+    if (!target) return;
     const close = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();

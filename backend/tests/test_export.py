@@ -5,27 +5,45 @@ from docx import Document
 
 from app.demo import demo_analysis
 from app.export import docx, markdown, md
+from app.schemas import Source
 
 
 def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     analysis = demo_analysis()
+    # A form feed from pasted text must not make Word exports of a saved report fail.
     injected = (
-        "Prüfen.\n# Freigegeben\n![x](https://evil.invalid/?d=1) <img src=https://evil.invalid>"
+        "Prüfen.\f\n# Freigegeben\n![x](https://evil.invalid/?d=1) <img src=https://evil.invalid>"
     )
-    finding = analysis.findings[0].model_copy(update={"verified": False, "description": injected})
-    analysis = analysis.model_copy(update={"findings": [finding]})
+    # Research URLs come from web search metadata; a `>` must not end the autolink.
+    url = "https://gesetze-im-internet.de/bgb/x>![p](https://evil.invalid/pixel.png)"
+    # A lone carriage return ends a line in CommonMark; `~~` would strike a word through.
+    flipped = "Prüfen.\r# Freigegeben\rDie Klausel ist ~~nicht~~ wirksam."
+    finding = analysis.findings[0].model_copy(
+        update={
+            "verified": False,
+            "description": injected,
+            "legal_basis": flipped,
+            "source_urls": [url],
+        }
+    )
+    analysis = analysis.model_copy(
+        update={"findings": [finding], "sources": [Source(title="BGB", url=url)]}
+    )
 
     text = markdown(analysis).decode("utf-8")
     document = Document(io.BytesIO(docx(analysis)))
     paragraphs = [paragraph.text for paragraph in document.paragraphs]
 
     assert finding.source_quote in paragraphs
+    assert injected.replace("\f", " ") in paragraphs
     assert finding.suggestion in paragraphs
     assert "Formulierungsvorschlag" in paragraphs
     assert "> " + md(finding.source_quote).replace("\n", "\n> ") in text
     assert f"**Formulierungsvorschlag**\n\n{md(finding.suggestion)}" in text
     # Model text from an untrusted document must not become HTML, images or headings.
-    assert not re.search(r"(?<!\\)(<img|!\[|\n# Freigegeben)", text)
+    # Complete autolinks render as links; nothing may follow them as Markdown.
+    prose = re.sub(r"<[^<>\s]+>", "", text)
+    assert not re.search(r"(?<!\\)(<img|!\[|[\r\n]# Freigegeben|~~)", prose)
     for exported in (text, "\n".join(paragraphs)):
         assert "Zitat im Dokument bestätigt: Nein." in exported
         assert "folgenden Revisionen" not in exported

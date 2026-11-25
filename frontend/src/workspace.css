@@ -136,9 +136,6 @@
 .severity-dot.low {
   background: var(--severity-low);
 }
-.severity-dot.info {
-  background: var(--severity-info);
-}
 .review-tab-bar {
   display: flex;
   align-items: center;
@@ -162,15 +159,6 @@
 }
 .review-tabs > button.active {
   color: var(--text-primary);
-}
-.review-tabs > button.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--text-primary);
 }
 .review-tabs > button > span {
   padding: 2px 5px;
@@ -215,9 +203,11 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
-.filter-pills > button:hover,
-.filter-pills > button.active {
+.filter-pills > button:hover {
   background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.filter-pills > button.active {
   color: var(--text-primary);
 }
 .filter-pills > button > span {
@@ -316,10 +306,6 @@
 .finding-chevron {
   margin-top: 3px;
   color: var(--text-muted);
-  transition: transform 180ms ease;
-}
-.finding-chevron.rotated {
-  transform: rotate(180deg);
 }
 .finding-content-motion {
   overflow: hidden;
@@ -371,11 +357,6 @@
   font-size: 16px;
   font-weight: 500;
 }
-.open-questions > p {
-  margin-top: 9px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
 .open-questions ol {
   margin: 18px 0 0;
   padding-left: 20px;
@@ -415,8 +396,6 @@
   gap: 12px;
   padding: 0;
   text-align: left;
-}
-.suggestion-title {
   font-size: 16px;
   font-weight: 500;
   line-height: 1.55;
@@ -613,11 +592,6 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.analysis-details p {
-  margin-top: 14px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
 
 /* History, playbooks and settings. */
 .standard-page-header {
@@ -746,7 +720,6 @@
 }
 .delete-hover {
   margin-right: 5px;
-  color: var(--text-muted);
 }
 .history-item:hover .delete-hover {
   color: var(--text-primary);
@@ -770,15 +743,6 @@
   font-size: 18px;
   font-weight: 500;
   color: var(--text-primary);
-}
-.empty-state p {
-  max-width: 420px;
-  font-size: 16px;
-  line-height: 1.8;
-  color: var(--text-secondary);
-}
-.empty-state .button {
-  margin-top: 8px;
 }
 .empty-state.compact {
   padding: 43px 20px;
@@ -1102,10 +1066,6 @@
 .theme-option:hover {
   background: var(--surface-hover);
 }
-.theme-option:has(input:checked) {
-  border-color: var(--border-selected);
-  background: var(--surface-selected);
-}
 .theme-option input {
   width: 14px;
   height: 14px;
@@ -1151,7 +1111,6 @@
     gap: 5px;
   }
   .page-heading-row {
-    align-items: flex-start;
     flex-wrap: wrap;
     gap: 18px;
   }
@@ -1192,7 +1151,6 @@
   .review-breadcrumb {
     margin-bottom: 17px;
     gap: 9px;
-    font-size: 12px;
   }
   .demo-banner {
     padding: 12px 13px;
@@ -1206,7 +1164,6 @@
     font-size: 25px;
   }
   .review-meta {
-    font-size: 12px;
     gap: 7px;
   }
   .export-wrapper > .button {
@@ -1221,10 +1178,6 @@
   }
   .review-overview {
     padding: 22px 0;
-    gap: 20px;
-  }
-  .summary-block p {
-    font-size: 16px;
   }
   .review-tabs {
     gap: 17px;
@@ -1233,9 +1186,6 @@
     min-height: 54px;
     font-size: 13px;
     gap: 6px;
-  }
-  .review-tabs > button > span {
-    font-size: 11px;
   }
   .review-tab-bar {
     gap: 10px;
@@ -1246,7 +1196,6 @@
   }
   .filter-pills > button {
     min-height: 39px;
-    font-size: 12px;
   }
   .findings-search {
     width: 100%;
@@ -1265,9 +1214,6 @@
     padding: 20px 17px;
     gap: 11px;
   }
-  .finding-heading-content > strong {
-    font-size: 16px;
-  }
   .finding-content {
     padding-inline: 20px;
     padding-bottom: 21px;
@@ -1282,9 +1228,6 @@
     padding: 18px;
     flex-wrap: wrap;
     gap: 8px;
-  }
-  .suggestion-title {
-    font-size: 16px;
   }
   .suggestion-card header .severity-tag {
     margin-left: 26px;
@@ -1303,7 +1246,6 @@
   }
   .analysis-details summary {
     min-height: 34px;
-    font-size: 13px;
   }
   .analysis-details dl {
     column-gap: 18px;
@@ -1340,7 +1282,6 @@
   .history-item-title > strong {
     font-size: 14px;
     white-space: normal;
-    line-height: 1.5;
   }
   .history-item-title > span {
     font-size: 11px;
@@ -1357,24 +1298,13 @@
     gap: 4px;
   }
   .delete-hover {
-    width: 36px;
-    height: 44px;
     margin-right: 0;
   }
   .empty-state.large {
     padding: 65px 10px 35px;
   }
-  .empty-state h2 {
-    font-size: 24px;
-  }
-  .empty-state p {
-    font-size: 16px;
-  }
   .playbook-card-content {
     padding: 22px;
-  }
-  .playbook-textarea {
-    font-size: 16px;
   }
   .settings-section {
     padding: 24px 0;
@@ -1384,9 +1314,6 @@
   }
   .settings-section-heading > div {
     min-width: 170px;
-  }
-  .settings-section-heading p {
-    font-size: 14px;
   }
   .setup-instructions {
     margin-left: 0;
@@ -1412,9 +1339,6 @@
   .settings-processing .processing-region-field > .field-help,
   .settings-processing .service-tier-field > .field-help {
     margin-top: 3px;
-  }
-  .privacy-facts p {
-    font-size: 15px;
   }
   .settings-section > .external-link {
     margin-left: 0;
@@ -1460,9 +1384,6 @@
     font-size: 12px;
     gap: 5px;
   }
-  .review-tabs > button > span {
-    font-size: 11px;
-  }
   .review-breadcrumb {
     font-size: 11px;
     gap: 7px;
@@ -1493,8 +1414,5 @@
   }
   .history-item-title > strong {
     font-size: 13px;
-  }
-  .history-item-title > span {
-    font-size: 11px;
   }
 }

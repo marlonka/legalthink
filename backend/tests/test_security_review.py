@@ -79,7 +79,7 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
             data_dir=tmp_path,
             allow_remote=True,
             api_token=token,
-            allowed_origins=("https://review.example",),
+            allowed_origins=("https://review.example", "https://desk.example"),
             allowed_hosts=("review.example",),
         )
     )
@@ -106,6 +106,21 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
             client.get("/api/playbooks", headers={**authorized, "Origin": "null"}).status_code
             == 403
         )
+        # An allowed origin on another site may call the API; the browser marks it cross-site.
+        other_site = {
+            **authorized,
+            "Origin": "https://desk.example",
+            "Sec-Fetch-Site": "cross-site",
+        }
+        assert client.get("/api/playbooks", headers=other_site).status_code == 200
+    # Behind a proxy with a path prefix, routes still match /api/…; so must the boundary.
+    with TestClient(
+        app,
+        base_url="https://review.example",
+        root_path="/legalthink",
+        client=("198.51.100.24", 12345),
+    ) as prefixed:
+        assert prefixed.get("/legalthink/api/playbooks").status_code == 401
 
 
 _PDF_TEXT = b"BT /F1 12 Tf 72 720 Td (Ein pruefbarer Vertragstext.) Tj ET"
@@ -187,7 +202,13 @@ def test_original_roundtrip_legacy_attachment_and_deletion(local_client, suffix,
     assert "content-encoding" not in downloaded.headers
     assert downloaded.headers["content-type"].startswith(media_type)
     assert name in downloaded.headers["content-disposition"]
-    legacy = {**uploaded, "id": "legacy-source", "original_available": False}
+    # A source imported by an older version, whose extractor dropped line breaks.
+    legacy = {
+        **uploaded,
+        "id": "legacy-source",
+        "original_available": False,
+        "text": uploaded["text"].replace("\n", ""),
+    }
     local_client.app.state.store.put("documents", legacy)
     legacy_url = "/api/documents/legacy-source/original"
     assert local_client.get(legacy_url).status_code == 404

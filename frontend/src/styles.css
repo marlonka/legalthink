@@ -52,11 +52,14 @@ summary {
   transition:
     background-color 140ms cubic-bezier(0.2, 0, 0, 1),
     border-color 140ms cubic-bezier(0.2, 0, 0, 1),
-    color 140ms cubic-bezier(0.2, 0, 0, 1);
+    color 140ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 140ms ease-out;
 }
-button:not(:disabled):active,
+/* Press feedback changes only opacity; position and size stay fixed. */
+button:not(:disabled, [aria-disabled='true']):active,
 a.icon-button:active,
 summary:active {
+  opacity: 0.88;
   transition-duration: 60ms;
 }
 :is(.button.secondary, .icon-button, .picker-button, .picker-option, .nav-item, .recent-item):not(
@@ -64,7 +67,8 @@ summary:active {
   ):active {
   background-color: var(--surface-selected);
 }
-button:disabled {
+button:disabled,
+button[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -160,8 +164,7 @@ code {
   color: var(--text-secondary);
   flex-shrink: 0;
 }
-.icon-button:hover,
-.icon-button.active {
+.icon-button:hover {
   color: var(--text-primary);
   background: var(--surface-hover);
 }
@@ -219,6 +222,26 @@ code {
 }
 .button.danger:hover {
   background: var(--danger-action-hover);
+}
+/* Actions whose icon or label changes while busy keep their size: the icon has a
+   fixed slot and the longest label reserves the width. */
+.action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 17px;
+}
+.stable-action-label {
+  display: inline-grid;
+  align-items: center;
+  white-space: nowrap;
+}
+.stable-action-label > span {
+  grid-area: 1 / 1;
+}
+.stable-action-size {
+  visibility: hidden;
 }
 .small-button {
   min-height: 36px;
@@ -498,7 +521,6 @@ code {
 }
 .context-label {
   display: block;
-  margin: 0 23px;
   font-size: 14px;
   font-weight: 500;
 }
@@ -508,7 +530,6 @@ code {
   color: var(--text-muted);
 }
 .analysis-data-note {
-  padding: 0 23px 17px;
   font-size: 12px;
   line-height: 1.7;
   color: var(--text-muted);
@@ -528,10 +549,6 @@ code {
   padding: 5px 3px;
   font-size: 14px;
   gap: 7px;
-}
-.run-analysis-button {
-  min-height: 40px;
-  font-size: 14px;
 }
 .model-picker {
   position: relative;
@@ -565,7 +582,6 @@ code {
   position: absolute;
   bottom: calc(100% + 10px);
   right: 0;
-  min-width: 290px;
   max-width: calc(100vw - 36px);
   padding: 7px;
   border: 1px solid var(--border-strong);
@@ -604,18 +620,12 @@ code {
   color: var(--text-secondary);
 }
 .composer-options {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
   padding: 20px 23px;
   border-top: 1px solid var(--border-subtle);
   border-radius: 0 0 var(--radius-composer) var(--radius-composer);
   background: var(--surface-raised);
 }
 .uploaded-documents {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 8px;
   padding: 0 23px 20px;
 }
@@ -645,7 +655,6 @@ code {
   margin-left: 4px;
 }
 .reorder-button {
-  margin-left: 4px;
   font-size: 12px;
 }
 .drop-overlay {
@@ -657,7 +666,6 @@ code {
   justify-content: center;
   flex-direction: column;
   gap: 12px;
-  border: 2px dashed var(--border-selected);
   border-radius: var(--radius-composer);
   background: var(--drop-overlay);
   pointer-events: none;
@@ -779,8 +787,7 @@ code {
   font-size: 14px;
   font-weight: 400;
 }
-.field-label input,
-.field-label select {
+.field-label input {
   display: block;
   width: 100%;
   min-height: 42px;
@@ -832,7 +839,6 @@ code {
   z-index: 100;
   bottom: 24px;
   left: calc(50% + var(--sidebar-width) / 2);
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -849,8 +855,19 @@ code {
 .toast > span {
   min-width: 0;
 }
+.toast.failed {
+  border-color: var(--danger-border);
+}
+.toast.failed > svg {
+  color: var(--danger-text);
+}
 .toast > .icon-button {
   margin-left: 5px;
+}
+.toast > .toast-action {
+  flex-shrink: 0;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 .external-link {
   display: inline-flex;
@@ -872,11 +889,7 @@ code {
     --page-top: 30px;
   }
   .workflow-selector button {
-    font-size: 13px;
     flex: 1 0 auto;
-  }
-  .composer-options {
-    gap: 18px;
   }
 }
 @media (max-width: 900px) and (min-width: 701px) {
@@ -887,10 +900,6 @@ code {
   .topbar {
     padding: 0 20px;
   }
-  .composer-options {
-    flex-direction: column;
-    align-items: stretch;
-  }
 }
 @media (max-width: 900px) {
   .picker-popover {
@@ -899,23 +908,10 @@ code {
   }
 }
 @media (max-width: 700px) {
-  :root {
-    --sidebar-width: 288px;
-  }
   .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
     width: min(var(--sidebar-width), calc(100vw - 48px));
-    transform: translateX(-100%);
-    visibility: hidden;
-    transition:
-      transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      visibility 220ms;
-  }
-  .sidebar.mobile-open {
-    visibility: visible;
-    transform: translateX(0);
-    box-shadow: var(--shadow-modal);
   }
   .sidebar-overlay {
     display: block;
@@ -932,9 +928,6 @@ code {
     display: inline;
     font-size: 14px;
   }
-  .sidebar-brand {
-    height: 62px;
-  }
   .nav-item,
   .recent-item {
     min-height: 44px;
@@ -946,14 +939,16 @@ code {
     border-bottom: 1px solid var(--border-subtle);
   }
   .topbar-status {
-    font-size: 12px;
     min-height: 40px;
     margin-right: -6px;
   }
-  .mobile-menu {
-    width: 36px;
+  /* Navigation needs a 44 px touch target (design.md); `.icon-button` would otherwise
+     set 38 px. The negative margins keep the icon and the page name in place. */
+  .topbar .mobile-menu {
+    width: 44px;
     height: 44px;
-    margin-left: -6px;
+    margin-left: -9px;
+    margin-right: -3px;
   }
   .main-content {
     scrollbar-width: none;
@@ -972,11 +967,6 @@ code {
   }
   .analysis-start-heading .text-button {
     min-height: 44px;
-    font-size: 13px;
-  }
-  .workflow-selector {
-    gap: 7px;
-    margin-bottom: 22px;
   }
   .workflow-selector button {
     min-height: 44px;
@@ -985,17 +975,8 @@ code {
   .document-input-heading {
     padding: 21px 19px;
   }
-  .document-input-heading > span {
-    font-size: 12px;
-  }
-  .context-label {
-    margin: 0 19px;
-  }
   .uploaded-documents {
     padding: 0 19px 20px;
-  }
-  .analysis-data-note {
-    padding: 0 19px 15px;
   }
   .composer-toolbar {
     grid-template-columns: minmax(132px, 1fr) 44px auto auto;
@@ -1007,19 +988,11 @@ code {
   }
   .picker-button {
     min-height: 42px;
-    font-size: 13px;
-  }
-  .run-analysis-button {
-    min-height: 44px;
   }
   .composer-options {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 19px;
     padding: 20px 19px;
   }
   .field-label input,
-  .field-label select,
   .service-tier-field > select,
   .processing-region-field > select {
     min-height: 44px;
@@ -1067,10 +1040,12 @@ code {
   .field-label-row .text-button {
     min-height: 36px;
   }
+  /* Full width: half the viewport is too narrow for a report title and its action. */
   .toast {
-    left: 50%;
+    left: 16px;
+    right: 16px;
     bottom: 16px;
-    min-width: 260px;
+    max-width: none;
     font-size: 13px;
   }
   .skip-link {
@@ -1106,11 +1081,6 @@ code {
   .document-input-heading .library-button {
     min-height: 40px;
   }
-  .picker-popover {
-    right: auto;
-    left: 0;
-    min-width: 275px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1123,8 +1093,5 @@ code {
   }
   .spin {
     animation: none !important;
-  }
-  .sidebar {
-    transition: none;
   }
 }

@@ -1,13 +1,15 @@
 import asyncio
 import io
+import os
 import sqlite3
+import stat
 import threading
 from dataclasses import replace
 
 import httpx2
 import pytest
 from docx import Document as WordDocument
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn
 from fastapi import Request
 from fastapi.testclient import TestClient
@@ -33,7 +35,7 @@ class CompletedService:
     def __init__(self):
         self.calls = []
 
-    async def run(self, body, documents, playbook, *, pasted_document=None):
+    async def run(self, body, documents, playbook, *, pasted_document=None, answered=None):
         self.calls.append((body, documents, pasted_document))
         return Analysis(
             id=new_id(),
@@ -54,10 +56,15 @@ class CompletedService:
 
 
 def test_document_playbook_and_analysis_persistence(tmp_path):
-    settings = Settings(data_dir=tmp_path, api_key="")
+    settings = Settings(data_dir=tmp_path / "data", api_key="")
     with TestClient(
         create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
     ) as client:
+        if os.name == "posix":
+            # Other accounts on the computer cannot read a new workspace.
+            database = settings.data_dir / "workspace.sqlite3"
+            assert stat.S_IMODE(settings.data_dir.stat().st_mode) == 0o700
+            assert stat.S_IMODE(database.stat().st_mode) == 0o600
         response = client.post(
             "/api/documents",
             files={
@@ -99,6 +106,8 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
         client.app.state.store.put("documents", legacy_source)
         with client.app.state.store.connection() as db:
             db.execute("DELETE FROM documents WHERE id=?", (second_id,))
+        # A damaged example record must not prevent the next start.
+        client.app.state.store.put("analyses", {"id": "damaged", "is_demo": True, "findings": None})
     with TestClient(
         create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
     ) as client:
@@ -129,12 +138,20 @@ def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     assert len(client.get("/api/playbooks").json()) == 1
     for table in ("analyses", "documents", "playbooks"):
         client.app.state.store.delete(table, f"damaged-{table}")
+    # Nor may a damaged source row make its report unreadable or unexportable.
+    source = client.app.state.store.get("documents", analysis["document_ids"][0])
+    client.app.state.store.put("documents", {**source, "unknown": True})
+    assert client.get(f"/api/analyses/{analysis['id']}").status_code == 200
+    assert client.get(f"/api/analyses/{analysis['id']}/export?format=md").status_code == 200
+    client.app.state.store.put("documents", source)
+    # The list omits document texts; the browser loads a text when it shows it.
     example = client.get("/api/documents").json()[0]
+    example_text = client.get(f"/api/documents/{example['id']}/text").text
     # User uploads remain deletable even with the same filename and text as an example.
     uploaded = Document(
         id=new_id(),
         name=example["name"],
-        text=example["text"],
+        text=example_text,
         page_count=1,
         char_count=example["char_count"],
         original_available=True,
@@ -152,9 +169,9 @@ def test_bulk_document_deletion_only_removes_confirmed_sources(client):
         response = client.request("DELETE", "/api/documents", json={"document_ids": confirmed})
         assert response.status_code == 204
         remaining = {doc["id"]: doc for doc in client.get("/api/documents").json()}
-        assert remaining == {example["id"]: example, newer.id: newer.model_dump()}
+        assert remaining == {example["id"]: example, newer.id: newer.model_dump(exclude={"text"})}
         assert client.get(f"/api/documents/{uploaded.id}/original").status_code == 404
-        assert client.get(f"/api/documents/{example['id']}/text").text == example["text"]
+        assert client.get(f"/api/documents/{example['id']}/text").text == example_text
     assert client.get(f"/api/analyses/{analysis['id']}").json()["findings"] == analysis["findings"]
     assert len(client.get("/api/playbooks").json()) == 1
 
@@ -180,7 +197,7 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     quote = "Nachricht mit Umlauten: Rückfrage."
 
     class QuotedService(CompletedService):
-        async def run(self, body, documents, playbook, *, pasted_document=None):
+        async def run(self, body, documents, playbook, *, pasted_document=None, answered=None):
             result = await super().run(body, documents, playbook, pasted_document=pasted_document)
             result.title = "Vergleich zur Lieferung"
             result.findings = [
@@ -209,7 +226,17 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
                     source_document_id=pasted_document.id,
                     source_quote=quote,
                     verified=True,
-                )
+                ),
+                # The model claimed this source, but the quote is not in the text.
+                TimelineEntry(
+                    date="2. März",
+                    event="Lieferung angekündigt.",
+                    open_question="",
+                    source="Beleg nicht bestätigt",
+                    source_document_id=pasted_document.id,
+                    source_quote="Die Lieferung erfolgt am 2. März.",
+                    verified=False,
+                ),
             ]
             return result
 
@@ -241,9 +268,10 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     assert analysis["source_text_document_name"] == expected_name
     assert analysis["findings"][0]["source_document_name"] == expected_name
     assert analysis["timeline"][0]["source"] == expected_name
+    assert analysis["timeline"][1]["source"] == "Beleg nicht bestätigt"
     assert analysis["findings"][0]["source_quote"] == quote
     assert analysis["timeline"][0]["source_quote"] == quote
-    assert pasted["text"] == text and pasted["char_count"] == len(text)
+    assert pasted["char_count"] == len(text)
     downloaded = client.get(f"/api/documents/{pasted_id}/text")
     assert downloaded.content == text.encode("utf-8")
     assert downloaded.headers["content-disposition"].startswith("attachment;")
@@ -278,7 +306,7 @@ def test_mixed_document_and_pasted_text_limit_is_enforced_without_truncation(
     assert response.status_code == expected_status, response.text
     if extra:
         assert not service.calls
-        assert client.get("/api/documents").json() == [document.model_dump()]
+        assert client.get("/api/documents").json() == [document.model_dump(exclude={"text"})]
         assert client.get("/api/analyses").json() == []
     else:
         assert [doc.text for doc in service.calls[0][1]] == [text]
@@ -307,7 +335,7 @@ def test_analysis_and_pasted_source_transaction_rolls_back_together(client):
     assert client.get(f"/api/analyses/{analysis['id']}").json() == analysis
 
 
-def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkeypatch):
+def test_disconnect_cancels_only_an_unanswered_analysis(client, monkeypatch):
     cancelled = threading.Event()
 
     class WaitingService:
@@ -333,6 +361,24 @@ def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkey
     assert cancelled.is_set()
     assert client.get("/api/documents").json() == []
     assert client.get("/api/analyses").json() == []
+
+    class AnsweredService(CompletedService):
+        """OpenAI has answered; the browser leaves while the evidence is verified."""
+
+        async def run(self, body, documents, playbook, *, pasted_document=None, answered=None):
+            answered.set()
+            await asyncio.sleep(0.05)
+            return await super().run(body, documents, playbook, pasted_document=pasted_document)
+
+    client.app.state.analysis_service = AnsweredService()
+    paid = client.post(
+        "/api/analyses", json={"workflow": "chronology", "source_text": "Bezahlte Nachricht."}
+    )
+    assert paid.status_code == 201
+    assert [item["id"] for item in client.get("/api/analyses").json()] == [paid.json()["id"]]
+    assert [doc["id"] for doc in client.get("/api/documents").json()] == [
+        paid.json()["source_text_document_id"]
+    ]
 
 
 def test_validation_errors_never_echo_document_text(client):
@@ -377,6 +423,14 @@ def test_validation_errors_never_echo_document_text(client):
         )
         assert rejected.status_code == 422
         assert "PRIVATE" not in rejected.text
+    # Rule violations name the rule instead of a generic field list.
+    single = client.post(
+        "/api/analyses",
+        json={"workflow": "compare", "document_ids": ["a"], "source_text": "PRIVATE Text"},
+    )
+    assert single.status_code == 422
+    assert single.json()["detail"].startswith("Der Versionsvergleich benötigt genau zwei Dokumente")
+    assert "PRIVATE" not in single.text
     assert not service.calls
     assert client.get("/api/analyses").json() == []
 
@@ -466,7 +520,16 @@ def test_scanned_pdf_and_empty_or_long_text_rejected():
         extract(b"a" * 200001, ".txt")
 
 
-def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
+def test_docx_import_reads_all_body_text_and_rejects_unresolved_revisions(client):
+    namespaces = (
+        'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+        'xmlns:v="urn:schemas-microsoft-com:vml"'
+    )
+
+    def box(markup):
+        return f"<w:txbxContent><w:p><w:r><w:t>{markup}</w:t></w:r></w:p></w:txbxContent>"
+
     for revision in (None, "ins", "del", "moveFrom", "moveTo"):
         document = WordDocument()
         document.add_paragraph("Der Vertrag beginnt am 1. Januar.")
@@ -483,6 +546,40 @@ def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
             paragraph._p.append(change)
         else:
             paragraph.add_run("Der Auftragnehmer haftet unbegrenzt.")
+            # Contract templates keep text in content controls, nested tables, fields and
+            # text boxes. Word shows it; the analysis must receive it as well.
+            cell = paragraph._parent
+            cell.add_table(rows=1, cols=1).cell(0, 0).text = "Vertragsstrafe 50.000 EUR."
+            body = document.element.body
+            body.insert(
+                len(body) - 1,
+                parse_xml(
+                    f"<w:sdt {namespaces}><w:sdtContent><w:p><w:r><w:t>Die Haftung ist "
+                    "auf 1.000 EUR begrenzt.</w:t></w:r></w:p></w:sdtContent></w:sdt>"
+                ),
+            )
+            start = document.add_paragraph("Laufzeit bis ")
+            start._p.append(
+                parse_xml(
+                    f"<w:sdt {namespaces}><w:sdtContent><w:r><w:t>31. Dezember 2027"
+                    "</w:t></w:r></w:sdtContent></w:sdt>"
+                )
+            )
+            start._p.append(
+                parse_xml(
+                    f'<w:fldSimple {namespaces} w:instr="REF Kuendigung"><w:r><w:t>'
+                    "; Kündigung nach § 12.</w:t></w:r></w:fldSimple>"
+                )
+            )
+            start._p.append(
+                parse_xml(
+                    f'<w:r {namespaces}><mc:AlternateContent><mc:Choice Requires="wps">'
+                    f"<w:drawing>{box('Textfeld: Vertraulich')}</w:drawing></mc:Choice>"
+                    "<mc:Fallback><w:pict><v:shape><v:textbox>"
+                    f"{box('Textfeld: Vertraulich')}</v:textbox></v:shape></w:pict>"
+                    "</mc:Fallback></mc:AlternateContent></w:r>"
+                )
+            )
         output = io.BytesIO()
         document.save(output)
         response = client.post(
@@ -493,7 +590,17 @@ def test_docx_unresolved_text_revisions_are_rejected_before_storage(client):
             assert "Änderungen" in response.json()["detail"]
         else:
             assert response.status_code == 201
-            assert "haftet unbegrenzt" in response.json()["text"]
+            text = response.json()["text"]
+            expected = [
+                "Der Vertrag beginnt am 1. Januar.",
+                "Der Auftragnehmer haftet unbegrenzt.\nVertragsstrafe 50.000 EUR.",
+                "Die Haftung ist auf 1.000 EUR begrenzt.",
+                "Laufzeit bis 31. Dezember 2027; Kündigung nach § 12.",
+                "Textfeld: Vertraulich",
+            ]
+            positions = [text.index(part) for part in expected]
+            assert positions == sorted(positions)
+            assert text.count("Textfeld: Vertraulich") == 1
     assert len(client.get("/api/documents").json()) == 1
 
 
@@ -516,6 +623,7 @@ def test_failed_upstream_analysis_is_not_persisted(client):
     )
     assert response.status_code == 502
     assert client.get("/api/analyses").json() == []
+    document.pop("text")
     assert client.get("/api/documents").json() == [document]
 
 

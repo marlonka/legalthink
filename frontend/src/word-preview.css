@@ -77,7 +77,6 @@
 .word-preview-viewport {
   position: relative;
   flex: 1;
-  min-height: 320px;
   overflow: hidden;
   background: var(--document-canvas);
 }

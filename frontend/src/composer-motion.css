@@ -148,31 +148,11 @@
 }
 
 .composer-disclosure-icon,
-.composer-drop-icon,
-.composer-action-icon {
+.composer-drop-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.composer-action-icon {
-  width: 17px;
-}
-
-/* The longest label reserves only the space the action can actually use. */
-.stable-action-label {
-  display: inline-grid;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.stable-action-label > span {
-  grid-area: 1 / 1;
-}
-
-.stable-action-size {
-  visibility: hidden;
 }
 
 .uploaded-documents.composer-document-list {
@@ -207,7 +187,6 @@
 .composer-research-toggle {
   position: relative;
   display: inline-flex;
-  flex: 0 0 36px;
   align-items: center;
   justify-content: center;
   width: 36px;
@@ -325,10 +304,6 @@
   min-height: 36px;
 }
 
-.drop-overlay.composer-drop-feedback {
-  border: 0;
-}
-
 .composer-drop-perimeter {
   position: absolute;
   inset: 0;
@@ -388,7 +363,6 @@
   }
 
   .composer-research-toggle {
-    flex-basis: 44px;
     width: 44px;
     height: 44px;
   }
