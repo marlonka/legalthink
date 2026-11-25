@@ -1,5 +1,7 @@
 """Synthetic, deterministic fixture. It never calls an API or reads user documents."""
 
+from pydantic import ValidationError
+
 from .analysis import verify_findings, verify_timeline
 from .schemas import (
     Analysis,
@@ -293,16 +295,21 @@ def demo_documents(scenario: DemoScenario = "contract") -> list[Document]:
 def restore_demo_sources(store: Store) -> None:
     """Identify shipped sources by ID and content, and repair previously deleted examples."""
     referenced_ids = set()
-    for analysis in store.list("analyses"):
-        if analysis.get("is_demo"):
-            referenced_ids.update(analysis.get("document_ids", []))
-            for item in analysis.get("findings", []) + analysis.get("timeline", []):
-                referenced_ids.add(item.get("source_document_id"))
+    for row in store.list("analyses"):
+        try:
+            analysis = Analysis.model_validate(row)
+        except ValidationError:
+            # The API skips unreadable reports; they must not stop the workspace starting.
+            continue
+        if analysis.is_demo:
+            referenced_ids.update(analysis.document_ids)
+            for item in [*analysis.findings, *analysis.timeline]:
+                referenced_ids.add(item.source_document_id)
     sources = [demo_document(), *(doc for docs in SCENARIO_DOCUMENTS.values() for doc in docs)]
     for document in sources:
         stored = store.get("documents", document.id)
         if stored is not None:
-            if stored["text"] == document.text and not stored.get("is_demo"):
+            if stored.get("text") == document.text and not stored.get("is_demo"):
                 store.put("documents", {**stored, "is_demo": True})
         elif document.id in referenced_ids:
             store.save_document(document.model_dump())

@@ -99,6 +99,8 @@ def test_document_playbook_and_analysis_persistence(tmp_path):
         client.app.state.store.put("documents", legacy_source)
         with client.app.state.store.connection() as db:
             db.execute("DELETE FROM documents WHERE id=?", (second_id,))
+        # A damaged example record must not prevent the next start.
+        client.app.state.store.put("analyses", {"id": "damaged", "is_demo": True, "findings": None})
     with TestClient(
         create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
     ) as client:
