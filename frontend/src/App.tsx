@@ -480,6 +480,28 @@ export default function App() {
   }, [toast]);
   useEffect(() => () => requestController.current?.abort(), []);
   useEffect(() => {
+    // Elsewhere than in the composer, a dropped file would replace this tab: drafts
+    // would be lost and a running analysis cancelled. Such drops are refused instead.
+    const refuse = (event: DragEvent) => {
+      if (event.defaultPrevented || !event.dataTransfer?.types.includes('Files')) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'none';
+    };
+    window.addEventListener('dragover', refuse);
+    window.addEventListener('drop', refuse);
+    return () => {
+      window.removeEventListener('dragover', refuse);
+      window.removeEventListener('drop', refuse);
+    };
+  }, []);
+  useEffect(() => {
+    if (!running) return;
+    // Leaving the page ends the request, which OpenAI may already be processing.
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [running]);
+  useEffect(() => {
     if (!mobileOpen) return;
     const sidebar = sidebarRef.current;
     const previousOverflow = document.body.style.overflow;
