@@ -242,7 +242,14 @@ def test_pdf_content_cannot_forge_page_attribution():
 
 async def test_default_research_retains_only_provider_attributed_urls():
     url = "https://gesetze-im-internet.de/bgb/__276.html"
-    invalid_urls = ["https://[invalid", "https:///missing-host", "javascript:alert(1)"]
+    invalid_urls = [
+        "https://[invalid",
+        "https:///missing-host",
+        "javascript:alert(1)",
+        "https://eur-lex.europa.eu/a\n\n![x](https://evil.invalid/nl.png)",
+    ]
+    # More consulted sources than a report keeps; the cited one must not be dropped.
+    consulted = [f"https://eur-lex.europa.eu/legal-content/{number}" for number in range(35)]
     captured = []
 
     def handler(request):
@@ -274,7 +281,9 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 "content": [{"type": "output_text", "text": "Ich prüfe § 276.", "annotations": []}],
             },
         )
-        response["output"].append(
+        # The search runs before the final answer, which cites one of its sources.
+        response["output"].insert(
+            -1,
             {
                 "id": "search_offline",
                 "type": "web_search_call",
@@ -282,9 +291,11 @@ async def test_default_research_retains_only_provider_attributed_urls():
                 "action": {
                     "type": "search",
                     "query": "§ 276 BGB",
-                    "sources": [{"type": "url", "url": value} for value in [*invalid_urls, url]],
+                    "sources": [
+                        {"type": "url", "url": value} for value in [*invalid_urls, *consulted, url]
+                    ],
                 },
-            }
+            },
         )
         response["service_tier"] = "flex"
         return httpx2.Response(200, json=response)
@@ -309,7 +320,7 @@ async def test_default_research_retains_only_provider_attributed_urls():
     assert result.processing_region == "eu"
     assert result.requested_service_tier == result.service_tier == "flex"
     assert result.findings[0].source_urls == [url]
-    assert [source.url for source in result.sources] == [url]
+    assert [source.url for source in result.sources] == [url, *consulted[:29]]
 
 
 async def test_pasted_text_is_a_separate_verified_source_and_never_a_mandate():

@@ -47,6 +47,8 @@ STANDARD_TIMEOUT_SECONDS = 600.0
 FLEX_TIMEOUT_SECONDS = 900.0
 # Localize hosted search; the tool otherwise assumes a user in the United States.
 WEB_SEARCH_LOCATION = {"type": "approximate", "country": "DE", "timezone": "Europe/Berlin"}
+MAX_SOURCES = 30
+_URL_FORBIDDEN = re.compile(r'[\s<>"\x00-\x1f\x7f]')
 
 
 class AnalysisError(Exception):
@@ -301,10 +303,18 @@ def parse_result(response: Any, schema: type[ModelAnalysis]) -> ModelAnalysis:
 
 
 def provider_sources(response: Any) -> list[Source]:
-    found: dict[str, Source] = {}
+    """URLs from tool metadata: the answer's citations first, then other consulted sources.
 
-    def add_source(url: Any, title: str | None, *, replace: bool = False) -> None:
-        if not isinstance(url, str):
+    Only these URLs may appear as research evidence. Citations come first so that the
+    stored list, which keeps at most MAX_SOURCES entries, never drops a cited source.
+    """
+    cited: dict[str, Source] = {}
+    consulted: dict[str, Source] = {}
+
+    def add(found: dict[str, Source], url: Any, title: Any) -> None:
+        # Unencoded whitespace, control characters, quotes or angle brackets never
+        # belong to a URL; they could also end a link in the Markdown export.
+        if not isinstance(url, str) or _URL_FORBIDDEN.search(url):
             return
         try:
             parsed = urlsplit(url)
@@ -313,32 +323,23 @@ def provider_sources(response: Any) -> list[Source]:
         except ValueError:
             # A malformed citation must not discard an otherwise completed report.
             return
-        if replace or url not in found:
-            found[url] = Source(title=title or parsed.netloc, url=url)
+        if url not in found:
+            label = title if isinstance(title, str) and title.strip() else parsed.netloc
+            found[url] = Source(title=label, url=url)
 
     for item in response.output:
-        if getattr(item, "type", "") == "message":
-            for content in getattr(item, "content", []):
-                for annotation in getattr(content, "annotations", []):
-                    add_source(
-                        getattr(annotation, "url", ""),
-                        getattr(annotation, "title", None),
-                        replace=True,
-                    )
-        if getattr(item, "type", "") == "web_search_call":
-            for source in getattr(getattr(item, "action", None), "sources", []) or []:
-                url = (
-                    source.get("url", "")
-                    if isinstance(source, dict)
-                    else getattr(source, "url", "")
-                )
-                title = (
-                    source.get("title")
-                    if isinstance(source, dict)
-                    else getattr(source, "title", None)
-                )
-                add_source(url, title)
-    return list(found.values())[:30]
+        kind = getattr(item, "type", "")
+        if kind == "message":
+            for content in _content(item):
+                for annotation in getattr(content, "annotations", None) or []:
+                    add(cited, getattr(annotation, "url", None), getattr(annotation, "title", None))
+        elif kind == "web_search_call":
+            for source in getattr(getattr(item, "action", None), "sources", None) or []:
+                if isinstance(source, dict):
+                    add(consulted, source.get("url"), source.get("title"))
+                else:
+                    add(consulted, getattr(source, "url", None), getattr(source, "title", None))
+    return [*cited.values(), *(source for url, source in consulted.items() if url not in cited)]
 
 
 class AnalysisService:
@@ -658,7 +659,7 @@ class AnalysisService:
             custom_model=request.custom_model,
             is_demo=False,
             usage=usage,
-            sources=sources,
+            sources=sources[:MAX_SOURCES],
             provider_request_id=getattr(response, "_request_id", None),
             provider_duration_ms=provider_duration_ms,
             processing_region=region,
