@@ -579,12 +579,8 @@ export default function App() {
       );
       return;
     }
-    if (health?.api_configured === false) {
-      setError(
-        'API-Schlüssel fehlt. Hinterlegen Sie OPENAI_API_KEY in backend/.env und starten Sie den Server neu.',
-      );
-      return;
-    }
+    // The server decides whether a key is configured: the status shown here can predate
+    // a restart with a new key. Without a key it answers at once and calls no provider.
     const controller = new AbortController();
     requestController.current = controller;
     setRunning(true);

@@ -348,9 +348,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if service is None:
             raise HTTPException(
                 503,
-                "OpenAI ist noch nicht eingerichtet. Der API-Schlüssel "
-                "wird ausschließlich auf dem Server hinterlegt. "
-                "Das Beispiel funktioniert ohne Schlüssel.",
+                "OpenAI ist nicht eingerichtet. Tragen Sie OPENAI_API_KEY in "
+                "backend/.env ein und starten Sie den Server neu. Beispiele "
+                "funktionieren ohne Schlüssel.",
             )
         documents = []
         for document_id in body.document_ids:

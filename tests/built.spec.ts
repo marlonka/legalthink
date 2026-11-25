@@ -82,11 +82,6 @@ test('comparison sends selected versions and context to the local API', async ({
     if (url.hostname !== '127.0.0.1') {
       externalRequests.push(url.href);
       await route.abort();
-    } else if (url.pathname === '/api/health') {
-      // Enable the form; the actual server still has no API key.
-      await route.fulfill({
-        json: { status: 'ok', api_configured: true, default_processing_region: 'global' },
-      });
     } else {
       await route.continue();
     }
@@ -123,6 +118,7 @@ test('comparison sends selected versions and context to the local API', async ({
     context: 'Haftung vergleichen.',
     research: false,
   });
-  await expect(page.getByRole('alert')).toContainText('OpenAI ist noch nicht eingerichtet');
+  // The server has no key: it answers without calling OpenAI and names the setup step.
+  await expect(page.getByRole('alert')).toContainText('OPENAI_API_KEY in backend/.env');
   expect(externalRequests).toEqual([]);
 });
