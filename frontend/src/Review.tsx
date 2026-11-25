@@ -100,16 +100,6 @@ export default function Review({
     });
     return () => cancelAnimationFrame(frame);
   }, [suggestionRequest, tab, reduced]);
-  useEffect(() => {
-    setTab(analysis.workflow === 'chronology' ? 'timeline' : 'findings');
-    setFilter('all');
-    setSearch('');
-    setSelectedId(analysis.findings[0]?.id ?? '');
-    setExpandedFindings(new Set(analysis.findings.slice(0, 1).map((finding) => finding.id)));
-    setMarked(new Set());
-    setSuggestionRequest(null);
-    consumedSuggestionRequest.current = 0;
-  }, [analysis.id, analysis.workflow, analysis.findings]);
   function documentRole(documentId: string) {
     const index = analysis.document_ids?.indexOf(documentId) ?? -1;
     return analysis.workflow === 'compare' && index >= 0 && index < 2

@@ -1073,6 +1073,8 @@ export default function App() {
                 ) : isReview ? (
                   analysis?.id === route.split('/')[1] ? (
                     <Review
+                      // Tabs, filters and review marks belong to one analysis.
+                      key={analysis.id}
                       analysis={analysis}
                       documents={documents}
                       onBack={() => navigate('new')}
