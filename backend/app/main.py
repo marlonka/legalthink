@@ -289,10 +289,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/analyses", response_model=list[Analysis])
     def list_analyses():
-        documents = {
-            doc.id: doc.model_dump()
-            for doc in readable(Document, app.state.store.list("documents"))
-        }
+        documents = {doc.id: doc for doc in readable(Document, app.state.store.list("documents"))}
         analyses = []
         for value in app.state.store.list("analyses"):
             try:
@@ -301,19 +298,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 skipped_record("analyses")
         return analyses
 
-    def prepare_analysis(value: dict, documents: dict | None = None) -> Analysis:
-        def source_document(source_id):
+    def prepare_analysis(value: dict, documents: dict[str, Document] | None = None) -> Analysis:
+        def source_document(source_id: str | None) -> Document | None:
             if documents is not None:
                 return documents.get(source_id)
-            return app.state.store.get("documents", source_id)
+            # A damaged source row must not make an intact report unreadable.
+            row = app.state.store.get("documents", source_id) if source_id else None
+            return next(iter(readable(Document, [row] if row else [])), None)
 
         analysis = Analysis.model_validate(value)
         source_ids = {*analysis.document_ids, analysis.source_text_document_id} - {None}
-        sources = [
-            Document.model_validate(source)
-            for source_id in source_ids
-            if (source := source_document(source_id))
-        ]
+        sources = [source for source_id in source_ids if (source := source_document(source_id))]
         recover_source_references(analysis, sources)
         # Older reports can recover a file name while the source is still available.
         # Do not rewrite the saved report or accept model-generated document names.
@@ -322,7 +317,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not finding.source_document_name:
                 name = names.get(finding.source_document_id)
                 if name is None and (source := source_document(finding.source_document_id)):
-                    name = source["name"]
+                    name = source.name
                 if name:
                     finding.source_document_name = name
         return analysis

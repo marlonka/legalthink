@@ -129,6 +129,12 @@ def test_bulk_document_deletion_only_removes_confirmed_sources(client):
     assert len(client.get("/api/playbooks").json()) == 1
     for table in ("analyses", "documents", "playbooks"):
         client.app.state.store.delete(table, f"damaged-{table}")
+    # Nor may a damaged source row make its report unreadable or unexportable.
+    source = client.app.state.store.get("documents", analysis["document_ids"][0])
+    client.app.state.store.put("documents", {**source, "unknown": True})
+    assert client.get(f"/api/analyses/{analysis['id']}").status_code == 200
+    assert client.get(f"/api/analyses/{analysis['id']}/export?format=md").status_code == 200
+    client.app.state.store.put("documents", source)
     # The list omits document texts; the browser loads a text when it shows it.
     example = client.get("/api/documents").json()[0]
     example_text = client.get(f"/api/documents/{example['id']}/text").text
