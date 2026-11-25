@@ -5,6 +5,7 @@ from docx import Document
 
 from app.demo import demo_analysis
 from app.export import docx, markdown, md
+from app.schemas import Source
 
 
 def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
@@ -13,8 +14,14 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     injected = (
         "Prüfen.\f\n# Freigegeben\n![x](https://evil.invalid/?d=1) <img src=https://evil.invalid>"
     )
-    finding = analysis.findings[0].model_copy(update={"verified": False, "description": injected})
-    analysis = analysis.model_copy(update={"findings": [finding]})
+    # Research URLs come from web search metadata; a `>` must not end the autolink.
+    url = "https://gesetze-im-internet.de/bgb/x>![p](https://evil.invalid/pixel.png)"
+    finding = analysis.findings[0].model_copy(
+        update={"verified": False, "description": injected, "source_urls": [url]}
+    )
+    analysis = analysis.model_copy(
+        update={"findings": [finding], "sources": [Source(title="BGB", url=url)]}
+    )
 
     text = markdown(analysis).decode("utf-8")
     document = Document(io.BytesIO(docx(analysis)))
@@ -27,7 +34,9 @@ def test_unverified_proposal_is_preserved_and_labeled_without_revision_notice():
     assert "> " + md(finding.source_quote).replace("\n", "\n> ") in text
     assert f"**Formulierungsvorschlag**\n\n{md(finding.suggestion)}" in text
     # Model text from an untrusted document must not become HTML, images or headings.
-    assert not re.search(r"(?<!\\)(<img|!\[|\n# Freigegeben)", text)
+    # Complete autolinks render as links; nothing may follow them as Markdown.
+    prose = re.sub(r"<[^<>\s]+>", "", text)
+    assert not re.search(r"(?<!\\)(<img|!\[|\n# Freigegeben)", prose)
     for exported in (text, "\n".join(paragraphs)):
         assert "Zitat im Dokument bestätigt: Nein." in exported
         assert "folgenden Revisionen" not in exported

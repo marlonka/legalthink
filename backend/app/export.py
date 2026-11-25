@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 from docx import Document
 from docx.opc.constants import RELATIONSHIP_TYPE
@@ -18,6 +19,27 @@ DISCLAIMER = (
 )
 PRIORITIES = {"high": "Hoch", "medium": "Mittel", "low": "Niedrig", "info": "Hinweis"}
 CHANGE_TYPES = {"modified": "Geändert", "added": "Ergänzt", "removed": "Gestrichen"}
+# The interface's names for reasoning effort (frontend/src/ui.tsx).
+EFFORTS = {
+    "auto": "Modellstandard",
+    "none": "Ohne",
+    "minimal": "Minimal",
+    "low": "Niedrig",
+    "medium": "Mittel",
+    "high": "Hoch",
+    "xhigh": "Sehr hoch",
+    "max": "Maximum",
+}
+
+
+def report_details(analysis: Analysis) -> str:
+    """Creation time, model and reasoning effort as the interface names them."""
+    try:
+        created = datetime.fromisoformat(analysis.created_at).astimezone(UTC)
+        timestamp = created.strftime("%d.%m.%Y, %H:%M UTC")
+    except ValueError:
+        timestamp = analysis.created_at
+    return f"Erstellt {timestamp} · {analysis.model} · Denkaufwand {EFFORTS[analysis.effort]}"
 
 
 def finding_source(finding: Finding) -> str:
@@ -64,6 +86,15 @@ def md_quote(text: str) -> str:
     return "> " + md(text).replace("\n", "\n> ")
 
 
+def md_url(url: str) -> str:
+    """Percent-encode characters that could end an autolink and start new Markdown.
+
+    Research URLs come from web search metadata; a `>` would otherwise close `<…>`
+    and let the rest of the URL render, for example as a remote image.
+    """
+    return quote(url, safe=":/?#[]@!$&'()*+,;=%")
+
+
 def markdown(analysis: Analysis) -> bytes:
     proposal_label = (
         "Verhandlungsvorschlag" if analysis.workflow == "compare" else "Formulierungsvorschlag"
@@ -72,9 +103,7 @@ def markdown(analysis: Analysis) -> bytes:
     if analysis.is_demo:
         lines += ["**SYNTHETISCHES BEISPIEL · Keine Modellanalyse**", ""]
     lines += [
-        f"Erstellt: {analysis.created_at}",
-        f"Modell: {md_line(analysis.model)}",
-        f"Denktiefe: {analysis.effort}",
+        md_line(report_details(analysis)),
         "",
         "## Überblick",
         "",
@@ -127,7 +156,7 @@ def markdown(analysis: Analysis) -> bytes:
         if finding.source_urls:
             lines += [
                 "Recherchequellen zum Befund:",
-                *[f"- <{u}>" for u in finding.source_urls],
+                *[f"- <{md_url(u)}>" for u in finding.source_urls],
                 "",
             ]
     if analysis.timeline:
@@ -153,7 +182,7 @@ def markdown(analysis: Analysis) -> bytes:
         lines += [
             "## Recherchequellen",
             "",
-            *[f"- {md_line(s.title)}: <{s.url}>" for s in analysis.sources],
+            *[f"- {md_line(s.title)}: <{md_url(s.url)}>" for s in analysis.sources],
         ]
     return "\n".join(lines).encode("utf-8")
 
@@ -227,7 +256,7 @@ def docx(analysis: Analysis) -> bytes:
     if analysis.is_demo:
         document.add_paragraph("SYNTHETISCHES BEISPIEL · Keine Modellanalyse", "Subtitle")
     document.add_paragraph(DISCLAIMER)
-    document.add_paragraph(f"{analysis.created_at[:10]} · {analysis.model} · {analysis.effort}")
+    document.add_paragraph(report_details(analysis))
     document.add_heading("Überblick", 1)
     document.add_paragraph(analysis.summary)
     includes_revisions = any(has_revision(finding) for finding in analysis.findings)
