@@ -40,9 +40,14 @@ export function DocumentPreviewProvider({
   children: ReactNode;
 }) {
   const [opened, setOpened] = useState<(PreviewRequest & { route: string }) | null>(null);
-  // A preview belongs to the page that opened it; navigating away closes it at once.
-  const source = opened?.route === route ? opened : null;
   const [expanded, setExpanded] = useState(false);
+  // A preview belongs to the page that opened it. Leaving the page closes it for good:
+  // returning to the report must not reopen it and move focus there.
+  if (opened && opened.route !== route) {
+    setOpened(null);
+    setExpanded(false);
+  }
+  const source = opened?.route === route ? opened : null;
   const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1400px)').matches);
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
