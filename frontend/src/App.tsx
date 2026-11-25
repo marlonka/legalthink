@@ -1,4 +1,5 @@
-import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BookOpen,
   Check,
@@ -131,7 +132,40 @@ function withNewer<T extends { id: string }>(
   return [...local.filter((item) => !ids.has(item.id) && newer(item.id)), ...server];
 }
 
-type Toast = { id: number; text: string; failed: boolean };
+type Toast = {
+  id: number;
+  text: string;
+  failed: boolean;
+  action?: { label: string; run: () => void };
+};
+
+/**
+ * Screen reader announcements of notices. A live region reliably announces only text that
+ * changes after it exists, and dialogs make the app root inert: the regions therefore stay
+ * mounted outside the root.
+ */
+function Announcements({ toast }: { toast: Toast | null }) {
+  const [host] = useState(() => {
+    const element = document.createElement('div');
+    element.setAttribute('data-live-region', '');
+    return element;
+  });
+  useLayoutEffect(() => {
+    document.body.append(host);
+    return () => host.remove();
+  }, [host]);
+  return createPortal(
+    <>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {toast && !toast.failed && <span key={toast.id}>{toast.text}</span>}
+      </p>
+      <p className="sr-only" aria-live="assertive" aria-atomic="true">
+        {toast?.failed && <span key={toast.id}>{toast.text}</span>}
+      </p>
+    </>,
+    host,
+  );
+}
 
 function Notification({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const present = useIsPresent();
@@ -139,8 +173,6 @@ function Notification({ toast, onClose }: { toast: Toast; onClose: () => void })
   return (
     <motion.div
       className={`toast motion-toast${toast.failed ? ' failed' : ''}`}
-      role={toast.failed ? 'alert' : 'status'}
-      aria-atomic="true"
       aria-hidden={!present || undefined}
       inert={!present}
       initial={reduced ? false : { opacity: 0 }}
@@ -150,6 +182,18 @@ function Notification({ toast, onClose }: { toast: Toast; onClose: () => void })
     >
       {toast.failed ? <CircleAlert size={16} /> : <Check size={16} />}
       <span>{toast.text}</span>
+      {toast.action && (
+        <button
+          type="button"
+          className="text-button toast-action"
+          onClick={() => {
+            toast.action?.run();
+            onClose();
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         type="button"
         className="icon-button small"
@@ -166,6 +210,9 @@ export default function App() {
   const { transition } = useMotionPreferences();
   const [themePreference, setThemePreference] = useThemePreference();
   const [route, setRoute] = useState(routeFromHash);
+  // The page shown when a request started may have changed by the time it ends.
+  const routeRef = useRef(route);
+  routeRef.current = route;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileNavigation, setMobileNavigation] = useState(
     () => window.matchMedia('(max-width: 700px)').matches,
@@ -253,10 +300,11 @@ export default function App() {
   const [pageError, setPageError] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const toastCount = useRef(0);
-  // Errors stay until closed; a repeated message is announced and timed again.
-  const notify = useCallback((text: string, failed = false) => {
+  // Errors and notices with an action stay until closed; a repeated message is
+  // announced and timed again.
+  const notify = useCallback((text: string, failed = false, action?: Toast['action']) => {
     toastCount.current += 1;
-    setToast({ id: toastCount.current, text, failed });
+    setToast({ id: toastCount.current, text, failed, action });
   }, []);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -426,7 +474,7 @@ export default function App() {
     return () => controller.abort();
   }, [route, analyses, analysis?.id]);
   useEffect(() => {
-    if (!toast || toast.failed) return;
+    if (!toast || toast.failed || toast.action) return;
     const timer = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timer);
   }, [toast]);
@@ -627,13 +675,22 @@ export default function App() {
         ]);
       }
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
-      navigate(`analysis/${result.id}`);
+      // Opening the report replaces the page. Someone who moved on while waiting, for
+      // example to write a playbook, keeps that input and opens the report from the notice.
+      if (routeRef.current === 'new') navigate(`analysis/${result.id}`);
+      else
+        notify(`Analyse fertig: ${result.title}`, false, {
+          label: 'Öffnen',
+          run: () => navigate(`analysis/${result.id}`),
+        });
     } catch (error) {
-      setError(
+      const text =
         error instanceof DOMException && error.name === 'AbortError'
           ? 'Das Warten auf die Antwort wurde abgebrochen.'
-          : message(error),
-      );
+          : message(error);
+      setError(text);
+      // The composer shows the error; elsewhere it would go unnoticed.
+      if (routeRef.current !== 'new') notify(text, true);
     } finally {
       setRunning(false);
       requestController.current = null;
@@ -1149,6 +1206,7 @@ export default function App() {
         <AnimatePresence initial={false}>
           {toast && <Notification key={toast.id} toast={toast} onClose={() => setToast(null)} />}
         </AnimatePresence>
+        <Announcements toast={toast} />
         <AnimatePresence initial={false}>
           {deleteTarget && (
             <Modal

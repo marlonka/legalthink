@@ -14,6 +14,11 @@
 }
 
 @media (max-width: 700px) {
+  .app-shell .toast.motion-toast {
+    transform: none;
+    translate: none;
+  }
+
   .sidebar[data-motion-navigation][data-presented='true'] {
     visibility: visible;
     box-shadow: var(--shadow-modal);

@@ -865,6 +865,11 @@ code {
 .toast > .icon-button {
   margin-left: 5px;
 }
+.toast > .toast-action {
+  flex-shrink: 0;
+  color: var(--text-primary);
+  font-weight: 500;
+}
 .external-link {
   display: inline-flex;
   align-items: center;
@@ -1047,10 +1052,12 @@ code {
   .field-label-row .text-button {
     min-height: 36px;
   }
+  /* Full width: half the viewport is too narrow for a report title and its action. */
   .toast {
-    left: 50%;
+    left: 16px;
+    right: 16px;
     bottom: 16px;
-    min-width: 260px;
+    max-width: none;
     font-size: 13px;
   }
   .skip-link {

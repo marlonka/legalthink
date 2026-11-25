@@ -86,7 +86,13 @@ function lockModal(modal: ActiveModal) {
     originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     for (const element of Array.from(document.body.children)) {
-      if (!(element instanceof HTMLElement) || element.hasAttribute('data-modal-portal')) continue;
+      // Announcements stay audible while a dialog is open.
+      if (
+        !(element instanceof HTMLElement) ||
+        element.hasAttribute('data-modal-portal') ||
+        element.hasAttribute('data-live-region')
+      )
+        continue;
       backgroundState.set(element, element.inert);
       element.inert = true;
     }
