@@ -645,7 +645,6 @@ export default function App() {
           service_tier: serviceTier,
         }),
       });
-      setAnalysis(result);
       markAdded(result.id);
       if (result.source_text_document_id) {
         markAdded(result.source_text_document_id);
@@ -665,9 +664,12 @@ export default function App() {
       }
       setAnalyses((previous) => [result, ...previous.filter((item) => item.id !== result.id)]);
       // Opening the report replaces the page. Someone who moved on while waiting, for
-      // example to write a playbook, keeps that input and opens the report from the notice.
-      if (routeRef.current === 'new') navigate(`analysis/${result.id}`);
-      else
+      // example to write a playbook or read another report, keeps that page and its state
+      // and opens the report from the notice.
+      if (routeRef.current === 'new') {
+        setAnalysis(result);
+        navigate(`analysis/${result.id}`);
+      } else
         notify(`Analyse fertig: ${result.title}`, false, {
           label: 'Öffnen',
           run: () => navigate(`analysis/${result.id}`),
