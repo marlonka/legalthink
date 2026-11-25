@@ -23,6 +23,17 @@ type Citation = {
 type Position = { item: number; start: number; end: number };
 const segmenter = new Intl.Segmenter('de', { granularity: 'grapheme' });
 const PDF_TO_CSS_UNITS = 96 / 72;
+// The limits of pdf.js's own viewer: mobile browsers fail on larger canvases, which then
+// show no page at 150-200 % zoom.
+const MAX_CANVAS_PIXELS = window.matchMedia('(pointer: coarse)').matches ? 5_242_880 : 16_000_000;
+
+/** Free canvas memory at once; Safari otherwise keeps it until garbage collection. */
+function releaseCanvases(element: HTMLElement | null) {
+  element?.querySelectorAll('canvas').forEach((canvas) => {
+    canvas.width = 0;
+    canvas.height = 0;
+  });
+}
 
 // Preserve word boundaries, including spaces implied by PDF text geometry. Using the same
 // character map for search and highlighting prevents an approximate match becoming evidence.
@@ -146,7 +157,7 @@ function PdfPage({
         const ratio = Math.min(
           window.devicePixelRatio || 1,
           2,
-          Math.sqrt(16_000_000 / (view.width * view.height)),
+          Math.sqrt(MAX_CANVAS_PIXELS / (view.width * view.height)),
         );
         canvas.width = Math.ceil(view.width * ratio);
         canvas.height = Math.ceil(view.height * ratio);
@@ -161,6 +172,7 @@ function PdfPage({
         text.className = 'pdf-text-layer';
         sheet.appendChild(text);
         // Attach only after the canvas is ready; the previous page remains stable meanwhile.
+        releaseCanvases(paper);
         paper.replaceChildren(sheet);
         textLayer = new TextLayer({ textContentSource: content, container: text, viewport: view });
         await textLayer.render();
@@ -186,10 +198,15 @@ function PdfPage({
   // pdf.js waits for a cancelled render to settle. Each page keeps its measured size.
   useEffect(() => {
     if (active) return;
+    releaseCanvases(host.current);
     host.current?.replaceChildren();
     rendered.current?.cleanup();
     rendered.current = null;
   }, [active]);
+  useEffect(() => {
+    const element = host.current;
+    return () => releaseCanvases(element);
+  }, []);
 
   return (
     <div className="pdf-page-slot" style={{ height: size.height + 32 }} data-pdf-page={page}>
