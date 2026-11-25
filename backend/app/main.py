@@ -18,7 +18,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
 
 from . import export
-from .analysis import AnalysisError, AnalysisService, normalized, recover_source_references
+from .analysis import AnalysisError, AnalysisService, recover_source_references, same_wording
 from .config import Settings
 from .demo import demo_analysis, demo_documents, restore_demo_sources
 from .extraction import ExtractionError, extract_isolated, safe_filename
@@ -246,7 +246,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.put("/api/documents/{document_id}/original", response_model=Document)
     async def attach_original(document_id: str, file: Annotated[UploadFile, File()]):
-        source = app.state.store.get("documents", document_id)
+        source = await run_in_threadpool(app.state.store.get, "documents", document_id)
         suffix = Path(source["name"]).suffix.lower() if source else ""
         problem = None
         if not source:
@@ -260,7 +260,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise problem
         data = await read_upload(file)
         text, _ = await extract_upload(data, suffix)
-        if normalized(text) != normalized(source["text"]):
+        # Older imports may differ in whitespace only; the wording must be the same.
+        if not same_wording(text, source["text"]):
             raise HTTPException(
                 422, "Der Text dieser Datei stimmt nicht mit dem gespeicherten Quelltext überein."
             )

@@ -61,6 +61,19 @@ def normalized(text: str) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFC", text)).strip()
 
 
+def same_wording(first: str, second: str) -> bool:
+    """Equal text apart from whitespace.
+
+    Extractor versions differ in line breaks and spacing, for example where a form feed
+    was removed or pypdf places a space. Different words or characters never match.
+    """
+
+    def compact(text: str) -> str:
+        return re.sub(r"\s+", "", unicodedata.normalize("NFC", text))
+
+    return compact(first) == compact(second)
+
+
 class SourceIndex:
     """Normalized source texts and PDF pages, computed once per verification.
 

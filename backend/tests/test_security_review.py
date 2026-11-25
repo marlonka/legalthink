@@ -195,7 +195,13 @@ def test_original_roundtrip_legacy_attachment_and_deletion(local_client, suffix,
     assert "content-encoding" not in downloaded.headers
     assert downloaded.headers["content-type"].startswith(media_type)
     assert name in downloaded.headers["content-disposition"]
-    legacy = {**uploaded, "id": "legacy-source", "original_available": False}
+    # A source imported by an older version, whose extractor dropped line breaks.
+    legacy = {
+        **uploaded,
+        "id": "legacy-source",
+        "original_available": False,
+        "text": uploaded["text"].replace("\n", ""),
+    }
     local_client.app.state.store.put("documents", legacy)
     legacy_url = "/api/documents/legacy-source/original"
     assert local_client.get(legacy_url).status_code == 404
