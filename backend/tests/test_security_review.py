@@ -79,7 +79,7 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
             data_dir=tmp_path,
             allow_remote=True,
             api_token=token,
-            allowed_origins=("https://review.example",),
+            allowed_origins=("https://review.example", "https://desk.example"),
             allowed_hosts=("review.example",),
         )
     )
@@ -106,6 +106,13 @@ def test_remote_api_requires_token_and_origin_even_after_successful_preflight(tm
             client.get("/api/playbooks", headers={**authorized, "Origin": "null"}).status_code
             == 403
         )
+        # An allowed origin on another site may call the API; the browser marks it cross-site.
+        other_site = {
+            **authorized,
+            "Origin": "https://desk.example",
+            "Sec-Fetch-Site": "cross-site",
+        }
+        assert client.get("/api/playbooks", headers=other_site).status_code == 200
     # Behind a proxy with a path prefix, routes still match /api/…; so must the boundary.
     with TestClient(
         app,

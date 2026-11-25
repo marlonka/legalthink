@@ -62,10 +62,15 @@ class SecurityBoundary:
             return
         method = scope.get("method", "GET")
         if path.startswith("/api/"):
-            if headers.get("sec-fetch-site") == "cross-site" or (
-                method not in {"GET", "HEAD", "OPTIONS"}
-                and not origin
-                and headers.get("sec-fetch-site") not in {None, "same-origin", "none"}
+            # A browser request from another site needs one of the allowed origins, checked
+            # above. Navigations and embedded resources from other sites carry no Origin.
+            fetch_site = headers.get("sec-fetch-site")
+            if not origin and (
+                fetch_site == "cross-site"
+                or (
+                    method not in {"GET", "HEAD", "OPTIONS"}
+                    and fetch_site not in {None, "same-origin", "none"}
+                )
             ):
                 await JSONResponse({"detail": "Origin nicht freigegeben."}, 403)(
                     scope, receive, send
