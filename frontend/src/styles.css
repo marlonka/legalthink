@@ -655,7 +655,6 @@ code {
   margin-left: 4px;
 }
 .reorder-button {
-  margin-left: 4px;
   font-size: 12px;
 }
 .drop-overlay {
@@ -890,7 +889,6 @@ code {
     --page-top: 30px;
   }
   .workflow-selector button {
-    font-size: 13px;
     flex: 1 0 auto;
   }
 }
@@ -930,9 +928,6 @@ code {
     display: inline;
     font-size: 14px;
   }
-  .sidebar-brand {
-    height: 62px;
-  }
   .nav-item,
   .recent-item {
     min-height: 44px;
@@ -944,7 +939,6 @@ code {
     border-bottom: 1px solid var(--border-subtle);
   }
   .topbar-status {
-    font-size: 12px;
     min-height: 40px;
     margin-right: -6px;
   }
@@ -970,11 +964,6 @@ code {
   }
   .analysis-start-heading .text-button {
     min-height: 44px;
-    font-size: 13px;
-  }
-  .workflow-selector {
-    gap: 7px;
-    margin-bottom: 22px;
   }
   .workflow-selector button {
     min-height: 44px;
@@ -982,9 +971,6 @@ code {
   }
   .document-input-heading {
     padding: 21px 19px;
-  }
-  .document-input-heading > span {
-    font-size: 12px;
   }
   .uploaded-documents {
     padding: 0 19px 20px;
@@ -999,7 +985,6 @@ code {
   }
   .picker-button {
     min-height: 42px;
-    font-size: 13px;
   }
   .composer-options {
     padding: 20px 19px;

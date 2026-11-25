@@ -187,7 +187,6 @@
 .composer-research-toggle {
   position: relative;
   display: inline-flex;
-  flex: 0 0 36px;
   align-items: center;
   justify-content: center;
   width: 36px;
@@ -364,7 +363,6 @@
   }
 
   .composer-research-toggle {
-    flex-basis: 44px;
     width: 44px;
     height: 44px;
   }

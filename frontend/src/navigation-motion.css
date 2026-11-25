@@ -1,9 +1,4 @@
 /* Navigation fades at its final position; only the document preview slides. */
-.sidebar[data-motion-navigation] {
-  transition: none;
-  transform: none;
-}
-
 .app-shell .navigation-backdrop {
   transition: none;
 }
@@ -20,7 +15,6 @@
   }
 
   .sidebar[data-motion-navigation][data-presented='true'] {
-    visibility: visible;
     box-shadow: var(--shadow-modal);
   }
 
