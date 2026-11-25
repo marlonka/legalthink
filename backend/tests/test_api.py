@@ -33,7 +33,7 @@ class CompletedService:
     def __init__(self):
         self.calls = []
 
-    async def run(self, body, documents, playbook, *, pasted_document=None):
+    async def run(self, body, documents, playbook, *, pasted_document=None, answered=None):
         self.calls.append((body, documents, pasted_document))
         return Analysis(
             id=new_id(),
@@ -182,7 +182,7 @@ def test_pasted_source_persists_with_completed_result_and_preserves_version_ids(
     quote = "Nachricht mit Umlauten: Rückfrage."
 
     class QuotedService(CompletedService):
-        async def run(self, body, documents, playbook, *, pasted_document=None):
+        async def run(self, body, documents, playbook, *, pasted_document=None, answered=None):
             result = await super().run(body, documents, playbook, pasted_document=pasted_document)
             result.title = "Vergleich zur Lieferung"
             result.findings = [
@@ -320,7 +320,7 @@ def test_analysis_and_pasted_source_transaction_rolls_back_together(client):
     assert client.get(f"/api/analyses/{analysis['id']}").json() == analysis
 
 
-def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkeypatch):
+def test_disconnect_cancels_only_an_unanswered_analysis(client, monkeypatch):
     cancelled = threading.Event()
 
     class WaitingService:
@@ -346,6 +346,24 @@ def test_disconnect_cancels_analysis_without_saving_pasted_source(client, monkey
     assert cancelled.is_set()
     assert client.get("/api/documents").json() == []
     assert client.get("/api/analyses").json() == []
+
+    class AnsweredService(CompletedService):
+        """OpenAI has answered; the browser leaves while the evidence is verified."""
+
+        async def run(self, body, documents, playbook, *, pasted_document=None, answered=None):
+            answered.set()
+            await asyncio.sleep(0.05)
+            return await super().run(body, documents, playbook, pasted_document=pasted_document)
+
+    client.app.state.analysis_service = AnsweredService()
+    paid = client.post(
+        "/api/analyses", json={"workflow": "chronology", "source_text": "Bezahlte Nachricht."}
+    )
+    assert paid.status_code == 201
+    assert [item["id"] for item in client.get("/api/analyses").json()] == [paid.json()["id"]]
+    assert [doc["id"] for doc in client.get("/api/documents").json()] == [
+        paid.json()["source_text_document_id"]
+    ]
 
 
 def test_validation_errors_never_echo_document_text(client):

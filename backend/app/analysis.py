@@ -360,7 +360,13 @@ class AnalysisService:
         playbook: Playbook | None = None,
         *,
         pasted_document: Document | None = None,
+        answered: asyncio.Event | None = None,
     ) -> Analysis:
+        """Request one analysis and verify its evidence.
+
+        `answered` is set once OpenAI has returned a response. The request is billed from
+        then on, so the caller keeps the result instead of cancelling it.
+        """
         region = request.processing_region or self.processing_region
         client = (
             self.client
@@ -597,6 +603,8 @@ class AnalysisService:
             ) from None
 
         provider_duration_ms = round((perf_counter() - started) * 1000)
+        if answered is not None:
+            answered.set()
         # Refusals are content parts of messages. Reasoning items carry no content list.
         if any(
             getattr(content, "type", "") == "refusal"

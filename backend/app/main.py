@@ -390,17 +390,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await asyncio.sleep(0.25)
 
         async with slots:
+            answered = asyncio.Event()
             task = asyncio.create_task(
-                service.run(body, documents, playbook, pasted_document=pasted_document)
+                service.run(
+                    body, documents, playbook, pasted_document=pasted_document, answered=answered
+                )
             )
             disconnect = asyncio.create_task(disconnected())
             try:
-                done, _ = await asyncio.wait(
-                    {task, disconnect}, return_when=asyncio.FIRST_COMPLETED
-                )
-                # A finished provider call is paid for; keep its result even if the
-                # browser disconnected at the same moment.
-                if task not in done:
+                await asyncio.wait({task, disconnect}, return_when=asyncio.FIRST_COMPLETED)
+                # Closing the browser cancels the request only until OpenAI answers. An
+                # answer is billed, so its evidence is still verified and the report saved.
+                if not task.done() and not answered.is_set():
                     raise HTTPException(499, "Analyse abgebrochen.")
                 result = await task
                 if pasted_document:
