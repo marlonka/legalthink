@@ -1,6 +1,8 @@
 import asyncio
 import io
+import os
 import sqlite3
+import stat
 import threading
 from dataclasses import replace
 
@@ -54,10 +56,15 @@ class CompletedService:
 
 
 def test_document_playbook_and_analysis_persistence(tmp_path):
-    settings = Settings(data_dir=tmp_path, api_key="")
+    settings = Settings(data_dir=tmp_path / "data", api_key="")
     with TestClient(
         create_app(settings), base_url="http://localhost", client=("127.0.0.1", 12345)
     ) as client:
+        if os.name == "posix":
+            # Other accounts on the computer cannot read a new workspace.
+            database = settings.data_dir / "workspace.sqlite3"
+            assert stat.S_IMODE(settings.data_dir.stat().st_mode) == 0o700
+            assert stat.S_IMODE(database.stat().st_mode) == 0o600
         response = client.post(
             "/api/documents",
             files={
