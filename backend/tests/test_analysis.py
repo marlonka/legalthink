@@ -422,6 +422,8 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
             ("removed", QUOTE, ""),
             ("modified", counter_quote, pasted.text),
             ("modified", QUOTE, QUOTE),
+            # Contrary to its category; verified and kept, not a reason to drop the report.
+            ("added", QUOTE, counter_quote),
         )
     ]
     captured = []
@@ -446,18 +448,20 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     assert user["source_text_document"]["id"] == pasted.id
     assert result.document_ids == [DOC.id, counter.id]
     assert result.source_text_document_id == pasted.id
-    assert [item.verified for item in result.findings] == [True, True, True, False, False]
+    assert [item.verified for item in result.findings] == [True, True, True, False, False, True]
     assert [item.source_quote for item in result.findings] == [
         counter_quote,
         counter_quote,
         QUOTE,
         pasted.text,
         QUOTE,
+        counter_quote,
     ]
     assert [item.source_document_name for item in result.findings] == [
         counter.name,
         counter.name,
         original.name,
+        counter.name,
         counter.name,
         counter.name,
     ]
@@ -468,8 +472,11 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
         "",
         finding["suggestion"],
         finding["suggestion"],
+        finding["suggestion"],
     ]
-    modified, added, removed, invalid, wrong_side = [item.comparison for item in result.findings]
+    modified, added, removed, invalid, wrong_side, contrary = [
+        item.comparison for item in result.findings
+    ]
     assert modified.original.verified and modified.counterdraft.verified
     assert modified.original.source_location == "Seite 2"
     assert modified.counterdraft.source_location == "Seite 4"
@@ -477,6 +484,7 @@ async def test_compare_pasted_source_does_not_become_a_version_or_redline_target
     assert not removed.counterdraft.verified and removed.counterdraft.source_quote == ""
     assert not invalid.original.verified and not invalid.counterdraft.verified
     assert wrong_side.original.verified and not wrong_side.counterdraft.verified
+    assert contrary.original.verified and contrary.counterdraft.verified
     assert all(
         item.comparison.original.source_document_id == original.id
         and item.comparison.counterdraft.source_document_id == counter.id

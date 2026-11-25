@@ -153,17 +153,12 @@ class ModelFinding(StrictModel):
 
 
 class ModelComparisonEvidence(StrictModel):
+    # The prompt asks for an empty side on "added" and "removed". The strict schema
+    # cannot express that; a contrary quote is verified and shown like any other
+    # instead of rejecting the whole, already billed report.
     change_type: Literal["modified", "added", "removed"]
     original_quote: str
     counterdraft_quote: str
-
-    @model_validator(mode="after")
-    def validate_sides(self) -> ModelComparisonEvidence:
-        if self.change_type == "added" and self.original_quote.strip():
-            raise ValueError("Eine ergänzte Regelung hat keinen Originalwortlaut.")
-        if self.change_type == "removed" and self.counterdraft_quote.strip():
-            raise ValueError("Eine gestrichene Regelung hat keinen Gegenentwurfswortlaut.")
-        return self
 
 
 class ModelComparisonFinding(ModelFinding):
