@@ -88,13 +88,18 @@ def md_quote(text: str) -> str:
     return "> " + md(text).replace("\n", "\n> ")
 
 
+# CommonMark ends an autolink at whitespace, a control character, `<` or `>`.
+_AUTOLINK_END = re.compile(r"[\s<>\x00-\x1f\x7f]")
+
+
 def md_url(url: str) -> str:
-    """Percent-encode characters that could end an autolink and start new Markdown.
+    """Percent-encode the characters that would end an autolink and start new Markdown.
 
     Research URLs come from web search metadata; a `>` would otherwise close `<…>`
-    and let the rest of the URL render, for example as a remote image.
+    and let the rest of the URL render, for example as a remote image. Everything else,
+    including international domain names, stays as provided.
     """
-    return quote(url, safe=":/?#[]@!$&'()*+,;=%")
+    return _AUTOLINK_END.sub(lambda match: quote(match.group()), url)
 
 
 def markdown(analysis: Analysis) -> bytes:
