@@ -8,6 +8,21 @@ export function validModelId(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/.test(value) && !/^(sk-|https?:)/i.test(value);
 }
 
+/** A browser-saved model profile; `auto` sends no reasoning effort. */
+export function customModel(id: string, efforts: unknown, supportsWebSearch: boolean): Model {
+  return {
+    id,
+    name: id,
+    custom: true,
+    default_effort: 'auto',
+    efforts: [
+      'auto',
+      ...CUSTOM_EFFORTS.filter((value) => Array.isArray(efforts) && efforts.includes(value)),
+    ],
+    supports_web_search: supportsWebSearch,
+  };
+}
+
 export function readCustomModels(): Model[] {
   try {
     const saved: unknown = JSON.parse(localStorage.getItem(CUSTOM_MODELS_KEY) || '[]');
@@ -17,21 +32,7 @@ export function readCustomModels(): Model[] {
       if (!item || typeof item.id !== 'string' || !validModelId(item.id) || seen.has(item.id))
         return [];
       seen.add(item.id);
-      return [
-        {
-          id: item.id,
-          name: item.id,
-          custom: true,
-          default_effort: 'auto',
-          efforts: [
-            'auto',
-            ...CUSTOM_EFFORTS.filter(
-              (value) => Array.isArray(item.efforts) && item.efforts.includes(value),
-            ),
-          ],
-          supports_web_search: item.supports_web_search === true,
-        },
-      ];
+      return [customModel(item.id, item.efforts, item.supports_web_search === true)];
     });
   } catch {
     return [];

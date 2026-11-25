@@ -27,6 +27,8 @@ const PreviewContext = createContext<{ openPreview: (source: PreviewRequest) => 
   openPreview: () => {},
 });
 export const useDocumentPreview = () => useContext(PreviewContext);
+// From this width a report and its source stand side by side (design.md).
+const DOCKED_PREVIEW = '(min-width: 1400px)';
 
 export function DocumentPreviewProvider({
   route,
@@ -48,7 +50,7 @@ export function DocumentPreviewProvider({
     setExpanded(false);
   }
   const source = opened?.route === route ? opened : null;
-  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1400px)').matches);
+  const [wide, setWide] = useState(() => window.matchMedia(DOCKED_PREVIEW).matches);
   const trigger = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -68,7 +70,7 @@ export function DocumentPreviewProvider({
     setExpanded(false);
   }
   useEffect(() => {
-    const query = window.matchMedia('(min-width: 1400px)');
+    const query = window.matchMedia(DOCKED_PREVIEW);
     const change = () => setWide(query.matches);
     query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);

@@ -99,7 +99,6 @@ export interface Playbook {
   created_at?: string;
 }
 export interface Health {
-  status: string;
   api_configured: boolean;
   default_processing_region: ProcessingRegion;
 }

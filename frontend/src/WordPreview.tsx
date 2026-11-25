@@ -251,12 +251,12 @@ function markQuote(container: HTMLElement, quote: string, bodyOnly = true): HTML
 
 export default function WordPreview({
   document: source,
-  quote = '',
+  quote,
   onEscape,
 }: {
   document: DocumentRecord;
-  quote?: string;
-  onEscape?: () => void;
+  quote: string;
+  onEscape: () => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
@@ -305,7 +305,7 @@ export default function WordPreview({
 
   useEffect(() => {
     const target = frame.current?.contentDocument;
-    if (!target || !onEscape) return;
+    if (!target) return;
     const close = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       event.preventDefault();

@@ -161,9 +161,9 @@ export function Playbooks({
 }: {
   playbooks: Playbook[];
   onCreate: (name: string, content: string) => Promise<void>;
-  onUpdate?: (id: string, name: string, content: string) => Promise<void>;
+  onUpdate: (id: string, name: string, content: string) => Promise<void>;
   onDelete: (playbook: Playbook) => void;
-  onDocumentImported?: (document: DocumentRecord) => void;
+  onDocumentImported: (document: DocumentRecord) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Playbook | null>(null);
@@ -189,7 +189,7 @@ export function Playbooks({
     setSaving(true);
     setFormError('');
     try {
-      if (editingId && onUpdate) await onUpdate(editingId, name.trim(), content.trim());
+      if (editingId) await onUpdate(editingId, name.trim(), content.trim());
       else await onCreate(name.trim(), content.trim());
       setOpen(false);
       setName('');
@@ -215,7 +215,7 @@ export function Playbooks({
         method: 'POST',
         body: form,
       });
-      onDocumentImported?.(document);
+      onDocumentImported(document);
       setContent(document.text);
       if (document.text.length > 30000)
         setFormError(
@@ -393,22 +393,20 @@ export function Playbooks({
               <div className="playbook-read-content">{selected.content}</div>
             </div>
             <div className="modal-footer">
-              {onUpdate && (
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={() => {
-                    setName(selected.name);
-                    setContent(selected.content);
-                    setEditingId(selected.id);
-                    setSelected(null);
-                    setOpen(true);
-                    setFormError('');
-                  }}
-                >
-                  Bearbeiten
-                </button>
-              )}
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setName(selected.name);
+                  setContent(selected.content);
+                  setEditingId(selected.id);
+                  setSelected(null);
+                  setOpen(true);
+                  setFormError('');
+                }}
+              >
+                Bearbeiten
+              </button>
               <button
                 type="button"
                 className="button secondary"

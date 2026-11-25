@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Model } from './types';
-import { CUSTOM_EFFORTS, MAX_CUSTOM_MODELS, validModelId } from './custom-models';
+import { CUSTOM_EFFORTS, MAX_CUSTOM_MODELS, customModel, validModelId } from './custom-models';
 import { EFFORT_NAMES, ErrorMessage, ExternalLink, Modal } from './ui';
 import './custom-models.css';
 
@@ -106,14 +106,7 @@ export default function CustomModels({
                   return;
                 }
                 try {
-                  onSave({
-                    id: modelId,
-                    name: modelId,
-                    custom: true,
-                    default_effort: 'auto',
-                    efforts: ['auto', ...CUSTOM_EFFORTS.filter((value) => efforts.includes(value))],
-                    supports_web_search: research,
-                  });
+                  onSave(customModel(modelId, efforts, research));
                   close();
                 } catch (cause) {
                   setFormError(
