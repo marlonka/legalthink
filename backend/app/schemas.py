@@ -114,13 +114,15 @@ class AnalysisRequest(StrictModel):
             raise explained("Bitte das eigene Modell zuerst in den Einstellungen hinzufügen.")
         if self.effort not in efforts:
             raise explained(
-                "Diese Denktiefe ist für das gewählte Modell nicht konfiguriert. "
+                "Dieser Denkaufwand ist für das gewählte Modell nicht konfiguriert. "
                 "Prüfen Sie die Modell-Einstellungen."
             )
         if len(set(self.document_ids)) != len(self.document_ids):
             raise explained("Dokumente dürfen nur einmal ausgewählt werden.")
         if self.workflow == "compare" and len(self.document_ids) != 2:
-            raise explained("Die Synopse benötigt genau zwei Dokumente: Entwurf und Gegenentwurf.")
+            raise explained(
+                "Der Versionsvergleich benötigt genau zwei Dokumente: Original und Gegenentwurf."
+            )
         if not self.document_ids and not self.source_text.strip():
             raise explained("Bitte ein Dokument auswählen oder Text zur Prüfung einfügen.")
         if self.workflow != "compliance" and self.compliance_task != "general":

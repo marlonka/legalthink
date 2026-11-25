@@ -178,6 +178,8 @@ def verify_findings(
                     index, counterdraft, item.comparison.counterdraft_quote
                 ),
             )
+            # A replacement always targets the counterdraft. A deletion is evidenced in the
+            # original, and a proposal there would become a false tracked change.
             target = (
                 comparison.original
                 if comparison.change_type == "removed"
@@ -634,12 +636,6 @@ class AnalysisService:
                 verify_timeline(result, evidence_documents),
             )
         )
-        if request.workflow == "compare":
-            for finding in findings:
-                # A proposed replacement must target the counterdraft. Original-only
-                # evidence can document a deletion, but cannot produce a counterdraft redline.
-                if finding.source_document_id != request.document_ids[1]:
-                    finding.suggestion = ""
         return Analysis(
             id=new_id(),
             title=result.title,

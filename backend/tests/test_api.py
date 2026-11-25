@@ -394,7 +394,7 @@ def test_validation_errors_never_echo_document_text(client):
         json={"workflow": "compare", "document_ids": ["a"], "source_text": "PRIVATE Text"},
     )
     assert single.status_code == 422
-    assert single.json()["detail"].startswith("Die Synopse benötigt genau zwei Dokumente")
+    assert single.json()["detail"].startswith("Der Versionsvergleich benötigt genau zwei Dokumente")
     assert "PRIVATE" not in single.text
     assert not service.calls
     assert client.get("/api/analyses").json() == []
