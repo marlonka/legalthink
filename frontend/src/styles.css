@@ -942,10 +942,13 @@ code {
     min-height: 40px;
     margin-right: -6px;
   }
-  .mobile-menu {
-    width: 36px;
+  /* Navigation needs a 44 px touch target (design.md); `.icon-button` would otherwise
+     set 38 px. The negative margins keep the icon and the page name in place. */
+  .topbar .mobile-menu {
+    width: 44px;
     height: 44px;
-    margin-left: -6px;
+    margin-left: -9px;
+    margin-right: -3px;
   }
   .main-content {
     scrollbar-width: none;
