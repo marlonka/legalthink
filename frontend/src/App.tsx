@@ -33,7 +33,7 @@ import type {
   ServiceTier,
   Workflow,
 } from './types';
-import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition } from './ui';
+import { Brand, DEFAULT_MODELS, ErrorMessage, Modal, PageTransition, trapTab } from './ui';
 import { INSTRUCTION_TEMPLATES } from './instruction-templates';
 import { CUSTOM_MODELS_KEY, MAX_CUSTOM_MODELS, readCustomModels } from './custom-models';
 import './polish.css';
@@ -506,15 +506,6 @@ export default function App() {
     const sidebar = sidebarRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const focusable = () =>
-      Array.from(
-        sidebar?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]',
-        ) ?? [],
-      ).filter(
-        (element) =>
-          element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden',
-      );
     sidebar?.querySelector<HTMLButtonElement>('.sidebar-mobile-close')?.focus();
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -522,36 +513,12 @@ export default function App() {
         setMobileOpen(false);
         return;
       }
-      if (event.key !== 'Tab') return;
-      const elements = focusable();
-      const first = elements[0],
-        last = elements.at(-1);
-      if (!first) {
-        event.preventDefault();
-        sidebar?.focus();
-        return;
-      }
-      if (!sidebar?.contains(document.activeElement)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    const desktop = window.matchMedia('(min-width: 701px)');
-    const onResize = () => {
-      if (desktop.matches) setMobileOpen(false);
+      if (event.key === 'Tab' && sidebar) trapTab(event, sidebar);
     };
     document.addEventListener('keydown', handleKey);
-    desktop.addEventListener('change', onResize);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleKey);
-      desktop.removeEventListener('change', onResize);
       if (menuTriggerRef.current?.getClientRects().length) menuTriggerRef.current.focus();
       else contentRef.current?.focus({ preventScroll: true });
     };
@@ -1011,7 +978,12 @@ export default function App() {
                 >
                   <FileText size={14} />
                   <span>{item.title}</span>
-                  {item.is_demo && <span className="recent-demo-dot" aria-label="Beispiel" />}
+                  {item.is_demo && (
+                    <>
+                      <span className="recent-demo-dot" aria-hidden="true" />
+                      <span className="sr-only">(Beispiel)</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>

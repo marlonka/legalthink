@@ -65,13 +65,43 @@ const backgroundState = new Map<HTMLElement, boolean>();
 let originalOverflow = '';
 let originalFocus: HTMLElement | null = null;
 
-function focusDialog(dialog: HTMLDivElement) {
-  const controls = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+function focusableControls(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(focusableSelector)).filter(
     (element) => {
       const bounds = element.getBoundingClientRect();
-      return bounds.width > 2 && bounds.height > 2 && !element.closest('[inert]');
+      return (
+        bounds.width > 2 &&
+        bounds.height > 2 &&
+        !element.closest('[inert]') &&
+        getComputedStyle(element).visibility !== 'hidden'
+      );
     },
   );
+}
+
+/** Keep Tab and Shift+Tab inside `container`, as a modal dialog or drawer requires. */
+export function trapTab(event: KeyboardEvent, container: HTMLElement) {
+  const controls = focusableControls(container);
+  const first = controls[0];
+  const last = controls.at(-1);
+  const active = document.activeElement;
+  if (!first || !last) {
+    event.preventDefault();
+    container.focus();
+  } else if (!container.contains(active)) {
+    event.preventDefault();
+    first.focus();
+  } else if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function focusDialog(dialog: HTMLDivElement) {
+  const controls = focusableControls(dialog);
   const autofocus = controls.find((element) => element.hasAttribute('autofocus'));
   const editable = controls.find((element) =>
     element.matches('input:not([type="file"]), textarea, select'),
@@ -165,25 +195,7 @@ export function Modal({
         event.stopPropagation();
         closeRef.current();
       }
-      if (event.key !== 'Tab') return;
-      const focusable = Array.from(
-        ref.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [],
-      ).filter((element) => {
-        const bounds = element.getBoundingClientRect();
-        return bounds.width > 2 && bounds.height > 2 && !element.closest('[inert]');
-      });
-      const firstElement = focusable[0],
-        lastElement = focusable.at(-1);
-      if (!firstElement) {
-        event.preventDefault();
-        ref.current?.focus();
-      } else if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault();
-        lastElement?.focus();
-      } else if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement?.focus();
-      }
+      if (event.key === 'Tab' && ref.current) trapTab(event, ref.current);
     };
     document.addEventListener('keydown', handleKey);
     return () => {
@@ -245,7 +257,7 @@ function PickerPopover({
   useEffect(() => {
     if (!present) return;
     const selected =
-      ref.current?.querySelector<HTMLElement>('[aria-pressed="true"], input') ??
+      ref.current?.querySelector<HTMLElement>('[aria-pressed="true"], input, select') ??
       ref.current?.querySelector<HTMLElement>('button:not(:disabled)');
     selected?.focus({ preventScroll: true });
   }, [present, effort]);

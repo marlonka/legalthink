@@ -130,7 +130,6 @@ export default function Start(props: Props) {
     if (focused && focused !== document.body && focused !== runButton.current) return;
     (running ? cancelButton : runButton).current?.focus({ preventScroll: true });
   }, [running]);
-  const textInput = useRef<HTMLTextAreaElement>(null);
   const dragCounter = useRef(0);
   const [dragging, setDragging] = useState(false);
   const [options, setOptions] = useState(false);
@@ -355,7 +354,6 @@ export default function Start(props: Props) {
         </div>
         <div className="composer-instruction-text">
           <textarea
-            ref={textInput}
             id="analysis-context"
             className="composer-text-input context-input"
             value={context}
